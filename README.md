@@ -1,5 +1,5 @@
 # graphit
-*My very first project.*
+*My very first java project.*
 
 Small program that reads txt-log files of "some" device, generates chart and creates error log which contains:<br>
 -- parsing errors *(simply bad text data)*<br>
