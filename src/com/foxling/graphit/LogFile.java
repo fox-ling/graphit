@@ -91,18 +91,6 @@ public class LogFile {
 		}
 	}
 	
-	public class BadLine {
-		public int lineID = -1;
-		public String line = "";
-		public String errorMsg = "";
-		/** Порядковый номер аргумента в котором возникла ошибка */
-		public byte errorID = -1; 
-		/** Позиция в строке */
-		public int errorPos = -1;
-		/** Длинна строкового значения аргумента */
-		public int errorLen = -1;
-	}
-	
 	/** Class for storing log-line */
 	public class Line {
 		/** 1: Текущее время */

@@ -40,7 +40,6 @@ import javax.swing.JTree;
 import javax.swing.JCheckBox;
 import javax.swing.JTextPane;
 
-import com.foxling.graphit.LogFile.BadLine;
 import com.foxling.graphit.LogFile.Startup;
 
 import java.awt.event.ActionListener;
