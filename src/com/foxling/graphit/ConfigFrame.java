@@ -19,14 +19,12 @@ package com.foxling.graphit;
 
 import java.awt.EventQueue;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.Vector;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.SpringLayout;
 import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.border.EmptyBorder;
 
 import org.joda.time.DateTime;
@@ -34,24 +32,26 @@ import org.joda.time.DateTime;
 import java.awt.BorderLayout;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.print.attribute.standard.DateTimeAtCompleted;
+import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JComboBox;
 import javax.swing.JSpinner;
 import javax.swing.JCheckBox;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
 
-public class Preferences extends JFrame {
+public class ConfigFrame extends JFrame {
 	private static final long serialVersionUID = 3103016344816004897L;
 	private JPanel contentPane;
 	private JTextField iColumnName;
 	private JComboBox<CBXItem<String>> iColumnDelimiter;		
-	private JComboBox<CBXItem<Class>> iDataType;
-	private JSpinner iScale;
+	private JComboBox iDataType;
+	private JComboBox iFormat;
+	private DefaultListModel<Field> mdlFieldList;
 	
-	
-	public Preferences() {
+	public ConfigFrame() {
 		super("Настройки");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 464, 400);
@@ -72,6 +72,10 @@ public class Preferences extends JFrame {
 		panel.add(lblFields);
 		
 		JButton btnAddCol = new JButton("Добавить");
+		btnAddCol.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+			}
+		});
 		sl_panel.putConstraint(SpringLayout.NORTH, btnAddCol, 6, SpringLayout.SOUTH, lblFields);
 		sl_panel.putConstraint(SpringLayout.WEST, btnAddCol, 10, SpringLayout.WEST, panel);
 		panel.add(btnAddCol);
@@ -88,7 +92,8 @@ public class Preferences extends JFrame {
 		sl_panel.putConstraint(SpringLayout.SOUTH, scrollPane, -6, SpringLayout.SOUTH, panel);
 		panel.add(scrollPane);
 		
-		JList fieldList = new JList();
+		mdlFieldList = new DefaultListModel<Field>();
+		JList<Field> fieldList = new JList<Field>(mdlFieldList);
 		scrollPane.setViewportView(fieldList);
 		
 		JPanel pnlMisc = new JPanel();
@@ -101,14 +106,14 @@ public class Preferences extends JFrame {
 		JLabel lblColumnName = new JLabel("Имя");
 		JLabel lblColumnDelimiter = new JLabel("Разделитель столбца");
 		JLabel lblDataType = new JLabel("Тип данных");
-		JLabel lblScale = new JLabel("Округление");
+		JLabel lblFormat = new JLabel("Формат");
 		
 		initControls();
 		
 		iColumnName = new JTextField();
 		//iColumnDelimiter = new JComboBox<CBXItem<String>>();		
 		//iDataType = new JComboBox<CBXItem<Class>>();
-		iScale = new JSpinner();
+		iFormat = new JComboBox();
 		
 		SpringLayout sl_pnlMisc = new SpringLayout();
 		
@@ -125,14 +130,14 @@ public class Preferences extends JFrame {
 		sl_pnlMisc.putConstraint(SpringLayout.WEST, iDataType, 0, SpringLayout.WEST, iColumnName);
 		sl_pnlMisc.putConstraint(SpringLayout.EAST, iDataType, 0, SpringLayout.EAST, iColumnName);
 		
-		sl_pnlMisc.putConstraint(SpringLayout.NORTH, iScale, 6, SpringLayout.SOUTH, iDataType);
-		sl_pnlMisc.putConstraint(SpringLayout.WEST, iScale, 0, SpringLayout.WEST, iColumnName);
-		sl_pnlMisc.putConstraint(SpringLayout.EAST, iScale, 0, SpringLayout.EAST, iColumnName);
+		sl_pnlMisc.putConstraint(SpringLayout.NORTH, iFormat, 6, SpringLayout.SOUTH, iDataType);
+		sl_pnlMisc.putConstraint(SpringLayout.WEST, iFormat, 0, SpringLayout.WEST, iColumnName);
+		sl_pnlMisc.putConstraint(SpringLayout.EAST, iFormat, 0, SpringLayout.EAST, iColumnName);
 		
 		sl_pnlMisc.putConstraint(SpringLayout.SOUTH, lblColumnName, -3, SpringLayout.SOUTH, iColumnName);
 		sl_pnlMisc.putConstraint(SpringLayout.SOUTH, lblColumnDelimiter, -3, SpringLayout.SOUTH, iColumnDelimiter);
 		sl_pnlMisc.putConstraint(SpringLayout.SOUTH, lblDataType, -3, SpringLayout.SOUTH, iDataType);
-		sl_pnlMisc.putConstraint(SpringLayout.SOUTH, lblScale, -3, SpringLayout.SOUTH, iScale);
+		sl_pnlMisc.putConstraint(SpringLayout.SOUTH, lblFormat, -3, SpringLayout.SOUTH, iFormat);
 		
 		
 		pnlMisc.setLayout(sl_pnlMisc);
@@ -140,39 +145,32 @@ public class Preferences extends JFrame {
 		pnlMisc.add(iColumnName);
 		pnlMisc.add(iColumnDelimiter);
 		pnlMisc.add(iDataType);
-		pnlMisc.add(iScale);
+		pnlMisc.add(iFormat);
 		
 		pnlMisc.add(lblColumnName);
 		pnlMisc.add(lblColumnDelimiter);
 		pnlMisc.add(lblDataType);
-		pnlMisc.add(lblScale);
+		pnlMisc.add(lblFormat);
 		
 		JCheckBox iOptional = new JCheckBox("Необязательное");
-		sl_pnlMisc.putConstraint(SpringLayout.NORTH, iOptional, 6, SpringLayout.SOUTH, iScale);
+		sl_pnlMisc.putConstraint(SpringLayout.NORTH, iOptional, 6, SpringLayout.SOUTH, iFormat);
 		sl_pnlMisc.putConstraint(SpringLayout.WEST, iOptional, 0, SpringLayout.WEST, iColumnName);
 		pnlMisc.add(iOptional);
 	}
 	
 	private void initControls(){
 		iColumnDelimiter = new JComboBox<CBXItem<String>>(new Vector<CBXItem<String>>(Arrays.asList(
-				new CBXItem<String>("{CR}{LF}", ""),
-				new CBXItem<String>("{CR}", ""),
-				new CBXItem<String>("{LF}", ""),
+				new CBXItem<String>("{CR}{LF}", "\r\n"),
+				new CBXItem<String>("{CR}", "\r"),
+				new CBXItem<String>("{LF}", "\n"),
 				new CBXItem<String>("Точка с запятой {;}", ";"),
-				new CBXItem<String>("Двоеточие {:}", ""),
-				new CBXItem<String>("Запятая {,}", ""),
-				new CBXItem<String>("Табуляция {t}", ""),
-				new CBXItem<String>("Вертикальная черта {|}", "")
+				new CBXItem<String>("Двоеточие {:}", ":"),
+				new CBXItem<String>("Запятая {,}", ","),
+				new CBXItem<String>("Табуляция {t}", "\t"),
+				new CBXItem<String>("Вертикальная черта {|}", "|")
 		)));
 		
-		iDataType = new JComboBox<CBXItem<Class>>(new Vector<CBXItem<Class>>(Arrays.asList(
-				new CBXItem<Class>("Строка", String.class),
-				new CBXItem<Class>("Целое число", Integer.class),
-				new CBXItem<Class>("Float", Float.class),
-				new CBXItem<Class>("Double", Double.class),
-				new CBXItem<Class>("Дата/Время", DateTime.class),
-				new CBXItem<Class>("Логический", Boolean.class)
-		)));
+		iDataType = new JComboBox<DataType>(DataType.values());
 	}
 
 	public static void main(String[] args) {
@@ -184,7 +182,7 @@ public class Preferences extends JFrame {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					Preferences frame = new Preferences();
+					ConfigFrame frame = new ConfigFrame();
 					frame.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();

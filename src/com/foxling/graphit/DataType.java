@@ -17,52 +17,28 @@
 
 package com.foxling.graphit;
 
-public class Field<T>
-implements Parser<T>{
-	private String name;
-	private String description;
-	private DataType dataType;
-	private String format;
+public enum DataType {
+	BOOLEAN("Логический [BOOLEAN]"),
+	INTEGER("Целое число [INTEGER]"),
+	FLOAT("Float [FLOAT]"),
+	DOUBLE("Double [DOUBLE]"),
+	STRING("Строка [STRING]"),
+	DATE("Дата [DATE]"),
+	DATETIME("Дата/Время [DATETIME]");
 	
-	public Field(String name, String description, DataType dataType, String format) {
-		this.name = name;
-		this.description = description;
-		this.dataType = dataType;
-		this.format = format;
-	}
-
-	public String getName() {
-		return name;
-	}
+	private final String caption;
 	
-	public void setName(String name) {
-		this.name = name;
+	/** @param parser default parser */
+	DataType(String caption){
+		this.caption = caption;
 	}
 
-	public String getDescription() {
-		return description;
-	}
-
-	public String getFormat() {
-		return format;
-	}
-
-	public DataType getDataType() {
-		return dataType;
-	}
-	
-	public void setDataType(DataType dataType) {
-		this.dataType = dataType;
+	public String getCaption() {
+		return caption;
 	}
 	
 	@Override
 	public String toString() {
-		return name;
-	}
-
-	@Override
-	public T parse(String str) {
-		
-		return null;
+		return caption;
 	}
 }

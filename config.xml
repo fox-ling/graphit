@@ -1,0 +1,6 @@
+<config>
+	<fields>
+		<field columnName="Дата/время" columnDelimiter="{;}" dataType="DATETIME" format="dd.MM.YYYY HH:mm:ss"/>
+		<field columnName="Натяжение" columnDelimiter="{CR}{LF}" dataType="FLOAT" format="dd.MM.YYYY HH:mm:ss"/>
+	</fields>
+</config>

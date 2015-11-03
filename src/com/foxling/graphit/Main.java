@@ -145,6 +145,7 @@ extends JFrame implements ChartProgressListener {
 	 * Launch the application.
 	 */
 	public static void main(String[] args) {
+		JOptionPane.showMessageDialog(null, System.getProperty("java.class.path"));
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		} catch (Exception e) {
