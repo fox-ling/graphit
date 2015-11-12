@@ -35,10 +35,6 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.SpringLayout;
 import javax.swing.UIManager;
 
-import com.foxling.graphit.LogFile;
-import com.foxling.graphit.LogFile.Line;
-import com.foxling.graphit.LogFile.Startup;
-
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
@@ -70,6 +66,10 @@ import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.ui.RectangleInsets;
+
+import com.foxling.graphit.logfile.LogFile;
+import com.foxling.graphit.logfile.LogFile.Line;
+import com.foxling.graphit.logfile.LogFile.Startup;
 
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -107,7 +107,7 @@ import javax.swing.JCheckBox;
 import java.awt.Font;
 import java.awt.Color;
 
-public class Main
+public class MainFrame
 extends JFrame implements ChartProgressListener {
 	private static final long serialVersionUID = 1L;
 	private static final String APPNAME = "Graphit - ИСУ \"Оптима\" ";
@@ -141,33 +141,7 @@ extends JFrame implements ChartProgressListener {
 	private JCheckBox cbTable;
 	
 	
-	/**
-	 * Launch the application.
-	 */
-	public static void main(String[] args) {
-		JOptionPane.showMessageDialog(null, System.getProperty("java.class.path"));
-		try {
-			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					Main frame = new Main();
-					frame.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		});
-	}
-
-	/**
-	 * Create the frame.
-	 */
-	public Main() {
+	public MainFrame() {
 		super(APPNAME);
 		
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -188,7 +162,7 @@ extends JFrame implements ChartProgressListener {
 				}
 			}
 		});
-		miOpen.setIcon(new ImageIcon(Main.class.getResource("/com/foxling/graphit/ic_action_collection.png")));
+		miOpen.setIcon(new ImageIcon(MainFrame.class.getResource("/com/foxling/graphit/ic_action_collection.png")));
 		miOpen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_MASK));
 		mFile.add(miOpen);
 		
@@ -206,7 +180,7 @@ extends JFrame implements ChartProgressListener {
 				fDetails.setVisible(true);
 			}
 		});
-		miDetails.setIcon(new ImageIcon(Main.class.getResource("/com/foxling/graphit/ic_action_storage.png")));
+		miDetails.setIcon(new ImageIcon(MainFrame.class.getResource("/com/foxling/graphit/ic_action_storage.png")));
 		miDetails.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, InputEvent.CTRL_MASK));
 		mFile.add(miDetails);
 		

@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.foxling.graphit;
+package com.foxling.graphit.logfile;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -27,195 +27,33 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
+import com.foxling.graphit.Core;
+
 
 /** Log-file parsing class */
 public class LogFile {
-	public String fileName;
-	public String intFileName;
-	public String serialNo;
-	public String frimware;
-	public int counter;	
-	public int linesCount;
-	public ArrayList<Startup> startup = new ArrayList<Startup>();
-	
-	private String DIVISOR = "; ";
-	private byte DIVISOR_LEN = 2;
+	private String fileName;
+	private String intFileName;
+	private String serialNo;
+	private String frimware;
+	private int counter;	
+	private int linesCount;
+	private ArrayList<Startup> startups = new ArrayList<Startup>();
 	
 	private int wStartupCount = 0;
 	private Path filePath;
 	private Charset encoding = Charset.forName("Cp1251");
-	private SimpleDateFormat fTime = new SimpleDateFormat ("HH:mm:ss");
-	private SimpleDateFormat fDate = new SimpleDateFormat ("dd.MM.YYYY");
-	private SimpleDateFormat fDateTime = new SimpleDateFormat ("dd.MM.YYYY HH:mm:ss");
-	
-	/** Class that stores data of one of the startups (launches)*/
-	public class Startup {
-		/** File's line no <br>
-		 * Номер строки в файле */
-		int lineNo;
-		/** Launch date <br>
-		 * Дата запуска */
-		Date date = null;
-		/** Launch time <br>
-		 * Время запуска */
-		Date time = null;
-		/** Launch datetime <br>
-		 *  Дата/время запуска */
-		Date datetime = null;
-		
-		public ArrayList<BadLine> badLines = new ArrayList<BadLine>();
-		public ArrayList<Line> lines = new ArrayList<Line>();
-		
-		public Startup(int aLineNo){
-			this.lineNo=aLineNo;
-		}
-		
-		/** Prints out current Startup in the java-console.
-		 * Optionally, you could set Startup-ID in method arg. */
-		public void printMe(int... id){			
-			Line currLine;
-			if (id.length==0) {
-				System.out.printf("Printing Startup at line %d%n", this.lineNo);
-			} else System.out.printf("Printing Startup number %d at line %d%n", id[0], this.lineNo);
-			
-			System.out.printf("System DateTime is: %s%n", fDateTime.format(date));
-			
-			for (int i = 0; i < lines.size(); i++) {
-				currLine = lines.get(i);
-				System.out.printf("%s|%d|%f|%d|%d|%s|%d|%d|%s|%s|%s;\n"
-							,currLine.time,currLine.depth,currLine.tension,currLine.topPos,currLine.voltage
-							,currLine.knob_state,currLine.speed,currLine.mode,currLine.stroke
-							,currLine.error,currLine.hash);		
-			}
-			System.out.println("===================================================");
-		}
-	}
-	
-	/** Class for storing log-line */
-	public class Line {
-		/** 1: Текущее время */
-		public Date time;
-		/** 2: Глубина в м.  */
-		public int depth;
-		/** 3: Натяжение проволки в кгс*/
-		public float tension;
-		/** 4: Датчик верхнего положения [-1,0,+1]::[обрыв датчика; не верхнее положение; верхнее положение]*/
-		public byte topPos;
-		/** 5: Напряжение в сети в Вольтах (на фазе L1)*/
-		public short voltage;
-		/** 6: Шестнадцатиричное значение (Карта адресов ModBus RTU, значение мнемоники knob_state)*/
-		public String knob_state;
-		/** 7: Текущая скорость */
-		public byte speed;
-		/** 8: Режим работы СУ: </br>
-		 * – 0 = ручной; </br>
-		 * – 1 = полуавтомат; </br>
-		 * – 2 = автомат. */
-		public byte mode;
-		/** 9: Направление хода скребка: </br>
-		 *  – S = СУ в состоянии останова; </br>
-		 *  – U = движение наверх; </br>
-		 *  – D = движение вниз. */
-		public char stroke;
-		/** (10): Код ошибки (Карта адресов ModBus RTU, мнемоника - global_err_register) </br>
-		 *  <i>* необязательное поле</i> */
-		public String error;
-		/** 11: Слово-ключ для защиты от изменения строк */
-		public String hash;
-		
-		/** Совпадает ли хэш */
-		public boolean authentic;
-		/** =true, при успешном распознании всех значений лога */
-		public boolean parsed;
-		
-		public Line(int lineID, String aLine, ArrayList<BadLine> garbage) throws IllegalArgumentException {
-			//13:29:55; 0000; +2.9; 0; 224; 02; 1; 0; D; 242D
-			byte fid = -1;
-			
-			int l = aLine.length();
-			String[] value = null;
-			try{
-				if (l < 6) {
-					fid = -128;
-					throw new IllegalArgumentException("Line is too short, there is no way it could hold all the fields");
-				}
-				
-				value = aLine.split("; ");
-				int l1 = value.length; 
-				if (l1 != 10 & l1 != 11 ) {
-					fid = -127;
-					throw new IllegalArgumentException("Fields count should be either 10 or 11");
-				}
-			
-				fid = 0; this.time =		fTime.parse(value[0]);
-				fid = 1; this.depth =		Integer.parseInt(value[1]);
-				fid = 2; this.tension =		Float.parseFloat(value[2]);
-				fid = 3; this.topPos =		Byte.parseByte(value[3]);
-				fid = 4; this.voltage =		Short.parseShort(value[4]);
-						 this.knob_state =	value[5];
-				fid = 6; this.speed =		Byte.parseByte(value[6]);
-				fid = 7; this.mode =		Byte.parseByte(value[7]);
-				fid = 8; this.stroke =		value[8].charAt(0);
-				
-				if (l1 == 11){
-					this.error =	value[9];
-					this.hash =		value[10];
-				} else {
-					this.hash =		value[9];
-				}
-				
-				this.authentic = (this.hash.equals(getCRC(aLine.substring(0, l-4))));
-				if (!this.authentic) {
-					BadLine badLine = new BadLine();
-					badLine.lineID = lineID; 
-					badLine.line = aLine;
-					badLine.errorMsg = "Wrong hash";
-					badLine.errorPos = aLine.lastIndexOf(DIVISOR)+DIVISOR_LEN;
-					badLine.errorLen = 4;
-					badLine.errorID = 9;
-					garbage.add(badLine);
-				}
-			} catch (Exception e) {
-				BadLine badLine = new BadLine();
-				badLine.lineID = lineID; 
-				badLine.line = aLine;
-				badLine.errorMsg = e.getMessage();
-				badLine.errorID = fid;
-				
-				if (fid < 0) {
-					badLine.errorPos = 0;
-					badLine.errorLen = aLine.length();
-				} else {
-					badLine.errorPos = fid * DIVISOR_LEN;
-					for (int i = 0; i < fid; i++) {
-						badLine.errorPos += value[i].length();
-					}
-					badLine.errorLen = value[fid].length();
-				}	
-
-				if (e.getClass().getName().equals("java.lang.NumberFormatException")) 
-					badLine.errorMsg = "Unknown number format " + badLine.errorMsg;
-
-				garbage.add(badLine);
-				throw new IllegalArgumentException(e.getMessage());
-			}
-		}
-	}
 	
 	public LogFile(String aFilename) {
 		fileName = aFilename;
 		filePath = Paths.get(aFilename);
-		try {
-			readHeader();
-		} catch (IOException e) {			
-			e.printStackTrace();
-		}
+		readHeader();
 	}
 	
 	public int getId(Date arg0){
 		int x = -1;
-		for (int i = 0; i < startup.size(); i++) {
-			Startup currStartup = startup.get(i);
+		for (int i = 0; i < startups.size(); i++) {
+			Startup currStartup = startups.get(i);
 			for (int j = 0; j < currStartup.lines.size(); j++) {
 				Line currLine = currStartup.lines.get(j);
 				x++;
@@ -231,7 +69,7 @@ public class LogFile {
 	}
 	
 	/** Parses log-file header */
-	public void readHeader() throws IOException {
+	public void readHeader() {
 		try (BufferedReader reader = Files.newBufferedReader(filePath, encoding)){			
 			Integer i;
 			String s;
@@ -242,14 +80,14 @@ public class LogFile {
 				if (s.contains("file")) {
 					i = s.indexOf(":");
 					if (i+1 < s.length()) {
-						s=s.substring(i+1);						
+						s = s.substring(i+1);						
 						this.intFileName=s.trim();						
 					}
 				} else
 					if (s.contains("serial no.")) {
 						i = s.indexOf(":");
 						int j = s.indexOf("firmware ver.:");
-						if (i+1 < s.length()) {
+						if (i + 1 < s.length()) {
 							if (j == -1) {
 								this.serialNo=s.substring(i+1);
 							} else
@@ -263,14 +101,14 @@ public class LogFile {
 					} else
 						if (s.contains("counter")) {
 							i = s.indexOf("#");
-							if (i+1 < s.length()) {
-								s=s.substring(i+1);							
+							if (i + 1 < s.length()) {
+								s = s.substring(i+1);							
 								this.counter=Integer.parseInt(s.trim());							
 							}
 						}
-				
-			};
-			reader.close();
+			}
+		} catch (IOException e) {			
+			e.printStackTrace();
 		}
 	}
 
@@ -285,9 +123,8 @@ public class LogFile {
 			
 			String date = "";
 			String time = "";
-			Startup currStartup = null;
 			
-			
+			Startup startup = null;
 			while ((line = reader.readLine()) != null) {
 				lineNo+=1;
 				if (!line.isEmpty()){
@@ -295,18 +132,20 @@ public class LogFile {
 						//Making startup object
 						if (line.equals("@ startup")) {
 							j+=1;
-							startup.add(new Startup(lineNo));							
-							currStartup = startup.get(j);
+							startup = new Startup(lineNo); 
+							startups.add(startup);
 						} else
 							// Parsing startup DateTime
-							if (currStartup != null) {
+							if (startup != null) {
 								if (line.contains("system date")) {
 									i=line.indexOf('#');
 									if (i>-1 && line.length()>i) {
 										try {
 											date = line.substring(i+1);
-											currStartup.date = fDate.parse(date);
-										} catch (Exception exc) {}
+											startup.date = Core.F_DATE.parse(date);
+										} catch (Exception e) {
+											e.printStackTrace();
+										}
 									}
 								} else
 									if (line.contains("system time")) {
@@ -314,28 +153,30 @@ public class LogFile {
 										if (i>-1 && line.length()>i) {
 											try {
 												time = line.substring(i+1);
-												currStartup.time = fTime.parse(time);
-												if (currStartup.date != null)
-													currStartup.datetime = fDateTime.parse(date+" "+time);
-											} catch (Exception exc) {}
+												startup.time = Core.F_TIME.parse(time);
+												if (startup.date != null)
+													startup.datetime = Core.F_DATETIME.parse(date+" "+time);
+											} catch (Exception e) {
+												e.printStackTrace();
+											}
 										}
 									}
 							}
 					} else
 						//Parsing data line
-						if (currStartup != null)
+						if (startup != null)
 						try {
-							currStartup.lines.add(new Line(lineNo, line, currStartup.badLines));
+							startup.lines.add(new Line(lineNo, line, startup.badLines));
 						} catch (IllegalArgumentException e) {
-							//System.out.println(e.toString());
+							e.printStackTrace();
 						}
 				}
 			}
 			this.linesCount=lineNo;
 			
 			//Count working startups:
-			for (i = 0; i < startup.size(); i++) {
-				if (startup.get(i).lines.size()>0) wStartupCount++;
+			for (i = 0; i < startups.size(); i++) {
+				if (startups.get(i).lines.size()>0) wStartupCount++;
 			} 
 		}
 	}
@@ -420,6 +261,81 @@ public class LogFile {
 		
 		return result+"</html>";
 	}
+	
+	
+	
+	private void parse() {
+		/*
+		int l = aLine.length();
+		String[] value = null;
+		try{
+			if (l < 6) {
+				fid = -128;
+				throw new IllegalArgumentException("Line is too short, there is no way it could hold all the fields");
+			}
+			
+			value = aLine.split("; ");
+			int l1 = value.length; 
+			if (l1 != 10 & l1 != 11 ) {
+				fid = -127;
+				throw new IllegalArgumentException("Fields count should be either 10 or 11");
+			}
+		
+			fid = 0; this.time =		fTime.parse(value[0]);
+			fid = 1; this.depth =		Integer.parseInt(value[1]);
+			fid = 2; this.tension =		Float.parseFloat(value[2]);
+			fid = 3; this.topPos =		Byte.parseByte(value[3]);
+			fid = 4; this.voltage =		Short.parseShort(value[4]);
+					 this.knob_state =	value[5];
+			fid = 6; this.speed =		Byte.parseByte(value[6]);
+			fid = 7; this.mode =		Byte.parseByte(value[7]);
+			fid = 8; this.stroke =		value[8].charAt(0);
+			
+			if (l1 == 11){
+				this.error =	value[9];
+				this.hash =		value[10];
+			} else {
+				this.hash =		value[9];
+			}
+			
+			this.authentic = (this.hash.equals(getCRC(aLine.substring(0, l-4))));
+			if (!this.authentic) {
+				BadLine badLine = new BadLine();
+				badLine.lineID = lineID; 
+				badLine.line = aLine;
+				badLine.errorMsg = "Wrong hash";
+				badLine.errorPos = aLine.lastIndexOf(DIVISOR)+DIVISOR_LEN;
+				badLine.errorLen = 4;
+				badLine.errorID = 9;
+				garbage.add(badLine);
+			}
+		} catch (Exception e) {
+			BadLine badLine = new BadLine();
+			badLine.lineID = lineID; 
+			badLine.line = aLine;
+			badLine.errorMsg = e.getMessage();
+			badLine.errorID = fid;
+			
+			if (fid < 0) {
+				badLine.errorPos = 0;
+				badLine.errorLen = aLine.length();
+			} else {
+				badLine.errorPos = fid * DIVISOR_LEN;
+				for (int i = 0; i < fid; i++) {
+					badLine.errorPos += value[i].length();
+				}
+				badLine.errorLen = value[fid].length();
+			}	
+	
+			if (e.getClass().getName().equals("java.lang.NumberFormatException")) 
+				badLine.errorMsg = "Unknown number format " + badLine.errorMsg;
+	
+			garbage.add(badLine);
+			throw new IllegalArgumentException(e.getMessage());
+		}*/
+	}
+	
+	
 	
 	// ===== CRC Section ===========================================================================
 	private final static short[] auchCRCHi = {

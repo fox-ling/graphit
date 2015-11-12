@@ -34,51 +34,51 @@ public class DefaultParser {
 	
 	public static final Parser<Integer> INTEGER = new Parser<Integer>() {
 		@Override
-		public Integer parse(String str) throws ParseException, NullPointerException {
+		public Integer parse(String str) throws ParseException {
 			if (str == null)
-				throw new NullPointerException("Cannot parse null");
+				throw new ParseException("Cannot parse null", -1);
 			
 			try {
 				return Integer.parseInt(str);
 			} catch (NumberFormatException e) {
-				throw new ParseException(str, 0);
+				throw new ParseException(str, -1);
 			}
 		}
 	};
 	
 	public static final Parser<Float> FLOAT = new Parser<Float>() {
 		@Override
-		public Float parse(String str) throws ParseException, NullPointerException {
+		public Float parse(String str) throws ParseException {
 			if (str == null)
-				throw new NullPointerException("Cannot parse null");
+				throw new ParseException("Cannot parse null", -1);
 			
 			try {
 				return Float.parseFloat(str);
 			} catch (NumberFormatException e) {
-				throw new ParseException(str, 0);
+				throw new ParseException(str, -1);
 			}
 		}
 	};
 
 	public static final Parser<Double> DOUBLE = new Parser<Double>() {
 		@Override
-		public Double parse(String str) throws ParseException, NullPointerException {
+		public Double parse(String str) throws ParseException {
 			if (str == null)
-				throw new NullPointerException("Cannot parse null");
+				throw new ParseException("Cannot parse null", -1);
 			
 			try {
 				return Double.parseDouble(str);
 			} catch (NumberFormatException e) {
-				throw new ParseException(str, 0);
+				throw new ParseException(str, -1);
 			}
 		}
 	};
 
 	public static final Parser<String> STRING = new Parser<String>() {
 		@Override
-		public String parse(String str) throws NullPointerException {
+		public String parse(String str) throws ParseException {
 			if (str == null)
-				throw new NullPointerException("Cannot parse null");
+				throw new ParseException("Cannot parse null", -1);
 			return str;
 		}
 	};
@@ -91,11 +91,31 @@ public class DefaultParser {
 			private SimpleDateFormat f = new SimpleDateFormat(format);
 			
 			@Override
-			public Date parse(String str) throws ParseException, NullPointerException {
+			public Date parse(String str) throws ParseException {
 				if (str == null)
-					throw new NullPointerException("Cannot parse null");
+					throw new ParseException("Cannot parse null", -1);
 				return f.parse(str);
 			}
 		};
+	}
+	
+	public static Parser getDefaultParser(DataType datatype, String format) throws IllegalArgumentException{
+		switch (datatype) {
+			case BOOLEAN:
+				return DefaultParser.BOOLEAN;
+			case INTEGER:
+				return DefaultParser.INTEGER;
+			case FLOAT:
+				return DefaultParser.FLOAT;
+			case DOUBLE:
+				return DefaultParser.DOUBLE;
+			case DATETIME:
+				if (format == null || format.equals(""))
+					new IllegalArgumentException("Have to provide datetime format");
+				return DefaultParser.datetime(format);
+			default:
+				new IllegalArgumentException("Unknown datatype");
+		}	
+		return null;
 	}
 }

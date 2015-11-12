@@ -36,11 +36,14 @@ import javax.swing.text.StyleContext;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
+
+import com.foxling.graphit.logfile.BadLine;
+import com.foxling.graphit.logfile.LogFile;
+import com.foxling.graphit.logfile.LogFile.Startup;
+
 import javax.swing.JTree;
 import javax.swing.JCheckBox;
 import javax.swing.JTextPane;
-
-import com.foxling.graphit.LogFile.Startup;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;

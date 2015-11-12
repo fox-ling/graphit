@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.foxling.graphit;
+package com.foxling.graphit.config;
 
 import java.awt.EventQueue;
 import java.util.Arrays;
@@ -26,30 +26,39 @@ import javax.swing.JPanel;
 import javax.swing.SpringLayout;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
-
-import org.joda.time.DateTime;
-
 import java.awt.BorderLayout;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.DefaultListModel;
+import javax.swing.AbstractListModel;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.ListModel;
 import javax.swing.JComboBox;
-import javax.swing.JSpinner;
 import javax.swing.JCheckBox;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
+import javax.swing.border.TitledBorder;
+
+import com.foxling.graphit.Core;
+import com.foxling.graphit.DataType;
+import com.foxling.graphit.Field;
+
+import javax.swing.JTabbedPane;
+import java.awt.FlowLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.JRadioButton;
+import javax.swing.SwingConstants;
+import net.miginfocom.swing.MigLayout;
+import java.awt.Color;
 
 public class ConfigFrame extends JFrame {
 	private static final long serialVersionUID = 3103016344816004897L;
 	private JPanel contentPane;
 	private JTextField iColumnName;
 	private JComboBox<CBXItem<String>> iColumnDelimiter;		
-	private JComboBox iDataType;
-	private JComboBox iFormat;
-	private DefaultListModel<Field> mdlFieldList;
+	private JComboBox<DataType> iDataType;
+	private JComboBox<String> iFormat;
+	private JList<Field> iFieldList;
 	
 	public ConfigFrame() {
 		super("Настройки");
@@ -61,50 +70,84 @@ public class ConfigFrame extends JFrame {
 		setContentPane(contentPane);
 		contentPane.setLayout(new BorderLayout(0, 0));
 		
-		JPanel panel = new JPanel();
-		contentPane.add(panel);
-		SpringLayout sl_panel = new SpringLayout();
-		panel.setLayout(sl_panel);
+		JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
+		contentPane.add(tabbedPane, BorderLayout.CENTER);
 		
-		JLabel lblFields = new JLabel("Настройка полей лог файла.");
-		sl_panel.putConstraint(SpringLayout.NORTH, lblFields, 10, SpringLayout.NORTH, panel);
-		sl_panel.putConstraint(SpringLayout.WEST, lblFields, 10, SpringLayout.WEST, panel);
-		panel.add(lblFields);
+		JPanel pnlGeneral = new JPanel();
+		tabbedPane.addTab("Общее", null, pnlGeneral, null);
+		pnlGeneral.setLayout(new BorderLayout(0, 0));
+		
+		JPanel pnlConfigLocation = new JPanel();
+		pnlConfigLocation.setBorder(new TitledBorder(null, "", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		pnlGeneral.add(pnlConfigLocation, BorderLayout.NORTH);
+		pnlConfigLocation.setLayout(new FlowLayout(FlowLayout.LEADING, 5, 5));
+		
+		JLabel lblConfigLocation = new JLabel("Хранилище настроек:");
+		lblConfigLocation.setVerticalAlignment(SwingConstants.BOTTOM);
+		pnlConfigLocation.add(lblConfigLocation);
+		
+		JRadioButton iWorkDir = new JRadioButton("Рабочая папка");
+		iWorkDir.setSelected(true);
+		pnlConfigLocation.add(iWorkDir);
+		
+		JRadioButton iCurrUser = new JRadioButton("Папка текущего пользователя");
+		pnlConfigLocation.add(iCurrUser);
+		
+		ButtonGroup groupConfigLocation = new ButtonGroup();
+	    groupConfigLocation.add(iWorkDir);
+	    groupConfigLocation.add(iCurrUser);
+	    
+	    JPanel panel = new JPanel();
+	    panel.setBorder(new TitledBorder(UIManager.getBorder("TitledBorder.border"), "Значения по умолчанию", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+	    pnlGeneral.add(panel, BorderLayout.CENTER);
+	    panel.setLayout(new MigLayout("", "[][grow]", "[][]"));
+	    
+	    JLabel label = new JLabel("Разделитель столбцов");
+	    panel.add(label, "cell 0 0,alignx trailing");
+	    
+	    JComboBox iDefaultFieldDelimiter = new JComboBox();
+	    panel.add(iDefaultFieldDelimiter, "cell 1 0,growx");
+	    
+	    JLabel lblNewLabel = new JLabel("Разделитель строк");
+	    panel.add(lblNewLabel, "cell 0 1,alignx trailing");
+	    
+	    JComboBox iDefaultLineDelimiter = new JComboBox();
+	    panel.add(iDefaultLineDelimiter, "cell 1 1,growx");
+		
+		JPanel pnlFields = new JPanel();
+		tabbedPane.addTab("Настройка полей", null, pnlFields, null);
+		SpringLayout sl_pnlFields = new SpringLayout();
+		pnlFields.setLayout(sl_pnlFields);
 		
 		JButton btnAddCol = new JButton("Добавить");
-		btnAddCol.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-			}
-		});
-		sl_panel.putConstraint(SpringLayout.NORTH, btnAddCol, 6, SpringLayout.SOUTH, lblFields);
-		sl_panel.putConstraint(SpringLayout.WEST, btnAddCol, 10, SpringLayout.WEST, panel);
-		panel.add(btnAddCol);
+		sl_pnlFields.putConstraint(SpringLayout.NORTH, btnAddCol, 6, SpringLayout.NORTH, pnlFields);
+		sl_pnlFields.putConstraint(SpringLayout.WEST, btnAddCol, 10, SpringLayout.WEST, pnlFields);
+		pnlFields.add(btnAddCol);
 		
 		JButton btnRemoveCol = new JButton("Удалить");
-		sl_panel.putConstraint(SpringLayout.NORTH, btnRemoveCol, 0, SpringLayout.NORTH, btnAddCol);
-		sl_panel.putConstraint(SpringLayout.WEST, btnRemoveCol, 6, SpringLayout.EAST, btnAddCol);
-		panel.add(btnRemoveCol);
+		sl_pnlFields.putConstraint(SpringLayout.NORTH, btnRemoveCol, 0, SpringLayout.NORTH, btnAddCol);
+		sl_pnlFields.putConstraint(SpringLayout.WEST, btnRemoveCol, 6, SpringLayout.EAST, btnAddCol);
+		pnlFields.add(btnRemoveCol);
 		
 		JScrollPane scrollPane = new JScrollPane();
-		sl_panel.putConstraint(SpringLayout.NORTH, scrollPane, 6, SpringLayout.SOUTH, btnAddCol);
-		sl_panel.putConstraint(SpringLayout.WEST, scrollPane, 0, SpringLayout.WEST, btnAddCol);
-		sl_panel.putConstraint(SpringLayout.EAST, scrollPane, 0, SpringLayout.EAST, btnRemoveCol);
-		sl_panel.putConstraint(SpringLayout.SOUTH, scrollPane, -6, SpringLayout.SOUTH, panel);
-		panel.add(scrollPane);
+		sl_pnlFields.putConstraint(SpringLayout.NORTH, scrollPane, 6, SpringLayout.SOUTH, btnAddCol);
+		sl_pnlFields.putConstraint(SpringLayout.WEST, scrollPane, 0, SpringLayout.WEST, btnAddCol);
+		sl_pnlFields.putConstraint(SpringLayout.EAST, scrollPane, 0, SpringLayout.EAST, btnRemoveCol);
+		sl_pnlFields.putConstraint(SpringLayout.SOUTH, scrollPane, -6, SpringLayout.SOUTH, pnlFields);
+		pnlFields.add(scrollPane);
 		
-		mdlFieldList = new DefaultListModel<Field>();
-		JList<Field> fieldList = new JList<Field>(mdlFieldList);
-		scrollPane.setViewportView(fieldList);
+		iFieldList = new JList<Field>();
+		scrollPane.setViewportView(iFieldList);
 		
 		JPanel pnlMisc = new JPanel();
-		sl_panel.putConstraint(SpringLayout.NORTH, pnlMisc, 0, SpringLayout.NORTH, btnAddCol);
-		sl_panel.putConstraint(SpringLayout.WEST, pnlMisc, 6, SpringLayout.EAST, btnRemoveCol);
-		sl_panel.putConstraint(SpringLayout.EAST, pnlMisc, -6, SpringLayout.EAST, panel);
-		sl_panel.putConstraint(SpringLayout.SOUTH, pnlMisc, -6, SpringLayout.SOUTH, panel);
-		panel.add(pnlMisc);
+		sl_pnlFields.putConstraint(SpringLayout.NORTH, pnlMisc, 0, SpringLayout.NORTH, btnAddCol);
+		sl_pnlFields.putConstraint(SpringLayout.WEST, pnlMisc, 6, SpringLayout.EAST, btnRemoveCol);
+		sl_pnlFields.putConstraint(SpringLayout.EAST, pnlMisc, -6, SpringLayout.EAST, pnlFields);
+		sl_pnlFields.putConstraint(SpringLayout.SOUTH, pnlMisc, -6, SpringLayout.SOUTH, pnlFields);
+		pnlFields.add(pnlMisc);
 		
 		JLabel lblColumnName = new JLabel("Имя");
-		JLabel lblColumnDelimiter = new JLabel("Разделитель столбца");
+		JLabel lblColumnDelimiter = new JLabel("Ограничитель столбца");
 		JLabel lblDataType = new JLabel("Тип данных");
 		JLabel lblFormat = new JLabel("Формат");
 		
@@ -113,7 +156,7 @@ public class ConfigFrame extends JFrame {
 		iColumnName = new JTextField();
 		//iColumnDelimiter = new JComboBox<CBXItem<String>>();		
 		//iDataType = new JComboBox<CBXItem<Class>>();
-		iFormat = new JComboBox();
+		iFormat = new JComboBox<String>();
 		
 		SpringLayout sl_pnlMisc = new SpringLayout();
 		
@@ -124,8 +167,8 @@ public class ConfigFrame extends JFrame {
 		sl_pnlMisc.putConstraint(SpringLayout.NORTH, iColumnDelimiter, 5, SpringLayout.SOUTH, iColumnName);
 		sl_pnlMisc.putConstraint(SpringLayout.WEST, iColumnDelimiter, 0, SpringLayout.WEST, iColumnName);
 		sl_pnlMisc.putConstraint(SpringLayout.EAST, iColumnDelimiter, 0, SpringLayout.EAST, iColumnName);
-
 		
+				
 		sl_pnlMisc.putConstraint(SpringLayout.NORTH, iDataType, 5, SpringLayout.SOUTH, iColumnDelimiter);
 		sl_pnlMisc.putConstraint(SpringLayout.WEST, iDataType, 0, SpringLayout.WEST, iColumnName);
 		sl_pnlMisc.putConstraint(SpringLayout.EAST, iDataType, 0, SpringLayout.EAST, iColumnName);
@@ -156,13 +199,15 @@ public class ConfigFrame extends JFrame {
 		sl_pnlMisc.putConstraint(SpringLayout.NORTH, iOptional, 6, SpringLayout.SOUTH, iFormat);
 		sl_pnlMisc.putConstraint(SpringLayout.WEST, iOptional, 0, SpringLayout.WEST, iColumnName);
 		pnlMisc.add(iOptional);
+		
 	}
 	
 	private void initControls(){
 		iColumnDelimiter = new JComboBox<CBXItem<String>>(new Vector<CBXItem<String>>(Arrays.asList(
-				new CBXItem<String>("{CR}{LF}", "\r\n"),
-				new CBXItem<String>("{CR}", "\r"),
-				new CBXItem<String>("{LF}", "\n"),
+				new CBXItem<String>(";{SPACE}", "; "),
+				new CBXItem<String>("{CR}{LF}", "{CR}{LF}"),
+				new CBXItem<String>("{CR}", "{CR}"),
+				new CBXItem<String>("{LF}", "{LF}"),
 				new CBXItem<String>("Точка с запятой {;}", ";"),
 				new CBXItem<String>("Двоеточие {:}", ":"),
 				new CBXItem<String>("Запятая {,}", ","),
@@ -170,7 +215,10 @@ public class ConfigFrame extends JFrame {
 				new CBXItem<String>("Вертикальная черта {|}", "|")
 		)));
 		
-		iDataType = new JComboBox<DataType>(DataType.values());
+		iDataType = new JComboBox<DataType>();
+		iDataType.setModel(new DefaultComboBoxModel<DataType>(DataType.values()));
+		
+		new ConfigController(iFieldList, Core.getConfigModel());
 	}
 
 	public static void main(String[] args) {

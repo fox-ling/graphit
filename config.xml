@@ -1,6 +1,99 @@
 <config>
-	<fields>
-		<field columnName="Дата/время" columnDelimiter="{;}" dataType="DATETIME" format="dd.MM.YYYY HH:mm:ss"/>
-		<field columnName="Натяжение" columnDelimiter="{CR}{LF}" dataType="FLOAT" format="dd.MM.YYYY HH:mm:ss"/>
-	</fields>
+	<defaults field-delimiter="; " line-delimiter="{CR}{LF}" date-format="dd.MM.YYYY HH:mm:ss" />
+	<field>
+		<name>время</name>
+		<description>Текущее время</description>
+		<delimiter>; </delimiter>
+		<datatype>TIME</datatype>
+		<format>HH:mm:ss</format>
+	</field>
+	<field>
+		<name>глуб.</name>
+		<description>Глубина в м.</description>
+		<delimiter>; </delimiter>
+		<datatype>INTEGER</datatype>
+	</field>
+	<field>
+		<name>натяж.</name>
+		<description>Натяжение проволки в кгс</description>
+		<delimiter>; </delimiter>
+		<datatype>FLOAT</datatype>
+	</field>
+	<field>
+		<name>ДВП</name>
+		<description>Датчик верхнего положения</description>
+		<delimiter>; </delimiter>
+		<datatype>BYTE</datatype>
+		<values>
+			<item value="-1" text="Обрыв" />
+			<item value="0" text="не ВП" />
+			<item value="+1" text="ВП" />
+		</values>
+	</field>
+	<field>
+		<name>Uтек</name>
+		<description>Напряжение в сети в Вольтах (на фазе L1)</description>
+		<delimiter>; </delimiter>
+		<datatype>SHORT</datatype>
+	</field>
+	<field>
+		<name>клав</name>
+		<description>Шестнадцатиричное значение (Карта адресов ModBus RTU, значение мнемоники knob_state)</description>
+		<delimiter>; </delimiter>
+		<datatype>STRING</datatype>
+	</field>
+	<field>
+		<name>F</name>
+		<description>Текущая скорость</description>
+		<delimiter>; </delimiter>
+		<datatype>BYTE</datatype>
+	</field>
+	<field>
+		<name>режим</name>
+		<description>Режим работы СУ</description>
+		<delimiter>; </delimiter>
+		<datatype>BYTE</datatype>
+		<values>
+			<item value="0" text="Ручной" />
+			<item value="1" text="Полуавтомат" />
+			<item value="2" text="Автомат" />
+		</values>
+	</field>
+	<field>
+		<name>ход</name>
+		<description>Направление хода скребка</description>
+		<delimiter>; </delimiter>
+		<datatype>STRING</datatype>
+		<values>
+			<item value="S" text="Останов" />
+			<item value="U" text="Вверх" />
+			<item value="D" text="Вниз" />
+		</values>
+	</field>
+	<field>
+		<name>(Ошиб)</name>
+		<description>Код ошибки (Карта адресов ModBus RTU, мнемоника - global_err_register)</description>
+		<delimiter>; </delimiter>
+		<datatype>SHORT</datatype>
+		<format>HEX</format>
+		<optional>1</optional>
+		<values bitmask="1">
+			<item value="0x0001" text='Восстановление после автоматического сброса по "зависанию"' />
+			<item value="0x0002" text="Недостаточно места на карте памяти" />
+			<item value="0x0004" text="Ошибка карты памяти SD" />
+			<item value="0x0008" text="Ошибка файловой системы на карте памяти SD" />
+			<item value="0x0010" text="Ошибка тензоизмерительного модуля (датчик натяжения)" />
+			<item value="0x0020" text="Обрыв внешней цепи датчика натяжения" />
+			<item value="0x0100" text="Обнаружены много кратные нажатия одной клавиши" />
+			<item value="0x0200" text='Обнаружено длительное удержание одной клавиши, возможно "залипание"' />
+			<item value="0x0400" text="Коэффициенты подстройки датчика натяжения повреждены, использованы значения по умолчанию" />
+			<item value="0x0800" text="Обрыв внешней цепи датчика натяжения" />
+		</values>
+	</field>
+	<field>
+		<name>хеш</name>
+		<description>Слово-ключ для защиты от изменения строк</description>
+		<delimiter>{CR}{LF}</delimiter>
+		<datatype>STRING</datatype>
+	</field>
 </config>

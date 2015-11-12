@@ -15,10 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.foxling.graphit;
+package com.foxling.graphit.logfile;
 
 public class BadLine {
-	public int lineID = -1;
+	public int lineNumber = -1;
 	public String line = "";
 	public String errorMsg = "";
 	/** Порядковый номер аргумента в котором возникла ошибка */

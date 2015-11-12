@@ -20,5 +20,5 @@ package com.foxling.graphit;
 import java.text.ParseException;
 
 public interface Parser<T> {
-	public T parse(String str) throws ParseException, NullPointerException;
+	public T parse(String str) throws ParseException;
 }
