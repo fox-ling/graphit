@@ -19,6 +19,7 @@ package com.foxling.graphit;
 
 import java.awt.EventQueue;
 import java.text.SimpleDateFormat;
+import java.util.logging.ConsoleHandler;
 import java.util.logging.Logger;
 import javax.swing.UIManager;
 import com.foxling.graphit.config.ConfigModel;
@@ -26,11 +27,16 @@ import com.foxling.graphit.config.ConfigModel;
 
 public class Core {
 	private static ConfigModel configModel = new ConfigModel();
-	private static final Logger LOG = Logger.getLogger("core");
+	private static final Logger LOG;
 
 	public static final SimpleDateFormat F_TIME = new SimpleDateFormat ("HH:mm:ss");
 	public static final SimpleDateFormat F_DATE = new SimpleDateFormat ("dd.MM.YYYY");
 	public static final SimpleDateFormat F_DATETIME = new SimpleDateFormat ("dd.MM.YYYY HH:mm:ss");
+	
+	static {
+		LOG = Logger.getLogger("core");
+		LOG.addHandler(new ConsoleHandler());
+	}
 	
 	public static void main(String[] args) {
 		try {

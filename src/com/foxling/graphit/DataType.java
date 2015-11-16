@@ -30,8 +30,8 @@ public enum DataType {
 	DOUBLE("Double", "DOUBLE", Double.class, null),
 	STRING("Строка", "STRING", String.class, null),
 	DATE("Дата", "DATE", LocalDate.class, new String[] {"dd.MM.YYYY"}),
-	TIME("Время", "DATE", LocalTime.class, new String[] {"HH:mm:ss"}),
-	DATETIME("Дата/Время", "DATE", LocalDateTime.class, new String[] {"dd.MM.YYYY HH:mm:ss"});
+	TIME("Время", "TIME", LocalTime.class, new String[] {"HH:mm:ss"}),
+	DATETIME("Дата/Время", "DATETIME", LocalDateTime.class, new String[] {"dd.MM.YYYY HH:mm:ss"});
 	
 	private final String caption;
 	private final String value;

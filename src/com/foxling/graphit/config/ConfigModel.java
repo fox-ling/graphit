@@ -185,8 +185,7 @@ public class ConfigModel {
 										}
 									} catch (Exception ex) {
 										valueSet = null;
-										ex.printStackTrace();
-										LOG.log(Level.WARNING, "Ошибка при загрузке набора значений поля {0}. Ошибка {1}", new Object[] { properties.get("name"), ex });
+										LOG.log(Level.WARNING, "Ошибка при загрузке набора значений поля \"{0}\". {1}", new Object[] { properties.get("name"), ex });
 									}
 								} else
 									properties.put(e.getName(), e.getText());
@@ -198,13 +197,12 @@ public class ConfigModel {
 									DataType.valueOf(properties.get("datatype")),
 									properties.get("delimiter"),
 									properties.get("format"),
-									properties.get("optional"),
-									valueSet
+									properties.get("optional")
 								);
 							fieldSet.add(field);
+							field.setValueSet(valueSet);
 						} catch (Exception e) {
-							System.out.println(e.getMessage());
-							e.printStackTrace();
+							LOG.log(Level.WARNING, "Ошибка при загрузке конфигурации поля \"{0}\". {1}", new Object[] { properties.get("name"), e });
 						}
 						break;
 				}

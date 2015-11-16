@@ -51,7 +51,7 @@ public class Field {
 	/** Object that converts string to field's {@link #datatype} */
 	private Parser parser;
 	
-	public Field(String name, String description, DataType datatype, String delimiter, String format, String isOptional, Map<String,String> valueSet) throws IllegalArgumentException {
+	public Field(String name, String description, DataType datatype, String delimiter, String format, String isOptional) throws Exception {
 		try {
 			setName(name);
 			setDescription(description);
@@ -60,9 +60,8 @@ public class Field {
 			setDelimiter(delimiter);
 			setOptional(isOptional);
 			setParser(DefaultParser.getDefaultParser(datatype, format));
-			setValueSet(valueSet);
-		} catch (IllegalArgumentException | ParseException e) {
-			throw new IllegalArgumentException("Ошибка при создании поля: " + e.getMessage());
+		} catch (Exception e) {
+			throw new Exception("Ошибка при создании поля: " + e.getMessage());
 		}
 	}
 	
@@ -129,7 +128,7 @@ public class Field {
 	
 	/** @throws ParseException 
 	 * @see {@link #valueSet} */
-	public void setValueSet(Map<String,String> valueSet) throws ParseException {
+	public void setValueSet(Map<String,String> valueSet) throws Exception {
 		if (valueSet == null || valueSet.size() == 0) {
 			this.valueSet = null;
 			return;
@@ -139,8 +138,8 @@ public class Field {
 		for (String key : valueSet.keySet()) {
 			try {
 				_valueSet.put(this.parser.parse(key), valueSet.get(key));
-			} catch (ParseException e) {
-				throw new ParseException(String.format("Не удалось конвертировать строку '%s' в тип %s", key, this.datatype.getCaption()), e.getErrorOffset());
+			} catch (Exception e) {
+				throw new Exception(String.format("Не удалось конвертировать строку '%s' в тип %s", key, this.datatype.getCaption()));
 			}
 		}
 		this.valueSet = _valueSet;
