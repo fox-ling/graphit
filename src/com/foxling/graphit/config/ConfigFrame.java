@@ -50,6 +50,18 @@ import javax.swing.JRadioButton;
 import javax.swing.SwingConstants;
 import net.miginfocom.swing.MigLayout;
 import java.awt.Color;
+import javax.swing.BoxLayout;
+import java.awt.Component;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
+import java.awt.Dimension;
+import javax.swing.JSpinner;
+import javax.swing.border.EtchedBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.border.MatteBorder;
+import javax.swing.border.SoftBevelBorder;
+import javax.swing.border.BevelBorder;
+import java.awt.Insets;
 
 public class ConfigFrame extends JFrame {
 	private static final long serialVersionUID = 3103016344816004897L;
@@ -59,11 +71,14 @@ public class ConfigFrame extends JFrame {
 	private JComboBox<DataType> iDataType;
 	private JComboBox<String> iFormat;
 	private JList<Field> iFieldList;
+	private JTextField edtFormat;
+	private JCheckBox iOptional;
+	private JTable tValues;
 	
 	public ConfigFrame() {
 		super("Настройки");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 464, 400);
+		setBounds(100, 100, 593, 400);
 		
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(1, 1, 1, 1));
@@ -116,90 +131,95 @@ public class ConfigFrame extends JFrame {
 		
 		JPanel pnlFields = new JPanel();
 		tabbedPane.addTab("Настройка полей", null, pnlFields, null);
-		SpringLayout sl_pnlFields = new SpringLayout();
-		pnlFields.setLayout(sl_pnlFields);
+		pnlFields.setLayout(new MigLayout("", "[][]", "[]"));
 		
-		JButton btnAddCol = new JButton("Добавить");
-		sl_pnlFields.putConstraint(SpringLayout.NORTH, btnAddCol, 6, SpringLayout.NORTH, pnlFields);
-		sl_pnlFields.putConstraint(SpringLayout.WEST, btnAddCol, 10, SpringLayout.WEST, pnlFields);
-		pnlFields.add(btnAddCol);
+		Insets toolButtonMargin = new Insets(2, 5, 2, 5);
+		Dimension spinButtonDimension = new Dimension(20, 16);
 		
-		JButton btnRemoveCol = new JButton("Удалить");
-		sl_pnlFields.putConstraint(SpringLayout.NORTH, btnRemoveCol, 0, SpringLayout.NORTH, btnAddCol);
-		sl_pnlFields.putConstraint(SpringLayout.WEST, btnRemoveCol, 6, SpringLayout.EAST, btnAddCol);
-		pnlFields.add(btnRemoveCol);
+		JPanel pnlFieldList = new JPanel();
+		pnlFieldList.setPreferredSize(new Dimension(100, 100));
+		pnlFields.add(pnlFieldList, "cell 0 0,grow");
+		pnlFieldList.setLayout(new MigLayout("", "[grow][]", "[grow]"));
 		
-		JScrollPane scrollPane = new JScrollPane();
-		sl_pnlFields.putConstraint(SpringLayout.NORTH, scrollPane, 6, SpringLayout.SOUTH, btnAddCol);
-		sl_pnlFields.putConstraint(SpringLayout.WEST, scrollPane, 0, SpringLayout.WEST, btnAddCol);
-		sl_pnlFields.putConstraint(SpringLayout.EAST, scrollPane, 0, SpringLayout.EAST, btnRemoveCol);
-		sl_pnlFields.putConstraint(SpringLayout.SOUTH, scrollPane, -6, SpringLayout.SOUTH, pnlFields);
-		pnlFields.add(scrollPane);
+		JScrollPane spFieldList = new JScrollPane();
+		pnlFieldList.add(spFieldList, "cell 0 0,growy");
 		
 		iFieldList = new JList<Field>();
-		scrollPane.setViewportView(iFieldList);
+		spFieldList.setViewportView(iFieldList);
+		
+		JPanel pnlFieldControls = new JPanel();
+		pnlFieldList.add(pnlFieldControls, "cell 1 0,aligny top");
+		pnlFieldControls.setLayout(new BoxLayout(pnlFieldControls, BoxLayout.Y_AXIS));
+		
+		JButton btnAddField = new JButton("+");
+		btnAddField.setMargin(toolButtonMargin);
+		pnlFieldControls.add(btnAddField);
+		
+		JButton btnRemoveField = new JButton("--");
+		btnRemoveField.setMargin(toolButtonMargin);
+		pnlFieldControls.add(btnRemoveField);
+		
+		JButton btnModifyField = new JButton("~");
+		btnModifyField.setMargin(toolButtonMargin);
+		pnlFieldControls.add(btnModifyField);
+		
+		JButton btnFieldUp = new JButton("˄");
+		btnFieldUp.setMargin(toolButtonMargin);
+		pnlFieldControls.add(btnFieldUp);
+		
+		JButton btnFieldDown = new JButton("˅");
+		btnFieldDown.setMargin(toolButtonMargin);
+		pnlFieldControls.add(btnFieldDown);
 		
 		JPanel pnlMisc = new JPanel();
-		sl_pnlFields.putConstraint(SpringLayout.NORTH, pnlMisc, 0, SpringLayout.NORTH, btnAddCol);
-		sl_pnlFields.putConstraint(SpringLayout.WEST, pnlMisc, 6, SpringLayout.EAST, btnRemoveCol);
-		sl_pnlFields.putConstraint(SpringLayout.EAST, pnlMisc, -6, SpringLayout.EAST, pnlFields);
-		sl_pnlFields.putConstraint(SpringLayout.SOUTH, pnlMisc, -6, SpringLayout.SOUTH, pnlFields);
-		pnlFields.add(pnlMisc);
+		pnlFields.add(pnlMisc, "cell 1 0,grow");
+		
 		
 		JLabel lblColumnName = new JLabel("Имя");
 		JLabel lblColumnDelimiter = new JLabel("Ограничитель столбца");
 		JLabel lblDataType = new JLabel("Тип данных");
+		JLabel lblOptional = new JLabel("Необязательное");
 		JLabel lblFormat = new JLabel("Формат");
-		
+		JPanel pnlFormat = new JPanel();
+		pnlFormat.setBorder(new TitledBorder(null, "", TitledBorder.LEADING, TitledBorder.TOP, null, null));
 		initControls();
 		
 		iColumnName = new JTextField();
-		//iColumnDelimiter = new JComboBox<CBXItem<String>>();		
-		//iDataType = new JComboBox<CBXItem<Class>>();
+		iOptional = new JCheckBox();
 		iFormat = new JComboBox<String>();
+		edtFormat = new JTextField();
+		pnlFormat.setLayout(new BoxLayout(pnlFormat, BoxLayout.Y_AXIS));
+		pnlFormat.add(iFormat);
+		pnlFormat.add(edtFormat);
 		
-		SpringLayout sl_pnlMisc = new SpringLayout();
+		pnlMisc.setLayout(new MigLayout("", "[grow][grow]", "[][][][][][grow]"));
+		pnlMisc.add(lblColumnName, "cell 0 0");
+		pnlMisc.add(iColumnName, "cell 1 0,growx");
+		pnlMisc.add(lblColumnDelimiter, "cell 0 1");
+		pnlMisc.add(iColumnDelimiter, "cell 1 1,growx");
+		pnlMisc.add(lblDataType, "cell 0 2");
+		pnlMisc.add(iDataType, "cell 1 2,growx");
+		pnlMisc.add(lblFormat, "cell 0 3");
+		pnlMisc.add(pnlFormat, "cell 1 3,grow");
+		pnlMisc.add(lblOptional, "cell 0 4");
+		pnlMisc.add(iOptional, "cell 1 4,growx");
 		
-		sl_pnlMisc.putConstraint(SpringLayout.NORTH, iColumnName, 6, SpringLayout.NORTH, pnlMisc);
-		sl_pnlMisc.putConstraint(SpringLayout.WEST, iColumnName, 122, SpringLayout.WEST, pnlMisc);
-		sl_pnlMisc.putConstraint(SpringLayout.EAST, iColumnName, -6, SpringLayout.EAST, pnlMisc);
+		JPanel pnlValues = new JPanel();
+		pnlValues.setBorder(new TitledBorder(null, "\u041D\u0430\u0431\u043E\u0440 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0439", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		pnlMisc.add(pnlValues, "cell 0 5 2 1,grow");
+		pnlValues.setLayout(new BoxLayout(pnlValues, BoxLayout.Y_AXIS));
 		
-		sl_pnlMisc.putConstraint(SpringLayout.NORTH, iColumnDelimiter, 5, SpringLayout.SOUTH, iColumnName);
-		sl_pnlMisc.putConstraint(SpringLayout.WEST, iColumnDelimiter, 0, SpringLayout.WEST, iColumnName);
-		sl_pnlMisc.putConstraint(SpringLayout.EAST, iColumnDelimiter, 0, SpringLayout.EAST, iColumnName);
+		JScrollPane spValues = new JScrollPane();
+		pnlValues.add(spValues);
 		
-				
-		sl_pnlMisc.putConstraint(SpringLayout.NORTH, iDataType, 5, SpringLayout.SOUTH, iColumnDelimiter);
-		sl_pnlMisc.putConstraint(SpringLayout.WEST, iDataType, 0, SpringLayout.WEST, iColumnName);
-		sl_pnlMisc.putConstraint(SpringLayout.EAST, iDataType, 0, SpringLayout.EAST, iColumnName);
-		
-		sl_pnlMisc.putConstraint(SpringLayout.NORTH, iFormat, 6, SpringLayout.SOUTH, iDataType);
-		sl_pnlMisc.putConstraint(SpringLayout.WEST, iFormat, 0, SpringLayout.WEST, iColumnName);
-		sl_pnlMisc.putConstraint(SpringLayout.EAST, iFormat, 0, SpringLayout.EAST, iColumnName);
-		
-		sl_pnlMisc.putConstraint(SpringLayout.SOUTH, lblColumnName, -3, SpringLayout.SOUTH, iColumnName);
-		sl_pnlMisc.putConstraint(SpringLayout.SOUTH, lblColumnDelimiter, -3, SpringLayout.SOUTH, iColumnDelimiter);
-		sl_pnlMisc.putConstraint(SpringLayout.SOUTH, lblDataType, -3, SpringLayout.SOUTH, iDataType);
-		sl_pnlMisc.putConstraint(SpringLayout.SOUTH, lblFormat, -3, SpringLayout.SOUTH, iFormat);
-		
-		
-		pnlMisc.setLayout(sl_pnlMisc);
-		
-		pnlMisc.add(iColumnName);
-		pnlMisc.add(iColumnDelimiter);
-		pnlMisc.add(iDataType);
-		pnlMisc.add(iFormat);
-		
-		pnlMisc.add(lblColumnName);
-		pnlMisc.add(lblColumnDelimiter);
-		pnlMisc.add(lblDataType);
-		pnlMisc.add(lblFormat);
-		
-		JCheckBox iOptional = new JCheckBox("Необязательное");
-		sl_pnlMisc.putConstraint(SpringLayout.NORTH, iOptional, 6, SpringLayout.SOUTH, iFormat);
-		sl_pnlMisc.putConstraint(SpringLayout.WEST, iOptional, 0, SpringLayout.WEST, iColumnName);
-		pnlMisc.add(iOptional);
-		
+		tValues = new JTable();
+		tValues.setModel(new DefaultTableModel(
+			new Object[][] {
+				{null, null},
+			},
+			new String[] { "Значение", "Описание" }
+		));
+		spValues.setViewportView(tValues);
 	}
 	
 	private void initControls(){
