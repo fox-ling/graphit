@@ -19,6 +19,8 @@ package com.foxling.graphit;
 
 import java.text.ParseException;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Field {
@@ -46,12 +48,12 @@ public class Field {
 	private boolean bitmask;
 	
 	/** Contains values that could appear in the field and its' descriptions */
-	private Map<Object,String> valueSet;
+	private List<Item<Object>> valueSet;
 	
 	/** Object that converts string to field's {@link #datatype} */
 	private Parser parser;
 	
-	public Field(String name, String description, DataType datatype, String delimiter, String format, String isOptional) throws Exception {
+	public Field(String name, String description, DataType datatype, String delimiter, String format, String isOptional, String bitmask) throws Exception {
 		try {
 			setName(name);
 			setDescription(description);
@@ -60,6 +62,7 @@ public class Field {
 			setDelimiter(delimiter);
 			setOptional(isOptional);
 			setParser(DefaultParser.getDefaultParser(datatype, format));
+			setBitmask(bitmask);
 		} catch (Exception e) {
 			throw new Exception("Ошибка при создании поля: " + e.getMessage());
 		}
@@ -113,9 +116,9 @@ public class Field {
 	
 	/** @see {@link #optional} */
 	public void setOptional(String optional) {
-		this.optional = optional != null && (optional.equals("true") || optional.equals("yes") || optional.equals("1"));
+		this.optional = parseBoolean(optional);
 	}
-	
+
 	/** @see {@link #optional} */
 	public void setOptional(boolean optional) {
 		this.optional = optional;
@@ -128,21 +131,25 @@ public class Field {
 	
 	/** @throws ParseException 
 	 * @see {@link #valueSet} */
-	public void setValueSet(Map<String,String> valueSet) throws Exception {
+	public void setValueSet(List<Item<Object>> valueSet) throws Exception {
 		if (valueSet == null || valueSet.size() == 0) {
 			this.valueSet = null;
 			return;
 		}
 		
-		Map<Object,String> _valueSet = new HashMap<Object,String>(valueSet.size());
-		for (String key : valueSet.keySet()) {
+		for (Item<Object> key : valueSet) {
 			try {
-				_valueSet.put(this.parser.parse(key), valueSet.get(key));
+				key.value = this.parser.parse(key.source);
 			} catch (Exception e) {
-				throw new Exception(String.format("Не удалось конвертировать строку '%s' в тип %s", key, this.datatype.getCaption()));
+				throw new Exception(String.format("Не удалось конвертировать строку '%s' в тип %s", key.source, this.datatype.getCaption()));
 			}
 		}
-		this.valueSet = _valueSet;
+		this.valueSet = valueSet;
+	}
+	
+	/** @see {@link #bitmask} */
+	public void setBitmask(String bitmask) {
+		this.bitmask = parseBoolean(bitmask);
 	}
 	
 	/** @see {@link #bitmask} */
@@ -165,10 +172,16 @@ public class Field {
 	/** @see {@link #optional} */
 	public boolean isOptional() { return optional; }
 	/** @see {@link #valueSet} */
-	public Map<Object, String> getValueSet() { return valueSet; }
+	public List<Item<Object>> getValueSet() { return valueSet; }
 	/** @see {@link #bitmask} */
 	public boolean isBitmask() { return bitmask; }
 
 	@Override
 	public String toString() { return name; }
+	
+	/** String to boolean converter
+	 * @return <code>true</code> if <code><b>text</b></code> in ["true", "yes", "1"] */
+	private boolean parseBoolean(String text) {
+		return text != null && (text.equals("true") || text.equals("yes") || text.equals("1"));
+	}
 }

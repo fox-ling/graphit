@@ -42,6 +42,7 @@ import javax.swing.border.TitledBorder;
 import com.foxling.graphit.Core;
 import com.foxling.graphit.DataType;
 import com.foxling.graphit.Field;
+import com.foxling.graphit.Item;
 
 import javax.swing.JTabbedPane;
 import java.awt.FlowLayout;
@@ -67,7 +68,7 @@ public class ConfigFrame extends JFrame {
 	private static final long serialVersionUID = 3103016344816004897L;
 	private JPanel contentPane;
 	private JTextField iColumnName;
-	private JComboBox<CBXItem<String>> iColumnDelimiter;		
+	private JComboBox<Item<String>> iColumnDelimiter;		
 	private JComboBox<DataType> iDataType;
 	private JComboBox<String> iFormat;
 	private JList<Field> iFieldList;
@@ -223,16 +224,16 @@ public class ConfigFrame extends JFrame {
 	}
 	
 	private void initControls(){
-		iColumnDelimiter = new JComboBox<CBXItem<String>>(new Vector<CBXItem<String>>(Arrays.asList(
-				new CBXItem<String>(";{SPACE}", "; "),
-				new CBXItem<String>("{CR}{LF}", "{CR}{LF}"),
-				new CBXItem<String>("{CR}", "{CR}"),
-				new CBXItem<String>("{LF}", "{LF}"),
-				new CBXItem<String>("Точка с запятой {;}", ";"),
-				new CBXItem<String>("Двоеточие {:}", ":"),
-				new CBXItem<String>("Запятая {,}", ","),
-				new CBXItem<String>("Табуляция {t}", "\t"),
-				new CBXItem<String>("Вертикальная черта {|}", "|")
+		iColumnDelimiter = new JComboBox<Item<String>>(new Vector<Item<String>>(Arrays.asList(
+				new Item<String>(";{SPACE}", "; "),
+				new Item<String>("{CR}{LF}", "{CR}{LF}"),
+				new Item<String>("{CR}", "{CR}"),
+				new Item<String>("{LF}", "{LF}"),
+				new Item<String>("Точка с запятой {;}", ";"),
+				new Item<String>("Двоеточие {:}", ":"),
+				new Item<String>("Запятая {,}", ","),
+				new Item<String>("Табуляция {t}", "\t"),
+				new Item<String>("Вертикальная черта {|}", "|")
 		)));
 		
 		iDataType = new JComboBox<DataType>();
@@ -257,27 +258,5 @@ public class ConfigFrame extends JFrame {
 				}
 			}
 		});
-	}
-
-	private class CBXItem<T> {
-		private String caption;
-		private T value;
-		
-		public CBXItem(String caption, T value) {
-			this.caption = caption;
-			this.value = value;
-		}
-
-		public String getCaption() {
-			return caption;
-		}
-
-		public T getValue() {
-			return value;
-		}
-		
-		public String toString(){
-			return caption;
-		}
 	}
 }

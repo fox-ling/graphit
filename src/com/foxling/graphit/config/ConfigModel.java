@@ -26,6 +26,7 @@ import java.util.EventObject;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -44,10 +45,11 @@ import org.jdom2.output.XMLOutputter;
 import com.foxling.graphit.Core;
 import com.foxling.graphit.DataType;
 import com.foxling.graphit.Field;
+import com.foxling.graphit.Item;
 
 public class ConfigModel {
 	public static void main(String[] args) {
-		Core.getConfigModel();//.saveConfig();
+		Core.getConfigModel().saveConfig();
 		System.out.println("the end!");
 	}
 	
@@ -166,25 +168,25 @@ public class ConfigModel {
 			nodes.forEach(node -> {
 				switch(node.getName()) {
 					case "defaults":
-						node.getAttributes().forEach(attr -> {
-							setProperty(attr.getName(), attr.getValue());
+						node.getChildren().forEach(e -> {
+							setProperty(e.getName(), e.getValue());
 						});
 						break;
 					case "field":
 						try {
 							Map<String,String> properties = new HashMap<String,String>(node.getChildren().size());
-							Map<String,String> valueSet = null;
+							List<Item<Object>> values = null;
 							List<Element> elements = node.getChildren();
 							for (Element e : elements) {
 								if (e.getName() == "values") {
 									try {
 										List<Element> items = e.getChildren();
-										valueSet = new HashMap<String,String>(items.size());
+										values = new ArrayList<Item<Object>>(items.size());
 										for (Element item : items){
-											valueSet.put(item.getAttributeValue("value"), item.getAttributeValue("text"));
+											values.add(new Item<Object>(null, item.getAttributeValue("text"), item.getAttributeValue("value")));
 										}
 									} catch (Exception ex) {
-										valueSet = null;
+										values = null;
 										LOG.log(Level.WARNING, "Ошибка при загрузке набора значений поля \"{0}\". {1}", new Object[] { properties.get("name"), ex });
 									}
 								} else
@@ -197,10 +199,11 @@ public class ConfigModel {
 									DataType.valueOf(properties.get("datatype")),
 									properties.get("delimiter"),
 									properties.get("format"),
-									properties.get("optional")
+									properties.get("optional"),
+									properties.get("bitmask")
 								);
 							fieldSet.add(field);
-							field.setValueSet(valueSet);
+							field.setValueSet(values);
 						} catch (Exception e) {
 							LOG.log(Level.WARNING, "Ошибка при загрузке конфигурации поля \"{0}\". {1}", new Object[] { properties.get("name"), e });
 						}
@@ -214,34 +217,53 @@ public class ConfigModel {
 		}
 	}
 	
+	private Element xmlElementFactory(String tagname, String value) {
+		Element e = new Element(tagname);
+		e.setText(value);
+		return e;
+	}
+	
 	public void saveConfig(){
 		try{
 	         Element eRoot = new Element("config");
-	         Document doc = new Document(eRoot);			
-	         
-	         Element eDefaults = new Element("defaults");
+	         Document doc = new Document(eRoot);
+	         Element defaults = new Element("defaults");
 	         properties.forEach((key, value) -> {
-	        	 eDefaults.setAttribute(new Attribute(key, value));
+	        	 defaults.addContent(xmlElementFactory(key, value));
 	         });
-	         eRoot.addContent(eDefaults);
+	         eRoot.addContent(defaults);
 
 	         fieldSet.forEach((field) -> {
 	        	 Element eField = new Element("field");
-	        	 eField.setAttributes(Arrays.asList(
-	        			 new Attribute("name", field.getName()),
-	        			 new Attribute("description", field.getDescription()),
-	        			 new Attribute("delimiter", field.getDelimiter()),
-	        			 new Attribute("datatype", field.getDatatype().getValue())
-	        	 ));
+	        	 eField.addContent(xmlElementFactory("name", field.getName()));
+	        	 eField.addContent(xmlElementFactory("description", field.getDescription()));
+	        	 eField.addContent(xmlElementFactory("delimiter", field.getDelimiter()));
+	        	 eField.addContent(xmlElementFactory("datatype", field.getDatatype().getValue()));
+	        	 
 	        	 if (field.getFormat() != null)
-	        		 eField.setAttribute(new Attribute("format", field.getFormat()));
+	        		 eField.addContent(xmlElementFactory("format", field.getFormat()));
 	        	 
 	        	 if (field.isOptional())
-	        		 eField.setAttribute(new Attribute("optional", "1"));
+	        		 eField.addContent(xmlElementFactory("optional", "1"));
+	        	 
+	        	 if (field.isBitmask())
+	        		 eField.addContent(xmlElementFactory("bitmask", "1"));
+	        	 
+	        	 List<Item<Object>> values = field.getValueSet();
+	        	 if (values != null && !values.isEmpty()) {
+	        		 Element eValues = new Element("values");
+	        		 values.forEach((value) -> {
+	        			 Element item = new Element("item");
+	        			 item.setAttribute("value", value.source);
+	        			 item.setAttribute("text", value.caption);
+	        			 eValues.addContent(item);	        			 
+	        		 });
+	        		 eField.addContent(eValues);
+	        	 }
 	        	 
 	        	 eRoot.addContent(eField);
 	         });
-
+	         
 	         XMLOutputter xmlOutput = new XMLOutputter();
 	         xmlOutput.setFormat(Format.getPrettyFormat());
 	         xmlOutput.output(doc, System.out);

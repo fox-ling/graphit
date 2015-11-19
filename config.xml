@@ -1,5 +1,9 @@
 <config>
-	<defaults field-delimiter="; " line-delimiter="{CR}{LF}" date-format="dd.MM.YYYY HH:mm:ss" />
+	<defaults>
+		<field-delimiter>; </field-delimiter>
+		<line-delimiter>{CR}{LF}</line-delimiter>
+		<date-format>dd.MM.YYYY HH:mm:ss</date-format>
+	</defaults>
 	<field>
 		<name>время</name>
 		<description>Текущее время</description>
@@ -77,7 +81,8 @@
 		<datatype>SHORT</datatype>
 		<format>HEX</format>
 		<optional>1</optional>
-		<values bitmask="1">
+		<bitmask>1</bitmask>
+		<values>
 			<item value="0x0001" text='Восстановление после автоматического сброса по "зависанию"' />
 			<item value="0x0002" text="Недостаточно места на карте памяти" />
 			<item value="0x0004" text="Ошибка карты памяти SD" />
