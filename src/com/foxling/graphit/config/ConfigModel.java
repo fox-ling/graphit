@@ -41,6 +41,7 @@ import org.jdom2.JDOMException;
 import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
+import org.jfree.util.Log;
 
 import com.foxling.graphit.Core;
 import com.foxling.graphit.DataType;
@@ -73,6 +74,7 @@ public class ConfigModel {
 		fieldSet = new ArrayList<Field>();
 		listeners = new HashSet<ConfigModelListener>();
 		
+		setDefaults();
 		try {
 			file = getConfigFile();
 			if (file != null) {
@@ -90,9 +92,11 @@ public class ConfigModel {
 	public void setDefaults(){
 		fieldSet.clear();
 		properties.clear();
-		properties.put("fielddelimiter", "; ");
-		properties.put("linedelimiter", "{CR}{LF}");
-		properties.put("dateformat", "dd.MM.YYYY HH:mm:ss");
+		properties.put("field-delimiter", "; ");
+		properties.put("line-delimiter", "{CR}{LF}");
+		properties.put("date-format", "dd.MM.YYYY");
+		properties.put("time-format", "HH:mm:ss");
+		properties.put("datetime-format", "dd.MM.YYYY HH:mm:ss");
 	}
 	
 	public String getProperty(String name) {
@@ -237,7 +241,7 @@ public class ConfigModel {
 	        	 Element eField = new Element("field");
 	        	 eField.addContent(xmlElementFactory("name", field.getName()));
 	        	 eField.addContent(xmlElementFactory("description", field.getDescription()));
-	        	 eField.addContent(xmlElementFactory("delimiter", field.getDelimiter()));
+	        	 eField.addContent(xmlElementFactory("delimiter", field.getDelimiter().getValue()));
 	        	 eField.addContent(xmlElementFactory("datatype", field.getDatatype().getValue()));
 	        	 
 	        	 if (field.getFormat() != null)
@@ -279,6 +283,41 @@ public class ConfigModel {
 	
 	public Field getField(int index){
 		return this.fieldSet.get(index);
+	}
+	
+	public void addFieldAfter(Field prevField) {
+		try {
+			Field newField = new Field("Новое поле", "", DataType.STRING, properties.get("field-delimiter"), null, "0", "0");
+			
+			int id = -1;
+			if (prevField == null) {
+				fieldSet.add(newField);
+				id = fieldSet.size() - 1;
+			} else {
+				id = fieldSet.indexOf(prevField) + 1;
+				if (id == 0)
+					throw new IllegalArgumentException("Предыдущего поля нет в списке полей");
+				fieldSet.add(id, newField);
+			}
+			
+			fireFieldSetChanged();
+		} catch (Exception e) {
+			Log.error("Не удалось создать новое поле", e);
+		}
+	}
+	
+	public void removeField(Field field) {
+		removeFields(Arrays.asList(field));
+	}
+	
+	public void removeFields(List<Field> list) {
+		boolean result = false;
+		for (Field field : list) {
+			if (fieldSet.remove(field))
+				result = true;
+		}
+		if (result)
+			fireFieldSetChanged();
 	}
 	
 	public void fireFieldSetChanged() {

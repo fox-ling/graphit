@@ -18,10 +18,7 @@
 package com.foxling.graphit;
 
 import java.text.ParseException;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public class Field {
 	/** Short name of the field, it's gonna appear<br>
@@ -38,7 +35,7 @@ public class Field {
 	private String format;
 	
 	/** Divisor between current and next fields */
-	private String delimiter;
+	private FieldDelimiter delimiter;
 	
 	/** Optional field could not appear in a line of the log file.<br>
 	 * *Only one field can be optional */
@@ -52,6 +49,7 @@ public class Field {
 	
 	/** Object that converts string to field's {@link #datatype} */
 	private Parser parser;
+	
 	
 	public Field(String name, String description, DataType datatype, String delimiter, String format, String isOptional, String bitmask) throws Exception {
 		try {
@@ -110,6 +108,13 @@ public class Field {
 	public void setDelimiter(String delimiter) {
 		if (delimiter == null || delimiter.equals(""))
 			throw new IllegalArgumentException("Ограничитель не должен быть пустым");
+		setDelimiter(FieldDelimiter.valueOf(delimiter));
+	}
+	
+	/** @see {@link #delimiter} */
+	public void setDelimiter(FieldDelimiter delimiter) {
+		if (delimiter == null)
+			throw new IllegalArgumentException("Ограничитель не должен быть пустым");
 		
 		this.delimiter = delimiter;
 	}
@@ -164,7 +169,7 @@ public class Field {
 	/** @see {@link #datatype} */
 	public DataType getDatatype() { return datatype; }
 	/** @see {@link #delimiter} */
-	public String getDelimiter() { return delimiter; }
+	public FieldDelimiter getDelimiter() { return delimiter; }
 	/** @see {@link #format} */
 	public String getFormat() { return format; }
 	/** @see {@link #parser} */

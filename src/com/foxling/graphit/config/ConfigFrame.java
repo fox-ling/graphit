@@ -38,10 +38,15 @@ import javax.swing.ListModel;
 import javax.swing.JComboBox;
 import javax.swing.JCheckBox;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 
 import com.foxling.graphit.Core;
 import com.foxling.graphit.DataType;
 import com.foxling.graphit.Field;
+import com.foxling.graphit.FieldDelimiter;
 import com.foxling.graphit.Item;
 
 import javax.swing.JTabbedPane;
@@ -63,15 +68,26 @@ import javax.swing.border.MatteBorder;
 import javax.swing.border.SoftBevelBorder;
 import javax.swing.border.BevelBorder;
 import java.awt.Insets;
+import javax.swing.JPopupMenu;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import javax.swing.JMenuItem;
+import javax.swing.JMenu;
+import javax.swing.JRadioButtonMenuItem;
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
 
 public class ConfigFrame extends JFrame {
 	private static final long serialVersionUID = 3103016344816004897L;
 	private JPanel contentPane;
 	private JTextField iColumnName;
-	private JComboBox<Item<String>> iColumnDelimiter;		
+	private JComboBox<FieldDelimiter> iFieldDelimiter;		
 	private JComboBox<DataType> iDataType;
 	private JComboBox<String> iFormat;
+	private FieldListModel mdlFieldList;
 	private JList<Field> iFieldList;
+	private JMenuItem miAddField;
+	private JMenuItem miRemoveField;
 	private JTextField edtFormat;
 	private JCheckBox iOptional;
 	private JTable tValues;
@@ -134,43 +150,25 @@ public class ConfigFrame extends JFrame {
 		tabbedPane.addTab("Настройка полей", null, pnlFields, null);
 		pnlFields.setLayout(new MigLayout("", "[][]", "[]"));
 		
-		Insets toolButtonMargin = new Insets(2, 5, 2, 5);
-		Dimension spinButtonDimension = new Dimension(20, 16);
-		
 		JPanel pnlFieldList = new JPanel();
 		pnlFieldList.setPreferredSize(new Dimension(100, 100));
 		pnlFields.add(pnlFieldList, "cell 0 0,grow");
-		pnlFieldList.setLayout(new MigLayout("", "[grow][]", "[grow]"));
+		pnlFieldList.setLayout(new BoxLayout(pnlFieldList, BoxLayout.X_AXIS));
 		
 		JScrollPane spFieldList = new JScrollPane();
-		pnlFieldList.add(spFieldList, "cell 0 0,growy");
+		pnlFieldList.add(spFieldList);
 		
 		iFieldList = new JList<Field>();
 		spFieldList.setViewportView(iFieldList);
 		
-		JPanel pnlFieldControls = new JPanel();
-		pnlFieldList.add(pnlFieldControls, "cell 1 0,aligny top");
-		pnlFieldControls.setLayout(new BoxLayout(pnlFieldControls, BoxLayout.Y_AXIS));
+		JPopupMenu pmFieldList = new JPopupMenu();
+		addPopup(iFieldList, pmFieldList);
 		
-		JButton btnAddField = new JButton("+");
-		btnAddField.setMargin(toolButtonMargin);
-		pnlFieldControls.add(btnAddField);
+		miAddField = new JMenuItem("Добавить");
+		pmFieldList.add(miAddField);
 		
-		JButton btnRemoveField = new JButton("--");
-		btnRemoveField.setMargin(toolButtonMargin);
-		pnlFieldControls.add(btnRemoveField);
-		
-		JButton btnModifyField = new JButton("~");
-		btnModifyField.setMargin(toolButtonMargin);
-		pnlFieldControls.add(btnModifyField);
-		
-		JButton btnFieldUp = new JButton("˄");
-		btnFieldUp.setMargin(toolButtonMargin);
-		pnlFieldControls.add(btnFieldUp);
-		
-		JButton btnFieldDown = new JButton("˅");
-		btnFieldDown.setMargin(toolButtonMargin);
-		pnlFieldControls.add(btnFieldDown);
+		miRemoveField = new JMenuItem("Удалить");
+		pmFieldList.add(miRemoveField);
 		
 		JPanel pnlMisc = new JPanel();
 		pnlFields.add(pnlMisc, "cell 1 0,grow");
@@ -197,7 +195,7 @@ public class ConfigFrame extends JFrame {
 		pnlMisc.add(lblColumnName, "cell 0 0");
 		pnlMisc.add(iColumnName, "cell 1 0,growx");
 		pnlMisc.add(lblColumnDelimiter, "cell 0 1");
-		pnlMisc.add(iColumnDelimiter, "cell 1 1,growx");
+		pnlMisc.add(iFieldDelimiter, "cell 1 1,growx");
 		pnlMisc.add(lblDataType, "cell 0 2");
 		pnlMisc.add(iDataType, "cell 1 2,growx");
 		pnlMisc.add(lblFormat, "cell 0 3");
@@ -224,22 +222,13 @@ public class ConfigFrame extends JFrame {
 	}
 	
 	private void initControls(){
-		iColumnDelimiter = new JComboBox<Item<String>>(new Vector<Item<String>>(Arrays.asList(
-				new Item<String>(";{SPACE}", "; "),
-				new Item<String>("{CR}{LF}", "{CR}{LF}"),
-				new Item<String>("{CR}", "{CR}"),
-				new Item<String>("{LF}", "{LF}"),
-				new Item<String>("Точка с запятой {;}", ";"),
-				new Item<String>("Двоеточие {:}", ":"),
-				new Item<String>("Запятая {,}", ","),
-				new Item<String>("Табуляция {t}", "\t"),
-				new Item<String>("Вертикальная черта {|}", "|")
-		)));
+		iFieldDelimiter = new JComboBox<FieldDelimiter>(new DefaultComboBoxModel<FieldDelimiter>(FieldDelimiter.values()));
 		
 		iDataType = new JComboBox<DataType>();
 		iDataType.setModel(new DefaultComboBoxModel<DataType>(DataType.values()));
 		
-		new ConfigController(iFieldList, Core.getConfigModel());
+		fieldListController();
+		fieldEditorController();
 	}
 
 	public static void main(String[] args) {
@@ -258,5 +247,70 @@ public class ConfigFrame extends JFrame {
 				}
 			}
 		});
+	}
+	
+	private static void addPopup(Component component, final JPopupMenu popup) {
+		component.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				if (e.isPopupTrigger()) {
+					showMenu(e);
+				}
+			}
+			public void mouseReleased(MouseEvent e) {
+				if (e.isPopupTrigger()) {
+					showMenu(e);
+				}
+			}
+			private void showMenu(MouseEvent e) {
+				popup.show(e.getComponent(), e.getX(), e.getY());
+			}
+		});
+	}
+	
+	private void fieldListController(){
+		mdlFieldList = new FieldListModel();
+		iFieldList.setModel(mdlFieldList);
+		iFieldList.repaint();
+		
+		Core.getConfigModel().addConfigModelListener((evt) -> {
+			mdlFieldList.refresh();
+		});
+		
+		miAddField.addActionListener((ActionEvent arg0) -> {
+			Core.getConfigModel().addFieldAfter(iFieldList.getSelectedValue());
+		});
+		
+		miRemoveField.addActionListener((ActionEvent arg0) -> {
+			Core.getConfigModel().removeFields(iFieldList.getSelectedValuesList());
+		});
+	}
+	
+	private void fieldEditorController(){
+		iFieldList.addListSelectionListener((evt) -> {
+			Field field = iFieldList.getSelectedValue();
+			//iFieldDelimiter.setSelectedItem(anObject);
+			//field.getName() 			field.getDe
+		});
+	}
+	
+	private class FieldListModel
+	extends AbstractListModel<Field> {
+		private static final long serialVersionUID = -6222628541194781163L;
+
+		@Override
+		public Field getElementAt(int index) {
+			return Core.getConfigModel().getField(index);
+		}
+
+		@Override
+		public int getSize() {
+			return Core.getConfigModel().getFieldSetSize();
+		}
+		
+		public void refresh(){
+			int length = getSize();
+			if (length > 0)
+				this.fireContentsChanged(this, 0, length);
+		}
 	}
 }
