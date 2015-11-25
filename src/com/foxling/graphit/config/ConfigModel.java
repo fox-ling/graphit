@@ -179,15 +179,15 @@ public class ConfigModel {
 					case "field":
 						try {
 							Map<String,String> properties = new HashMap<String,String>(node.getChildren().size());
-							List<Item<Object>> values = null;
+							List<Item> values = null;
 							List<Element> elements = node.getChildren();
 							for (Element e : elements) {
 								if (e.getName() == "values") {
 									try {
 										List<Element> items = e.getChildren();
-										values = new ArrayList<Item<Object>>(items.size());
+										values = new ArrayList<Item>(items.size());
 										for (Element item : items){
-											values.add(new Item<Object>(null, item.getAttributeValue("text"), item.getAttributeValue("value")));
+											values.add(new Item(null, item.getAttributeValue("text"), item.getAttributeValue("value")));
 										}
 									} catch (Exception ex) {
 										values = null;
@@ -241,7 +241,7 @@ public class ConfigModel {
 	        	 Element eField = new Element("field");
 	        	 eField.addContent(xmlElementFactory("name", field.getName()));
 	        	 eField.addContent(xmlElementFactory("description", field.getDescription()));
-	        	 eField.addContent(xmlElementFactory("delimiter", field.getDelimiter().getValue()));
+	        	 eField.addContent(xmlElementFactory("delimiter", field.getDelimiter().name()));
 	        	 eField.addContent(xmlElementFactory("datatype", field.getDatatype().getValue()));
 	        	 
 	        	 if (field.getFormat() != null)
@@ -253,14 +253,14 @@ public class ConfigModel {
 	        	 if (field.isBitmask())
 	        		 eField.addContent(xmlElementFactory("bitmask", "1"));
 	        	 
-	        	 List<Item<Object>> values = field.getValueSet();
+	        	 List<Item> values = field.getValueList();
 	        	 if (values != null && !values.isEmpty()) {
 	        		 Element eValues = new Element("values");
 	        		 values.forEach((value) -> {
 	        			 Element item = new Element("item");
 	        			 item.setAttribute("value", value.source);
 	        			 item.setAttribute("text", value.caption);
-	        			 eValues.addContent(item);	        			 
+	        			 eValues.addContent(item);
 	        		 });
 	        		 eField.addContent(eValues);
 	        	 }

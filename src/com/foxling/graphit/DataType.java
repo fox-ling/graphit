@@ -20,27 +20,33 @@ package com.foxling.graphit;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Arrays;
+import java.util.List;
 
 public enum DataType {
 	BOOLEAN("Логический", "BOOLEAN", Boolean.class, null),
 	BYTE("Целое число (1 байт)", "BYTE", Byte.class, null),
 	SHORT("Целое число (2 байта)", "SHORT", Short.class, null),
-	INTEGER("Целое число (4 байта)", "INTEGER", Integer.class, new String[] {"DEC [10]", "HEX [16]", "BOOL [2]", "OCT [8]"}),
+	INTEGER("Целое число (4 байта)", "INTEGER", Integer.class, Arrays.asList(
+					new Item(10, "DEC [10]"),
+					new Item(16, "HEX [16]"),
+					new Item(2, "BOOL [2]"),
+					new Item(8, "OCT [8]")
+	)),
 	FLOAT("Float", "FLOAT", Float.class, null),
 	DOUBLE("Double", "DOUBLE", Double.class, null),
 	STRING("Строка", "STRING", String.class, null),
-	DATE("Дата", "DATE", LocalDate.class, new String[] {"dd.MM.YYYY"}),
-	TIME("Время", "TIME", LocalTime.class, new String[] {"HH:mm:ss"}),
-	DATETIME("Дата/Время", "DATETIME", LocalDateTime.class, new String[] {"dd.MM.YYYY HH:mm:ss"});
+	DATE("Дата", "DATE", LocalDate.class, Arrays.asList(new Item("dd.MM.YYYY"))),
+	TIME("Время", "TIME", LocalTime.class, Arrays.asList(new Item("HH:mm:ss"))),
+	DATETIME("Дата/Время", "DATETIME", LocalDateTime.class, Arrays.asList(new Item("dd.MM.YYYY HH:mm:ss")));
 	
 	private final String caption;
 	private final String value;
-
 	private final Class _class;
-	private final String[] formatList;
+	private final List<Item> formatList;
 	
 	/** @param parser default parser */
-	DataType(String caption, String value, Class _class, String[] formatList){
+	DataType(String caption, String value, Class _class, List<Item> formatList){
 		this.caption = caption;
 		this.value = value;
 		this._class = _class;
@@ -58,8 +64,20 @@ public enum DataType {
 		return _class;
 	}
 
-	public String[] getFormatList() {
+	public List<Item> getFormatList() {
 		return formatList;
+	}
+	
+	public Item getFormat(Object value){
+		if (formatList == null || value == null)
+			return null;
+		
+		for (Item item : formatList) {
+			if (value.equals(item.value))
+				return item;
+		}
+		
+		return null;
 	}
 	
 	@Override

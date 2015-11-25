@@ -9,26 +9,26 @@
 	<field>
 		<name>время</name>
 		<description>Текущее время</description>
-		<delimiter>; </delimiter>
+		<delimiter>SEMICOLON_SPACE</delimiter>
 		<datatype>TIME</datatype>
 		<format>HH:mm:ss</format>
 	</field>
 	<field>
 		<name>глуб.</name>
 		<description>Глубина в м.</description>
-		<delimiter>; </delimiter>
+		<delimiter>SEMICOLON_SPACE</delimiter>
 		<datatype>INTEGER</datatype>
 	</field>
 	<field>
 		<name>натяж.</name>
 		<description>Натяжение проволки в кгс</description>
-		<delimiter>; </delimiter>
+		<delimiter>SEMICOLON_SPACE</delimiter>
 		<datatype>FLOAT</datatype>
 	</field>
 	<field>
 		<name>ДВП</name>
 		<description>Датчик верхнего положения</description>
-		<delimiter>; </delimiter>
+		<delimiter>SEMICOLON_SPACE</delimiter>
 		<datatype>BYTE</datatype>
 		<values>
 			<item value="-1" text="Обрыв" />
@@ -39,25 +39,25 @@
 	<field>
 		<name>Uтек</name>
 		<description>Напряжение в сети в Вольтах (на фазе L1)</description>
-		<delimiter>; </delimiter>
+		<delimiter>SEMICOLON_SPACE</delimiter>
 		<datatype>SHORT</datatype>
 	</field>
 	<field>
 		<name>клав</name>
 		<description>Шестнадцатиричное значение (Карта адресов ModBus RTU, значение мнемоники knob_state)</description>
-		<delimiter>; </delimiter>
+		<delimiter>SEMICOLON_SPACE</delimiter>
 		<datatype>STRING</datatype>
 	</field>
 	<field>
 		<name>F</name>
 		<description>Текущая скорость</description>
-		<delimiter>; </delimiter>
+		<delimiter>SEMICOLON_SPACE</delimiter>
 		<datatype>BYTE</datatype>
 	</field>
 	<field>
 		<name>режим</name>
 		<description>Режим работы СУ</description>
-		<delimiter>; </delimiter>
+		<delimiter>SEMICOLON_SPACE</delimiter>
 		<datatype>BYTE</datatype>
 		<values>
 			<item value="0" text="Ручной" />
@@ -68,7 +68,7 @@
 	<field>
 		<name>ход</name>
 		<description>Направление хода скребка</description>
-		<delimiter>; </delimiter>
+		<delimiter>SEMICOLON_SPACE</delimiter>
 		<datatype>STRING</datatype>
 		<values>
 			<item value="S" text="Останов" />
@@ -79,7 +79,7 @@
 	<field>
 		<name>(Ошиб)</name>
 		<description>Код ошибки (Карта адресов ModBus RTU, мнемоника - global_err_register)</description>
-		<delimiter>; </delimiter>
+		<delimiter>SEMICOLON_SPACE</delimiter>
 		<datatype>SHORT</datatype>
 		<format>HEX</format>
 		<optional>1</optional>
@@ -100,7 +100,7 @@
 	<field>
 		<name>хеш</name>
 		<description>Слово-ключ для защиты от изменения строк</description>
-		<delimiter>{CR}{LF}</delimiter>
+		<delimiter>CRLF</delimiter>
 		<datatype>STRING</datatype>
 	</field>
 </config>

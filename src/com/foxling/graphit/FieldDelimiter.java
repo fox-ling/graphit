@@ -18,7 +18,7 @@
 package com.foxling.graphit;
 
 public enum FieldDelimiter {
-	CRLF("{CR}{LF}", "{CR}{LF}"),
+	CRLF("{CR}{LF}", "\n\r"),
 	CR("{CR}", "{CR}"),
 	LF("{LF}", "{LF}"),
 	SEMICOLON("Точка с запятой {;}", ";"),
@@ -46,9 +46,5 @@ public enum FieldDelimiter {
 	
 	public String toString(){
 		return caption;
-	}
-	
-	public FieldDelimiter valueOf(String key) {
-		
 	}
 }

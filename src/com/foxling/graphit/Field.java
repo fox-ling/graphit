@@ -45,7 +45,7 @@ public class Field {
 	private boolean bitmask;
 	
 	/** Contains values that could appear in the field and its' descriptions */
-	private List<Item<Object>> valueSet;
+	private List<Item> valueSet;
 	
 	/** Object that converts string to field's {@link #datatype} */
 	private Parser parser;
@@ -136,13 +136,13 @@ public class Field {
 	
 	/** @throws ParseException 
 	 * @see {@link #valueSet} */
-	public void setValueSet(List<Item<Object>> valueSet) throws Exception {
+	public void setValueSet(List<Item> valueSet) throws Exception {
 		if (valueSet == null || valueSet.size() == 0) {
 			this.valueSet = null;
 			return;
 		}
 		
-		for (Item<Object> key : valueSet) {
+		for (Item key : valueSet) {
 			try {
 				key.value = this.parser.parse(key.source);
 			} catch (Exception e) {
@@ -177,7 +177,7 @@ public class Field {
 	/** @see {@link #optional} */
 	public boolean isOptional() { return optional; }
 	/** @see {@link #valueSet} */
-	public List<Item<Object>> getValueSet() { return valueSet; }
+	public List<Item> getValueList() { return valueSet; }
 	/** @see {@link #bitmask} */
 	public boolean isBitmask() { return bitmask; }
 

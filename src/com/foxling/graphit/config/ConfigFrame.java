@@ -19,6 +19,7 @@ package com.foxling.graphit.config;
 
 import java.awt.EventQueue;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Vector;
 
 import javax.swing.JFrame;
@@ -59,6 +60,7 @@ import java.awt.Color;
 import javax.swing.BoxLayout;
 import java.awt.Component;
 import javax.swing.JTable;
+import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
 import java.awt.Dimension;
 import javax.swing.JSpinner;
@@ -68,6 +70,7 @@ import javax.swing.border.MatteBorder;
 import javax.swing.border.SoftBevelBorder;
 import javax.swing.border.BevelBorder;
 import java.awt.Insets;
+
 import javax.swing.JPopupMenu;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -181,9 +184,12 @@ public class ConfigFrame extends JFrame {
 		JLabel lblFormat = new JLabel("Формат");
 		JPanel pnlFormat = new JPanel();
 		pnlFormat.setBorder(new TitledBorder(null, "", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-		initControls();
+		
 		
 		iColumnName = new JTextField();
+		iFieldDelimiter = new JComboBox<FieldDelimiter>(new DefaultComboBoxModel<FieldDelimiter>(FieldDelimiter.values()));
+		iDataType = new JComboBox<DataType>();
+		iDataType.setModel(new DefaultComboBoxModel<DataType>(DataType.values()));
 		iOptional = new JCheckBox();
 		iFormat = new JComboBox<String>();
 		edtFormat = new JTextField();
@@ -212,21 +218,12 @@ public class ConfigFrame extends JFrame {
 		pnlValues.add(spValues);
 		
 		tValues = new JTable();
-		tValues.setModel(new DefaultTableModel(
-			new Object[][] {
-				{null, null},
-			},
-			new String[] { "Значение", "Описание" }
-		));
 		spValues.setViewportView(tValues);
+		
+		initControls();
 	}
 	
 	private void initControls(){
-		iFieldDelimiter = new JComboBox<FieldDelimiter>(new DefaultComboBoxModel<FieldDelimiter>(FieldDelimiter.values()));
-		
-		iDataType = new JComboBox<DataType>();
-		iDataType.setModel(new DefaultComboBoxModel<DataType>(DataType.values()));
-		
 		fieldListController();
 		fieldEditorController();
 	}
@@ -270,7 +267,6 @@ public class ConfigFrame extends JFrame {
 	private void fieldListController(){
 		mdlFieldList = new FieldListModel();
 		iFieldList.setModel(mdlFieldList);
-		iFieldList.repaint();
 		
 		Core.getConfigModel().addConfigModelListener((evt) -> {
 			mdlFieldList.refresh();
@@ -286,10 +282,23 @@ public class ConfigFrame extends JFrame {
 	}
 	
 	private void fieldEditorController(){
+		ValueListModel mdlValueList = new ValueListModel();
+		tValues.setModel(mdlValueList);
+		
 		iFieldList.addListSelectionListener((evt) -> {
 			Field field = iFieldList.getSelectedValue();
-			//iFieldDelimiter.setSelectedItem(anObject);
-			//field.getName() 			field.getDe
+			if (field != null) {
+				DataType datatype = field.getDatatype();
+				iColumnName.setText(field.getName());
+				iFieldDelimiter.setSelectedItem(field.getDelimiter());
+				iDataType.setSelectedItem(datatype);
+				edtFormat.setText(field.getFormat());
+				if (datatype != null)
+					iFormat.setSelectedItem(datatype.getFormat(field.getFormat()));
+				iOptional.setSelected(field.isOptional());
+				
+				mdlValueList.setField(field);
+			}
 		});
 	}
 	
@@ -311,6 +320,65 @@ public class ConfigFrame extends JFrame {
 			int length = getSize();
 			if (length > 0)
 				this.fireContentsChanged(this, 0, length);
+		}
+	}
+	
+	private class ValueListModel
+	extends AbstractTableModel {
+		private static final long serialVersionUID = 3742047021848215242L;
+		private final String[] COLS = { "Значение", "Описание" };
+		private final Class[] COL_CLASS = {Object.class, String.class};
+		private List<Item> valueList;
+		
+		@Override
+		public int getColumnCount() {
+			return COLS.length;
+		}
+		
+		@Override
+		public String getColumnName(int col) {
+			return COLS[col];
+		}
+		
+		@Override
+		public Class getColumnClass(int col) {
+			return COL_CLASS[col];
+		}
+
+		@Override
+		public int getRowCount() {
+			if (valueList != null) {
+				return valueList.size();
+			} else
+				return 0;
+		}
+
+		@Override
+		public Object getValueAt(int row, int col) {
+			if (valueList != null) {
+				if (row >= valueList.size())
+					return null;
+				switch (col) {
+				case 0:
+					return valueList.get(row).value;
+				case 1:
+					return valueList.get(row).caption;
+				default:
+					return null;
+				}
+			} else
+				return null;
+		}
+		
+		public void setField(Field field){
+			if (field != null) {
+				valueList = field.getValueList();
+				fireTableDataChanged();
+			} else
+				if (valueList != null) {
+					valueList = null;
+					fireTableDataChanged();
+				}
 		}
 	}
 }

@@ -17,22 +17,27 @@
 
 package com.foxling.graphit;
 
-public class Item<T> {
+public class Item {
 	/** Caption/Description of the <code>value</code> */
 	public String caption;
-	public T value;
+	public Object value;
 	
 	/** Source string of value */
 	public String source;
 	
-	public Item(T value, String caption) {
-		this.caption = caption;
+	public Item(Object value){
 		this.value = value;
+		this.caption = value.toString();
 	}
 	
-	public Item(T value, String caption, String source) {
-		this.caption = caption;
+	public Item(Object value, String caption) {
 		this.value = value;
+		this.caption = caption;
+	}
+	
+	public Item(Object value, String caption, String source) {
+		this.value = value;
+		this.caption = caption;
 		this.source = source;
 	}
 	
