@@ -15,33 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.foxling.graphit;
+package com.foxling.graphit.config;
 
-public class Item {
-	/** Caption/Description of the <code>value</code> */
-	public String caption;
-	public Object value;
-	
-	/** Source string of value */
-	public String source;
-	
-	public Item(Object value){
-		this.value = value;
-		this.caption = value.toString();
-	}
-	
-	public Item(Object value, String caption) {
-		this.value = value;
-		this.caption = caption;
-	}
-	
-	public Item(Object value, String caption, String source) {
-		this.value = value;
-		this.caption = caption;
-		this.source = source;
-	}
-	
-	public String toString(){
-		return caption;
-	}
+import java.util.EventListener;
+
+public interface PropertyListListener extends EventListener {
+	public void propertyListChanged(PropertyListEvent evt);
 }

@@ -1,7 +1,7 @@
 <config>
 	<defaults>
-		<field-delimiter>; </field-delimiter>
-		<line-delimiter>{CR}{LF}</line-delimiter>
+		<field-delimiter>SEMICOLON_SPACE</field-delimiter>
+		<line-delimiter>CRLF</line-delimiter>
 		<date-format>dd.MM.YYYY</date-format>
 		<time-format>HH:mm:ss</time-format>
 		<datetime-format>dd.MM.YYYY HH:mm:ss</datetime-format>
@@ -81,7 +81,7 @@
 		<description>Код ошибки (Карта адресов ModBus RTU, мнемоника - global_err_register)</description>
 		<delimiter>SEMICOLON_SPACE</delimiter>
 		<datatype>SHORT</datatype>
-		<format>HEX</format>
+		<format>16</format>
 		<optional>1</optional>
 		<bitmask>1</bitmask>
 		<values>

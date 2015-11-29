@@ -22,19 +22,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EventListener;
-import java.util.EventObject;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
-import org.jdom2.Attribute;
+import javax.swing.event.EventListenerList;
+
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
@@ -46,10 +44,11 @@ import org.jfree.util.Log;
 import com.foxling.graphit.Core;
 import com.foxling.graphit.DataType;
 import com.foxling.graphit.Field;
-import com.foxling.graphit.Item;
+import com.foxling.graphit.FieldValue;
 
 public class ConfigModel {
 	public static void main(String[] args) {
+		Logger.getLogger("core").addHandler(new ConsoleHandler());
 		Core.getConfigModel().saveConfig();
 		System.out.println("the end!");
 	}
@@ -67,12 +66,11 @@ public class ConfigModel {
 	private File file;
 	private Map<String,String> properties; 
 	private List<Field> fieldSet;
-	private Set<ConfigModelListener> listeners;
+	protected EventListenerList listenerList = new EventListenerList();
 	
 	public ConfigModel() {
 		properties = new HashMap<String,String>();
 		fieldSet = new ArrayList<Field>();
-		listeners = new HashSet<ConfigModelListener>();
 		
 		setDefaults();
 		try {
@@ -179,15 +177,15 @@ public class ConfigModel {
 					case "field":
 						try {
 							Map<String,String> properties = new HashMap<String,String>(node.getChildren().size());
-							List<Item> values = null;
+							List<FieldValue> values = null;
 							List<Element> elements = node.getChildren();
 							for (Element e : elements) {
 								if (e.getName() == "values") {
 									try {
 										List<Element> items = e.getChildren();
-										values = new ArrayList<Item>(items.size());
+										values = new ArrayList<FieldValue>(items.size());
 										for (Element item : items){
-											values.add(new Item(null, item.getAttributeValue("text"), item.getAttributeValue("value")));
+											values.add(new FieldValue(null, item.getAttributeValue("text"), item.getAttributeValue("value")));
 										}
 									} catch (Exception ex) {
 										values = null;
@@ -207,13 +205,14 @@ public class ConfigModel {
 									properties.get("bitmask")
 								);
 							fieldSet.add(field);
-							field.setValueSet(values);
+							field.setValueList(values);
 						} catch (Exception e) {
 							LOG.log(Level.WARNING, "Ошибка при загрузке конфигурации поля \"{0}\". {1}", new Object[] { properties.get("name"), e });
 						}
 						break;
 				}
 			});
+			fireFieldListChanged(new FieldListEvent(this, FieldListEvent.INSERT, null));
 		} catch(JDOMException e) {
 			e.printStackTrace();
 		} catch(IOException e) {
@@ -253,7 +252,7 @@ public class ConfigModel {
 	        	 if (field.isBitmask())
 	        		 eField.addContent(xmlElementFactory("bitmask", "1"));
 	        	 
-	        	 List<Item> values = field.getValueList();
+	        	 List<FieldValue> values = field.getValueList();
 	        	 if (values != null && !values.isEmpty()) {
 	        		 Element eValues = new Element("values");
 	        		 values.forEach((value) -> {
@@ -300,7 +299,7 @@ public class ConfigModel {
 				fieldSet.add(id, newField);
 			}
 			
-			fireFieldSetChanged();
+			fireFieldListChanged(new FieldListEvent(this, FieldListEvent.INSERT, newField));
 		} catch (Exception e) {
 			Log.error("Не удалось создать новое поле", e);
 		}
@@ -317,40 +316,47 @@ public class ConfigModel {
 				result = true;
 		}
 		if (result)
-			fireFieldSetChanged();
+			fireFieldListChanged(new FieldListEvent(this, FieldListEvent.DELETE, null));
 	}
 	
-	public void fireFieldSetChanged() {
-		ConfigModelEvent evt = new ConfigModelEvent(this);
-		for (ConfigModelListener listener : getConfigModelListeners()) {
-			listener.fieldSetChanged(evt);
+	public void addFieldValueAt(Field field, Integer index, FieldValue value) {
+		try {
+			field.addValueAt(index, value);
+			fireFieldListChanged(new FieldListEvent(this, FieldListEvent.UPDATE, field));
+		} catch (Exception e) {
+			Log.error("Не удалось добавить значение поля", e);
+		}
+		
+	}
+	
+	public void removeFieldValue(Field field, int[] index) {
+		if (index.length == 0)
+			return;
+		
+		try {
+			field.removeValues(index);
+			fireFieldListChanged(new FieldListEvent(this, FieldListEvent.UPDATE, field));
+		} catch (Exception e) {
+			Log.error("Не удалось удалить значение поля", e);
 		}
 	}
 	
-	public void addConfigModelListener(ConfigModelListener listener) {
-		listeners.add(listener);
-	}
-	
-	public void removeConfigModelListener(ConfigModelListener listener) {
-		listeners.remove(listener); 
-	}
-	
-	public Set<ConfigModelListener> getConfigModelListeners() {
-		return listeners;
-	}
-	
-	protected interface ConfigModelListener
-	extends EventListener{
-		public void fieldSetChanged(ConfigModelEvent evt);
-	}
-	
-	protected class ConfigModelEvent
-	extends EventObject {
-		private static final long serialVersionUID = 7587760715994607198L;
-	
-		public ConfigModelEvent(Object arg0) {
-			super(arg0);
+	public void fireFieldListChanged(FieldListEvent evt) {
+		for (FieldListListener listener : getListeners(FieldListListener.class)) {
+			listener.fieldListChanged(evt);
 		}
+	}
+	
+	public void addFieldListListener(FieldListListener listener) {
+		listenerList.add(FieldListListener.class, listener);
+	}
+	
+	public void removeFieldListListener(FieldListListener listener) {
+		listenerList.remove(FieldListListener.class, listener); 
+	}
+	
+	public <T extends EventListener> T[] getListeners(Class<T> listenerType) {
+		return listenerList.getListeners(listenerType);
 	}
 }
 

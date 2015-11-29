@@ -61,15 +61,15 @@ public class DefaultParser {
 		final int _radix;
 		final String _prefix;
 		switch (format) {
-		case "HEX":
+		case "16":
 			_radix = 16;
 			_prefix = "0x";
 			break;
-		case "OCT":
+		case "8":
 			_radix = 8;
 			_prefix = "0o";
 			break;
-		case "BIN":
+		case "2":
 			_radix = 2;
 			_prefix = "0b";
 			break;

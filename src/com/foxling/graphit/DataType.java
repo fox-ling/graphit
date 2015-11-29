@@ -21,36 +21,51 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public enum DataType {
-	BOOLEAN("Логический", "BOOLEAN", Boolean.class, null),
-	BYTE("Целое число (1 байт)", "BYTE", Byte.class, null),
-	SHORT("Целое число (2 байта)", "SHORT", Short.class, null),
-	INTEGER("Целое число (4 байта)", "INTEGER", Integer.class, Arrays.asList(
-					new Item(10, "DEC [10]"),
-					new Item(16, "HEX [16]"),
-					new Item(2, "BOOL [2]"),
-					new Item(8, "OCT [8]")
+	BOOLEAN("Логический", "BOOLEAN", Boolean.class, true, null),
+	
+	BYTE("Целое число (1 байт)", "BYTE", Byte.class, true, Arrays.asList(
+			new Format("DEC", 10),
+			new Format("HEX", 16),
+			new Format("BOOL", 2),
+			new Format("OCT", 8)
 	)),
-	FLOAT("Float", "FLOAT", Float.class, null),
-	DOUBLE("Double", "DOUBLE", Double.class, null),
-	STRING("Строка", "STRING", String.class, null),
-	DATE("Дата", "DATE", LocalDate.class, Arrays.asList(new Item("dd.MM.YYYY"))),
-	TIME("Время", "TIME", LocalTime.class, Arrays.asList(new Item("HH:mm:ss"))),
-	DATETIME("Дата/Время", "DATETIME", LocalDateTime.class, Arrays.asList(new Item("dd.MM.YYYY HH:mm:ss")));
+	SHORT("Целое число (2 байта)", "SHORT", Short.class, true, BYTE.getFormatList()),
+	INTEGER("Целое число (4 байта)", "INTEGER", Integer.class, true, BYTE.getFormatList()),
+	
+	FLOAT("Float", "FLOAT", Float.class, true, null),
+	DOUBLE("Double", "DOUBLE", Double.class, true, null),
+	
+	STRING("Строка", "STRING", String.class, true, null),
+	
+	DATE("Дата", "DATE", LocalDate.class, false, Arrays.asList(
+			new Format("dd.MM.YYYY", "dd.MM.YYYY")
+	)),
+	TIME("Время", "TIME", LocalTime.class, false, Arrays.asList(
+			new Format("HH:mm:ss", "HH:mm:ss")
+	)),
+	DATETIME("Дата/Время", "DATETIME", LocalDateTime.class, false, Arrays.asList(
+			new Format("dd.MM.YYYY HH:mm:ss", "dd.MM.YYYY HH:mm:ss")
+	));
 	
 	private final String caption;
 	private final String value;
 	private final Class _class;
-	private final List<Item> formatList;
+	private final boolean fixedFormatList;
+	private final List<Format> formatList;
 	
-	/** @param parser default parser */
-	DataType(String caption, String value, Class _class, List<Item> formatList){
+	DataType(String caption, String value, Class _class, boolean fixedFormatList, List<Format> formatList){
 		this.caption = caption;
 		this.value = value;
-		this._class = _class;
-		this.formatList = formatList;
+		this._class = _class.getClass();
+		this.fixedFormatList = fixedFormatList;
+		if (fixedFormatList) {
+			this.formatList = Collections.unmodifiableList(formatList); 
+		} else 
+			this.formatList = formatList;
 	}
 
 	public String getCaption() {
@@ -64,18 +79,35 @@ public enum DataType {
 		return _class;
 	}
 
-	public List<Item> getFormatList() {
+	public boolean isFixedFormatList() {
+		return fixedFormatList;
+	}
+	
+	public boolean isFormatRequired() {
+		return this.formatList != null;
+	}
+
+	public List<Format> getFormatList() {
 		return formatList;
 	}
 	
-	public Item getFormat(Object value){
-		if (formatList == null || value == null)
+	public Format getFormat(String caption){
+		if (formatList == null || caption == null)
 			return null;
 		
-		for (Item item : formatList) {
-			if (value.equals(item.value))
-				return item;
+		for (Format format : formatList) {
+			if (caption.equals(format.caption))
+				return format;
 		}
+		
+		return null;
+	}
+	
+	public Format getDefaultFormat() throws IllegalStateException {
+		if (formatList != null && formatList.size() > 0) {
+			return formatList.get(0);
+		} else if (isFormatRequired())
+			throw new IllegalStateException(String.format("Невозможно установить формат по умолчанию для типа %s, список форматов пуст", getCaption()));
 		
 		return null;
 	}

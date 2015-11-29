@@ -21,6 +21,8 @@ import java.awt.EventQueue;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Vector;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Logger;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -48,11 +50,13 @@ import com.foxling.graphit.Core;
 import com.foxling.graphit.DataType;
 import com.foxling.graphit.Field;
 import com.foxling.graphit.FieldDelimiter;
-import com.foxling.graphit.Item;
+import com.foxling.graphit.FieldValue;
+import com.foxling.graphit.Format;
 
 import javax.swing.JTabbedPane;
 import java.awt.FlowLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.ComboBoxModel;
 import javax.swing.JRadioButton;
 import javax.swing.SwingConstants;
 import net.miginfocom.swing.MigLayout;
@@ -86,11 +90,13 @@ public class ConfigFrame extends JFrame {
 	private JTextField iColumnName;
 	private JComboBox<FieldDelimiter> iFieldDelimiter;		
 	private JComboBox<DataType> iDataType;
-	private JComboBox<String> iFormat;
+	private JComboBox<Format> iFormat;
 	private FieldListModel mdlFieldList;
 	private JList<Field> iFieldList;
 	private JMenuItem miAddField;
 	private JMenuItem miRemoveField;
+	private JMenuItem miAddValue;
+	private JMenuItem miRemoveValue;
 	private JTextField edtFormat;
 	private JCheckBox iOptional;
 	private JTable tValues;
@@ -140,13 +146,13 @@ public class ConfigFrame extends JFrame {
 	    JLabel label = new JLabel("Разделитель столбцов");
 	    panel.add(label, "cell 0 0,alignx trailing");
 	    
-	    JComboBox iDefaultFieldDelimiter = new JComboBox();
+	    JComboBox<FieldDelimiter> iDefaultFieldDelimiter = new JComboBox<FieldDelimiter>();
 	    panel.add(iDefaultFieldDelimiter, "cell 1 0,growx");
 	    
 	    JLabel lblNewLabel = new JLabel("Разделитель строк");
 	    panel.add(lblNewLabel, "cell 0 1,alignx trailing");
 	    
-	    JComboBox iDefaultLineDelimiter = new JComboBox();
+	    JComboBox<FieldDelimiter> iDefaultLineDelimiter = new JComboBox<FieldDelimiter>();
 	    panel.add(iDefaultLineDelimiter, "cell 1 1,growx");
 		
 		JPanel pnlFields = new JPanel();
@@ -191,7 +197,7 @@ public class ConfigFrame extends JFrame {
 		iDataType = new JComboBox<DataType>();
 		iDataType.setModel(new DefaultComboBoxModel<DataType>(DataType.values()));
 		iOptional = new JCheckBox();
-		iFormat = new JComboBox<String>();
+		iFormat = new JComboBox<Format>();
 		edtFormat = new JTextField();
 		pnlFormat.setLayout(new BoxLayout(pnlFormat, BoxLayout.Y_AXIS));
 		pnlFormat.add(iFormat);
@@ -220,6 +226,15 @@ public class ConfigFrame extends JFrame {
 		tValues = new JTable();
 		spValues.setViewportView(tValues);
 		
+		JPopupMenu pmValueList = new JPopupMenu();
+		addPopup(tValues, pmValueList);
+		
+		miAddValue = new JMenuItem("Добавить");
+		pmValueList.add(miAddValue);
+		
+		miRemoveValue = new JMenuItem("Удалить");
+		pmValueList.add(miRemoveValue);
+		
 		initControls();
 	}
 	
@@ -229,6 +244,7 @@ public class ConfigFrame extends JFrame {
 	}
 
 	public static void main(String[] args) {
+		Logger.getLogger("core").addHandler(new ConsoleHandler());
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		} catch (Exception e) {
@@ -268,7 +284,7 @@ public class ConfigFrame extends JFrame {
 		mdlFieldList = new FieldListModel();
 		iFieldList.setModel(mdlFieldList);
 		
-		Core.getConfigModel().addConfigModelListener((evt) -> {
+		Core.getConfigModel().addFieldListListener((evt) -> {
 			mdlFieldList.refresh();
 		});
 		
@@ -282,8 +298,16 @@ public class ConfigFrame extends JFrame {
 	}
 	
 	private void fieldEditorController(){
+		FormatListModel mdlFormatlist = new FormatListModel();
+		iFormat.setModel(mdlFormatlist);
+		
 		ValueListModel mdlValueList = new ValueListModel();
 		tValues.setModel(mdlValueList);
+		
+		Core.getConfigModel().addFieldListListener((evt) -> {
+			if (evt.getField() == null || evt.getField() == iFieldList.getSelectedValue())
+				mdlValueList.fireTableDataChanged();
+		});
 		
 		iFieldList.addListSelectionListener((evt) -> {
 			Field field = iFieldList.getSelectedValue();
@@ -293,12 +317,29 @@ public class ConfigFrame extends JFrame {
 				iFieldDelimiter.setSelectedItem(field.getDelimiter());
 				iDataType.setSelectedItem(datatype);
 				edtFormat.setText(field.getFormat());
-				if (datatype != null)
+				if (datatype != null) {
+					datatype.getFormatList();
 					iFormat.setSelectedItem(datatype.getFormat(field.getFormat()));
+				}
 				iOptional.setSelected(field.isOptional());
 				
+				mdlFormatlist.refresh();
 				mdlValueList.setField(field);
 			}
+		});
+		
+		miAddValue.addActionListener((ActionEvent arg0) -> {
+			Field field = iFieldList.getSelectedValue();
+			int index = tValues.getSelectedRow();
+			if (index == -1) {
+				Core.getConfigModel().addFieldValueAt(field, null, null);
+			} else {
+				Core.getConfigModel().addFieldValueAt(field, index + 1, null);
+			}
+		});
+		
+		miRemoveValue.addActionListener((ActionEvent arg0) -> {
+			Core.getConfigModel().removeFieldValue(iFieldList.getSelectedValue(), tValues.getSelectedRows());
 		});
 	}
 	
@@ -323,12 +364,68 @@ public class ConfigFrame extends JFrame {
 		}
 	}
 	
+	private class FormatListModel
+	extends AbstractListModel<Format>
+	implements ComboBoxModel<Format> {
+		private static final long serialVersionUID = -3972948053898888801L;
+		
+		private Format selected;
+		
+		@Override
+		public Format getElementAt(int index) {
+			DataType datatype = getDataType();
+			if (datatype != null) {	
+				List<Format> formatList = datatype.getFormatList();
+				if (formatList != null) {
+					return formatList.get(index);
+				}
+			}
+			return null;
+		}
+
+		@Override
+		public int getSize() {
+			DataType datatype = getDataType();
+			if (datatype != null) {	
+				List<Format> formatList = datatype.getFormatList();
+				if (formatList != null) {
+					return formatList.size();
+				}
+			}
+			return 0;
+		}
+
+		@Override
+		public Object getSelectedItem() {
+			return selected;
+		}
+
+		@Override
+		public void setSelectedItem(Object format) {
+			this.selected = (Format) format;
+		}
+		
+		public void refresh(){
+			int length = getSize();
+			if (length > 0)
+				this.fireContentsChanged(this, 0, length);
+		}
+		
+		private DataType getDataType() {
+			Field field = iFieldList.getSelectedValue();
+			if (field != null) {
+				return field.getDatatype();
+			}
+			return null;
+		}
+	}
+	
 	private class ValueListModel
 	extends AbstractTableModel {
 		private static final long serialVersionUID = 3742047021848215242L;
 		private final String[] COLS = { "Значение", "Описание" };
 		private final Class[] COL_CLASS = {Object.class, String.class};
-		private List<Item> valueList;
+		private List<FieldValue> valueList;
 		
 		@Override
 		public int getColumnCount() {

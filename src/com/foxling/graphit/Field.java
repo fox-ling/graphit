@@ -18,6 +18,8 @@
 package com.foxling.graphit;
 
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Field {
@@ -32,7 +34,7 @@ public class Field {
 	private DataType datatype;
 	
 	/** Format of the data in the log file. */
-	private String format;
+	private Format format;
 	
 	/** Divisor between current and next fields */
 	private FieldDelimiter delimiter;
@@ -41,11 +43,11 @@ public class Field {
 	 * *Only one field can be optional */
 	private boolean optional;
 	
-	/** <code>True</code> if value of the field could be sum of {@link #valueSet} */
+	/** <code>True</code> if value of the field could be sum of {@link #valueList} */
 	private boolean bitmask;
 	
 	/** Contains values that could appear in the field and its' descriptions */
-	private List<Item> valueSet;
+	private List<FieldValue> valueList;
 	
 	/** Object that converts string to field's {@link #datatype} */
 	private Parser parser;
@@ -97,11 +99,34 @@ public class Field {
 	}
 	
 	/** @see {@link #format} */
-	public void setFormat(String format) {
-		if (datatype == DataType.DATETIME && (format == null || format.equals("")))
-			throw new IllegalArgumentException("Необходимо задать формат даты/времени");
+	public void setFormat(String format) throws IllegalStateException {
+		if (format == null || format.equals("")) {
+			if (datatype.getFormatList() == null) {
+				this.format = null;
+			} else if (datatype.getFormatList().size() > 0) {
+				this.format = datatype.getFormatList().get(0);
+			} else if (datatype.isFormatRequired()) {
+				throw new IllegalStateException(String.format("Тип данных %s требует явного указания формата", datatype.getCaption()));
+			}	
+		} else {
+			Format f = datatype.getFormat(format);
+			if (f == null && datatype.isFixedFormatList()) {
+				
+			}
+			
+			if (datatype.isFixedFormatList() && datatype.getFormatList() == null && format != null && !format.equals("")) {
+				throw new IllegalStateException(String.format("Невозможно добавить формат \"%s\". Тип данных %s имеет фиксированный набор форматов", format, datatype.getCaption()));
+			}
+			
+			
+			
+			
+			this.format = format;
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
 		
-		this.format = format;
+		
 	}
 	
 	/** @see {@link #delimiter} */
@@ -135,21 +160,53 @@ public class Field {
 	}
 	
 	/** @throws ParseException 
-	 * @see {@link #valueSet} */
-	public void setValueSet(List<Item> valueSet) throws Exception {
-		if (valueSet == null || valueSet.size() == 0) {
-			this.valueSet = null;
+	 * @see {@link #valueList} */
+	public void setValueList(List<FieldValue> valueList) throws Exception {
+		if (valueList == null || valueList.size() == 0) {
+			this.valueList = null;
 			return;
 		}
 		
-		for (Item key : valueSet) {
+		for (FieldValue key : valueList) {
 			try {
 				key.value = this.parser.parse(key.source);
 			} catch (Exception e) {
 				throw new Exception(String.format("Не удалось конвертировать строку '%s' в тип %s", key.source, this.datatype.getCaption()));
 			}
 		}
-		this.valueSet = valueSet;
+		this.valueList = valueList;
+	}
+	
+	public void addValueAt(Integer index, FieldValue value) throws IndexOutOfBoundsException {
+		if (valueList == null) {
+			valueList = new ArrayList<FieldValue>();
+		} 
+		
+		if (value == null)
+			value = new FieldValue("", "");
+		
+		if (index == null) {
+			valueList.add(value);
+		} else {
+			if (index < 0 || index > valueList.size())
+				throw new IndexOutOfBoundsException();
+			valueList.add(index, value);
+		}
+	}
+	
+	public void removeValues(int[] index) throws IndexOutOfBoundsException, NullPointerException {
+		if (valueList == null)
+			throw new NullPointerException("Список значений не инициализирован - нечего удалять");
+		
+		int size = valueList.size();
+		
+		Arrays.sort(index);
+		for (int i = index.length - 1; i >= 0; i--) {
+			if (index[i] < 0 || index[i] >= size)
+				throw new IndexOutOfBoundsException();
+			
+			valueList.remove(index[i]);
+		}
 	}
 	
 	/** @see {@link #bitmask} */
@@ -176,8 +233,8 @@ public class Field {
 	public Parser getParser() { return parser; }
 	/** @see {@link #optional} */
 	public boolean isOptional() { return optional; }
-	/** @see {@link #valueSet} */
-	public List<Item> getValueList() { return valueSet; }
+	/** @see {@link #valueList} */
+	public List<FieldValue> getValueList() { return valueList; }
 	/** @see {@link #bitmask} */
 	public boolean isBitmask() { return bitmask; }
 
