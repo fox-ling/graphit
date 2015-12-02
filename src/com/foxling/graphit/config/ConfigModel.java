@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.EventListener;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +43,7 @@ import org.jdom2.output.XMLOutputter;
 import org.jfree.util.Log;
 
 import com.foxling.graphit.Core;
-import com.foxling.graphit.DataType;
+import com.foxling.graphit.DefaultParser;
 import com.foxling.graphit.Field;
 import com.foxling.graphit.FieldValue;
 
@@ -65,12 +66,12 @@ public class ConfigModel {
 	
 	private File file;
 	private Map<String,String> properties; 
-	private List<Field> fieldSet;
+	private List<Field> fieldList;
 	protected EventListenerList listenerList = new EventListenerList();
 	
 	public ConfigModel() {
 		properties = new HashMap<String,String>();
-		fieldSet = new ArrayList<Field>();
+		fieldList = new ArrayList<Field>();
 		
 		setDefaults();
 		try {
@@ -88,7 +89,7 @@ public class ConfigModel {
 	}
 	
 	public void setDefaults(){
-		fieldSet.clear();
+		fieldList.clear();
 		properties.clear();
 		properties.put("field-delimiter", "; ");
 		properties.put("line-delimiter", "{CR}{LF}");
@@ -104,6 +105,10 @@ public class ConfigModel {
 	public void setProperty(String key, String value){
 		properties.put(key, value);
 	}
+	
+	/*
+	 *  -----=== File Management ===-----
+	 */
 	
 	/** Returns config file is exists, <code>null</code> otherwise */
 	public File getConfigFile() {
@@ -148,20 +153,6 @@ public class ConfigModel {
 		return null;
 	}
 	
-	/**	Returns storage path in current user's [Application Data] folder</br>
-	 * <i>*depends on OS, ex.: ...\AppData\Roaming\<code>%package_name%</code>\</i> */
-	public static String getAppDataPath(){
-		return System.getenv("APPDATA")
-				+ FILE_SEPARATOR
-				+ ConfigModel.class.getPackage().getName()
-				+ FILE_SEPARATOR;
-	}
-	
-	/**	Returns workdir path */
-	public static String getWorkDirPath() {
-		return System.getProperty("user.dir") + FILE_SEPARATOR;
-	}
-	
 	public void loadConfig(){
 		try {
 			SAXBuilder saxBuilder = new SAXBuilder();
@@ -176,7 +167,7 @@ public class ConfigModel {
 						break;
 					case "field":
 						try {
-							Map<String,String> properties = new HashMap<String,String>(node.getChildren().size());
+							Map<String,String> properties = new LinkedHashMap<String,String>(node.getChildren().size());
 							List<FieldValue> values = null;
 							List<Element> elements = node.getChildren();
 							for (Element e : elements) {
@@ -195,17 +186,8 @@ public class ConfigModel {
 									properties.put(e.getName(), e.getText());
 							}
 							
-							Field field = new Field(
-									properties.get("name"),
-									properties.get("description"),
-									DataType.valueOf(properties.get("datatype")),
-									properties.get("delimiter"),
-									properties.get("format"),
-									properties.get("optional"),
-									properties.get("bitmask")
-								);
-							fieldSet.add(field);
-							field.setValueList(values);
+							Field field = fieldFactory(properties, values);
+							fieldList.add(field);
 						} catch (Exception e) {
 							LOG.log(Level.WARNING, "Ошибка при загрузке конфигурации поля \"{0}\". {1}", new Object[] { properties.get("name"), e });
 						}
@@ -220,14 +202,8 @@ public class ConfigModel {
 		}
 	}
 	
-	private Element xmlElementFactory(String tagname, String value) {
-		Element e = new Element(tagname);
-		e.setText(value);
-		return e;
-	}
-	
 	public void saveConfig(){
-		try{
+		try {
 	         Element eRoot = new Element("config");
 	         Document doc = new Document(eRoot);
 	         Element defaults = new Element("defaults");
@@ -236,15 +212,13 @@ public class ConfigModel {
 	         });
 	         eRoot.addContent(defaults);
 
-	         fieldSet.forEach((field) -> {
+	         fieldList.forEach((field) -> {
 	        	 Element eField = new Element("field");
 	        	 eField.addContent(xmlElementFactory("name", field.getName()));
 	        	 eField.addContent(xmlElementFactory("description", field.getDescription()));
 	        	 eField.addContent(xmlElementFactory("delimiter", field.getDelimiter().name()));
 	        	 eField.addContent(xmlElementFactory("datatype", field.getDatatype().getValue()));
-	        	 
-	        	 if (field.getFormat() != null)
-	        		 eField.addContent(xmlElementFactory("format", field.getFormat()));
+	        	 eField.addContent(xmlElementFactory("format", field.getFormatValue()));
 	        	 
 	        	 if (field.isOptional())
 	        		 eField.addContent(xmlElementFactory("optional", "1"));
@@ -276,30 +250,106 @@ public class ConfigModel {
 	      }
 	}
 	
+	/**	Returns storage path in current user's [Application Data] folder</br>
+	 * <i>*depends on OS, ex.: ...\AppData\Roaming\<code>%package_name%</code>\</i> */
+	private static String getAppDataPath(){
+		return System.getenv("APPDATA")
+				+ FILE_SEPARATOR
+				+ ConfigModel.class.getPackage().getName()
+				+ FILE_SEPARATOR;
+	}
+	
+	/**	Returns workdir path */
+	private static String getWorkDirPath() {
+		return System.getProperty("user.dir") + FILE_SEPARATOR;
+	}
+	
+	private Element xmlElementFactory(String tagname, String value) {
+		Element e = new Element(tagname);
+		e.setText(value);
+		return e;
+	}
+	
+	/*
+	 * -----=== Поля ===----- 
+	 */
+	
+	/** The field factory creates an empty field and tries to set
+	 * each properties and values are supplied. Exceptions don't interrupt
+	 * execution. 
+	 * @param properties field properties
+	 * @param values field values
+	 * @return new field */
+	protected Field fieldFactory(Map<String,String> properties, List<FieldValue> values) {
+		Field field = new Field();
+		
+		for (String property : properties.keySet()) {
+			try {
+				String value = properties.get(property);
+				switch (property) {
+					case "name":
+						field.setName(value); break;
+					case "description":
+						field.setDescription(value); break;
+					case "datatype":
+						field.setDatatype(value); break;
+					case "delimiter":
+						field.setDelimiter(value); break;
+					case "format":
+						field.setFormat(value); break;
+					case "optional":
+						field.setOptional(value); break;
+					case "bitmask":
+						field.setBitmask(value); break;
+				}
+			} catch (Exception e) {
+				LOG.log(Level.SEVERE, String.format("Ошибка при загрузке свойства поля [%s]. ", field.getName(), e.getMessage()), e);
+			}
+		}
+		
+		try {
+			field.setParser(DefaultParser.getDefaultParser(field.getDatatype(), field.getFormatValue()));
+		} catch (Exception e) {
+			LOG.log(Level.SEVERE, String.format("Ошибка при загрузке свойства поля [%s]. ", field.getName(), e.getMessage()), e);
+		}
+		
+		if (values != null)
+			for (FieldValue value : values) {
+				try {
+					field.addValue(value);
+					field.validateValue(value);
+				} catch (Exception e) {
+					LOG.log(Level.SEVERE, String.format("Ошибка при загрузке значения поля [%s]. ", field.getName(), e.getMessage()), e);
+				}
+			}
+		
+		return field;
+	}
+	
 	public int getFieldSetSize(){
-		return this.fieldSet.size();
+		return this.fieldList.size();
 	}
 	
 	public Field getField(int index){
-		return this.fieldSet.get(index);
+		return this.fieldList.get(index);
 	}
 	
 	public void addFieldAfter(Field prevField) {
 		try {
-			Field newField = new Field("Новое поле", "", DataType.STRING, properties.get("field-delimiter"), null, "0", "0");
+			Field field = new Field();
 			
 			int id = -1;
 			if (prevField == null) {
-				fieldSet.add(newField);
-				id = fieldSet.size() - 1;
+				fieldList.add(field);
+				id = fieldList.size() - 1;
 			} else {
-				id = fieldSet.indexOf(prevField) + 1;
+				id = fieldList.indexOf(prevField) + 1;
 				if (id == 0)
 					throw new IllegalArgumentException("Предыдущего поля нет в списке полей");
-				fieldSet.add(id, newField);
+				fieldList.add(id, field);
 			}
 			
-			fireFieldListChanged(new FieldListEvent(this, FieldListEvent.INSERT, newField));
+			fireFieldListChanged(new FieldListEvent(this, FieldListEvent.INSERT, field));
 		} catch (Exception e) {
 			Log.error("Не удалось создать новое поле", e);
 		}
@@ -312,7 +362,7 @@ public class ConfigModel {
 	public void removeFields(List<Field> list) {
 		boolean result = false;
 		for (Field field : list) {
-			if (fieldSet.remove(field))
+			if (fieldList.remove(field))
 				result = true;
 		}
 		if (result)
@@ -321,7 +371,10 @@ public class ConfigModel {
 	
 	public void addFieldValueAt(Field field, Integer index, FieldValue value) {
 		try {
-			field.addValueAt(index, value);
+			if (index == null) {
+				field.addValue(value);
+			} else
+				field.addValueAt(index, value);
 			fireFieldListChanged(new FieldListEvent(this, FieldListEvent.UPDATE, field));
 		} catch (Exception e) {
 			Log.error("Не удалось добавить значение поля", e);
@@ -340,6 +393,11 @@ public class ConfigModel {
 			Log.error("Не удалось удалить значение поля", e);
 		}
 	}
+	
+	
+	/*
+	 * ---=== Event Management ===---
+	 */
 	
 	public void fireFieldListChanged(FieldListEvent evt) {
 		for (FieldListListener listener : getListeners(FieldListListener.class)) {

@@ -19,14 +19,14 @@ package com.foxling.graphit;
 
 public class Format {
 	public String caption;
-	public Object value;
+	public String value;
 	
 	public Format(String caption) {
 		this.caption = caption;
 		this.value = caption;
 	}
 	
-	public Format(String caption, Object value) {
+	public Format(String caption, String value) {
 		this.caption = caption;
 		this.value = value;
 	}

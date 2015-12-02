@@ -17,12 +17,13 @@
 
 package com.foxling.graphit;
 
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class Field {
+	private static int g_counter;
+	private int id;
 	/** Short name of the field, it's gonna appear<br>
 	 *  in the MainFrame's table and at graph's legend */
 	private String name;
@@ -52,6 +53,16 @@ public class Field {
 	/** Object that converts string to field's {@link #datatype} */
 	private Parser parser;
 	
+	{
+		id = ++Field.g_counter;
+		name = String.format("<Поле #%d>", id);
+	}
+	
+	public Field() {}
+	
+	public Field(String name) throws IllegalArgumentException {
+		setName(name);
+	}
 	
 	public Field(String name, String description, DataType datatype, String delimiter, String format, String isOptional, String bitmask) throws Exception {
 		try {
@@ -61,8 +72,9 @@ public class Field {
 			setFormat(format);
 			setDelimiter(delimiter);
 			setOptional(isOptional);
-			setParser(DefaultParser.getDefaultParser(datatype, format));
 			setBitmask(bitmask);
+			
+			setParser(DefaultParser.getDefaultParser(datatype, format));
 		} catch (Exception e) {
 			throw new Exception("Ошибка при создании поля: " + e.getMessage());
 		}
@@ -82,7 +94,7 @@ public class Field {
 	}
 	
 	/** @see {@link #datatype} */
-	public void setDatatype(String datatype){
+	public void setDatatype(String datatype) throws IllegalArgumentException {
 		DataType value = DataType.valueOf(datatype);
 		if (value == null)
 			throw new IllegalArgumentException("Неподдерживаемый тип данных");
@@ -91,11 +103,16 @@ public class Field {
 	}
 	
 	/** @see {@link #datatype} */
-	public void setDatatype(DataType datatype) {
+	public void setDatatype(DataType datatype) throws IllegalArgumentException {
 		if (datatype == null)
 			throw new IllegalArgumentException("Тип данных не должен быть пустым");
 		
 		this.datatype = datatype;
+	}
+	
+	/** @see {@link #format} */
+	public void setFormat(Format format) {
+		this.format = format;		
 	}
 	
 	/** @see {@link #format} */
@@ -110,23 +127,15 @@ public class Field {
 			}	
 		} else {
 			Format f = datatype.getFormat(format);
-			if (f == null && datatype.isFixedFormatList()) {
-				
+			if (f == null) {
+				if (!datatype.isFixedFormatList()) {
+					f = new Format("*[" + getName() + "]", format);
+				} else
+					throw new IllegalStateException(String.format("У типа данных %s фиксированный набор форматов и формата \"%s\" в нём нет", datatype.getCaption(), format));
 			}
 			
-			if (datatype.isFixedFormatList() && datatype.getFormatList() == null && format != null && !format.equals("")) {
-				throw new IllegalStateException(String.format("Невозможно добавить формат \"%s\". Тип данных %s имеет фиксированный набор форматов", format, datatype.getCaption()));
-			}
-			
-			
-			
-			
-			this.format = format;
-		} catch (Exception e) {
-			// TODO: handle exception
+			this.format = f;
 		}
-		
-		
 	}
 	
 	/** @see {@link #delimiter} */
@@ -159,39 +168,38 @@ public class Field {
 		this.parser = parser;
 	}
 	
-	/** @throws ParseException 
+	/** @throws Exception 
 	 * @see {@link #valueList} */
-	public void setValueList(List<FieldValue> valueList) throws Exception {
-		if (valueList == null || valueList.size() == 0) {
-			this.valueList = null;
-			return;
+	public void validateValue(FieldValue value) throws Exception {
+		try {
+			value.value = parser.parse(value.source);
+		} catch (Exception e) {
+			value.value = null;
+			throw new Exception(String.format("Не удалось конвертировать строку '%s' в тип %s", value.source, datatype.getCaption()));
 		}
-		
-		for (FieldValue key : valueList) {
-			try {
-				key.value = this.parser.parse(key.source);
-			} catch (Exception e) {
-				throw new Exception(String.format("Не удалось конвертировать строку '%s' в тип %s", key.source, this.datatype.getCaption()));
-			}
-		}
-		this.valueList = valueList;
 	}
 	
-	public void addValueAt(Integer index, FieldValue value) throws IndexOutOfBoundsException {
+	public void addValue(FieldValue value) throws Exception {
+		int size;
 		if (valueList == null) {
-			valueList = new ArrayList<FieldValue>();
-		} 
+			size = 0;
+		} else
+			size = valueList.size();
 		
+		addValueAt(size, value);
+	}
+	
+	public void addValueAt(int index, FieldValue value) throws Exception {
 		if (value == null)
-			value = new FieldValue("", "");
+			throw new IllegalArgumentException("Попытка вставить null-значение поля");
 		
-		if (index == null) {
-			valueList.add(value);
-		} else {
-			if (index < 0 || index > valueList.size())
-				throw new IndexOutOfBoundsException();
-			valueList.add(index, value);
-		}
+		if (valueList == null)
+			valueList = new ArrayList<FieldValue>();
+		
+		if (index < 0 || index > valueList.size())
+			throw new IndexOutOfBoundsException(String.format("Попытка вставить значение поля в некорректную позицию (%d)", index));
+		
+		valueList.add(index, value);
 	}
 	
 	public void removeValues(int[] index) throws IndexOutOfBoundsException, NullPointerException {
@@ -228,7 +236,14 @@ public class Field {
 	/** @see {@link #delimiter} */
 	public FieldDelimiter getDelimiter() { return delimiter; }
 	/** @see {@link #format} */
-	public String getFormat() { return format; }
+	public Format getFormat() { return format; }
+	/** @see {@link #format} */
+	public String getFormatValue() {
+		if (format != null) {
+			return format.value;
+		} else
+			return null;
+	}
 	/** @see {@link #parser} */
 	public Parser getParser() { return parser; }
 	/** @see {@link #optional} */

@@ -28,10 +28,10 @@ public enum DataType {
 	BOOLEAN("Логический", "BOOLEAN", Boolean.class, true, null),
 	
 	BYTE("Целое число (1 байт)", "BYTE", Byte.class, true, Arrays.asList(
-			new Format("DEC", 10),
-			new Format("HEX", 16),
-			new Format("BOOL", 2),
-			new Format("OCT", 8)
+			new Format("DEC", "10"),
+			new Format("HEX", "16"),
+			new Format("BOOL", "2"),
+			new Format("OCT", "8")
 	)),
 	SHORT("Целое число (2 байта)", "SHORT", Short.class, true, BYTE.getFormatList()),
 	INTEGER("Целое число (4 байта)", "INTEGER", Integer.class, true, BYTE.getFormatList()),
@@ -63,7 +63,10 @@ public enum DataType {
 		this._class = _class.getClass();
 		this.fixedFormatList = fixedFormatList;
 		if (fixedFormatList) {
-			this.formatList = Collections.unmodifiableList(formatList); 
+			if (formatList != null) {
+				this.formatList = Collections.unmodifiableList(formatList);
+			} else
+				this.formatList = null;
 		} else 
 			this.formatList = formatList;
 	}
@@ -91,12 +94,12 @@ public enum DataType {
 		return formatList;
 	}
 	
-	public Format getFormat(String caption){
+	public Format getFormat(String value){
 		if (formatList == null || caption == null)
 			return null;
 		
 		for (Format format : formatList) {
-			if (caption.equals(format.caption))
+			if (format.value.equals(value))
 				return format;
 		}
 		

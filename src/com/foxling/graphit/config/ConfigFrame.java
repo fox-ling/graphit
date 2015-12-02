@@ -18,15 +18,12 @@
 package com.foxling.graphit.config;
 
 import java.awt.EventQueue;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Vector;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Logger;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.SpringLayout;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
@@ -34,18 +31,11 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.AbstractListModel;
 import javax.swing.DefaultComboBoxModel;
-import javax.swing.JButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import javax.swing.ListModel;
 import javax.swing.JComboBox;
 import javax.swing.JCheckBox;
 import javax.swing.border.TitledBorder;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
-import javax.swing.event.PopupMenuEvent;
-import javax.swing.event.PopupMenuListener;
-
 import com.foxling.graphit.Core;
 import com.foxling.graphit.DataType;
 import com.foxling.graphit.Field;
@@ -65,23 +55,11 @@ import javax.swing.BoxLayout;
 import java.awt.Component;
 import javax.swing.JTable;
 import javax.swing.table.AbstractTableModel;
-import javax.swing.table.DefaultTableModel;
 import java.awt.Dimension;
-import javax.swing.JSpinner;
-import javax.swing.border.EtchedBorder;
-import javax.swing.border.LineBorder;
-import javax.swing.border.MatteBorder;
-import javax.swing.border.SoftBevelBorder;
-import javax.swing.border.BevelBorder;
-import java.awt.Insets;
-
 import javax.swing.JPopupMenu;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.JMenuItem;
-import javax.swing.JMenu;
-import javax.swing.JRadioButtonMenuItem;
-import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
 public class ConfigFrame extends JFrame {
@@ -227,6 +205,7 @@ public class ConfigFrame extends JFrame {
 		spValues.setViewportView(tValues);
 		
 		JPopupMenu pmValueList = new JPopupMenu();
+		addPopup(spValues, pmValueList);
 		addPopup(tValues, pmValueList);
 		
 		miAddValue = new JMenuItem("Добавить");
@@ -305,8 +284,9 @@ public class ConfigFrame extends JFrame {
 		tValues.setModel(mdlValueList);
 		
 		Core.getConfigModel().addFieldListListener((evt) -> {
-			if (evt.getField() == null || evt.getField() == iFieldList.getSelectedValue())
-				mdlValueList.fireTableDataChanged();
+			if (evt.getField() == null || evt.getField() == iFieldList.getSelectedValue()) {
+				mdlValueList.setField(iFieldList.getSelectedValue());
+			}
 		});
 		
 		iFieldList.addListSelectionListener((evt) -> {
@@ -316,25 +296,41 @@ public class ConfigFrame extends JFrame {
 				iColumnName.setText(field.getName());
 				iFieldDelimiter.setSelectedItem(field.getDelimiter());
 				iDataType.setSelectedItem(datatype);
-				edtFormat.setText(field.getFormat());
-				if (datatype != null) {
-					datatype.getFormatList();
-					iFormat.setSelectedItem(datatype.getFormat(field.getFormat()));
-				}
+				edtFormat.setText(field.getFormatValue());
+				Format format = field.getFormat();
+				iFormat.setSelectedItem(format);
 				iOptional.setSelected(field.isOptional());
 				
 				mdlFormatlist.refresh();
 				mdlValueList.setField(field);
 			}
+			
+			iColumnName.setEnabled(field != null);
+			iFieldDelimiter.setEnabled(field != null);
+			iDataType.setEnabled(field != null);
+			edtFormat.setEnabled(field != null);
+			iFormat.setEnabled(field != null);
+			iOptional.setEnabled(field != null);
+			tValues.setEnabled(field != null);
 		});
+		{	Field field = iFieldList.getSelectedValue();
+			iColumnName.setEnabled(field != null);
+			iFieldDelimiter.setEnabled(field != null);
+			iDataType.setEnabled(field != null);
+			edtFormat.setEnabled(field != null);
+			iFormat.setEnabled(field != null);
+			iOptional.setEnabled(field != null);
+			tValues.setEnabled(field != null);
+		}
 		
 		miAddValue.addActionListener((ActionEvent arg0) -> {
 			Field field = iFieldList.getSelectedValue();
 			int index = tValues.getSelectedRow();
+			FieldValue value = new FieldValue("");
 			if (index == -1) {
-				Core.getConfigModel().addFieldValueAt(field, null, null);
+				Core.getConfigModel().addFieldValueAt(field, null, value);
 			} else {
-				Core.getConfigModel().addFieldValueAt(field, index + 1, null);
+				Core.getConfigModel().addFieldValueAt(field, index + 1, value);
 			}
 		});
 		
@@ -357,10 +353,9 @@ public class ConfigFrame extends JFrame {
 			return Core.getConfigModel().getFieldSetSize();
 		}
 		
-		public void refresh(){
-			int length = getSize();
-			if (length > 0)
-				this.fireContentsChanged(this, 0, length);
+		/** Refreshes whole list */
+		public void refresh() {
+			fireContentsChanged(this, -1, -1);
 		}
 	}
 	
@@ -369,28 +364,23 @@ public class ConfigFrame extends JFrame {
 	implements ComboBoxModel<Format> {
 		private static final long serialVersionUID = -3972948053898888801L;
 		
+		/** The selected item */
 		private Format selected;
 		
 		@Override
 		public Format getElementAt(int index) {
-			DataType datatype = getDataType();
-			if (datatype != null) {	
-				List<Format> formatList = datatype.getFormatList();
-				if (formatList != null) {
-					return formatList.get(index);
-				}
+			List<Format> formatList = getFormatList();
+			if (formatList != null) {
+				return formatList.get(index);
 			}
 			return null;
 		}
 
 		@Override
 		public int getSize() {
-			DataType datatype = getDataType();
-			if (datatype != null) {	
-				List<Format> formatList = datatype.getFormatList();
-				if (formatList != null) {
-					return formatList.size();
-				}
+			List<Format> formatList = getFormatList();
+			if (formatList != null) {
+				return formatList.size();
 			}
 			return 0;
 		}
@@ -401,22 +391,43 @@ public class ConfigFrame extends JFrame {
 		}
 
 		@Override
-		public void setSelectedItem(Object format) {
-			this.selected = (Format) format;
+		public void setSelectedItem(Object object) {
+			if (selected == null && object == null ||
+				selected != null && selected.equals(object) ||
+				object != null && getIndexOf(object) == -1)
+					return;
+			
+			selected = (Format) object;
+			refresh();
 		}
 		
-		public void refresh(){
-			int length = getSize();
-			if (length > 0)
-				this.fireContentsChanged(this, 0, length);
+		/** Refreshes whole list */
+		public void refresh() {
+			fireContentsChanged(this, -1, -1);
 		}
 		
-		private DataType getDataType() {
+		/** Returns the model's item list */
+		private List<Format> getFormatList() {
 			Field field = iFieldList.getSelectedValue();
 			if (field != null) {
-				return field.getDatatype();
+				DataType datatype = field.getDatatype();
+				if (datatype != null)
+					return datatype.getFormatList();
 			}
 			return null;
+		}
+		
+		/**
+		 * Returns the index of the specified element in the model's item list.
+		 * @param format  the element.
+		 * @return The index of the specified element in the model's item list.
+		 * */
+		private int getIndexOf(Object format) {
+			List<Format> list = getFormatList();
+			if (list != null) {
+				return list.indexOf(format);
+			} else
+				return -1;
 		}
 	}
 	
@@ -467,7 +478,28 @@ public class ConfigFrame extends JFrame {
 				return null;
 		}
 		
-		public void setField(Field field){
+		@Override
+		public void setValueAt(Object value, int row, int col) {
+			if (valueList != null) {
+				if (row >= valueList.size())
+					return;
+				switch (col) {
+				case 0:
+					valueList.get(row).value = value;
+					break;
+				case 1:
+					valueList.get(row).caption = value.toString();
+					break;
+				}
+			}
+		}
+		
+		@Override
+		public boolean isCellEditable(int rowIndex, int columnIndex) {
+			return true;
+		}
+		
+		public void setField(Field field) {
 			if (field != null) {
 				valueList = field.getValueList();
 				fireTableDataChanged();
