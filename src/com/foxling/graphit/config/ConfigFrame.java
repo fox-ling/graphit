@@ -18,6 +18,7 @@
 package com.foxling.graphit.config;
 
 import java.awt.EventQueue;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Logger;
@@ -78,6 +79,7 @@ public class ConfigFrame extends JFrame {
 	private JTextField edtFormat;
 	private JCheckBox iOptional;
 	private JTable tValues;
+	private JScrollPane spValues;
 	
 	public ConfigFrame() {
 		super("Настройки");
@@ -198,7 +200,7 @@ public class ConfigFrame extends JFrame {
 		pnlMisc.add(pnlValues, "cell 0 5 2 1,grow");
 		pnlValues.setLayout(new BoxLayout(pnlValues, BoxLayout.Y_AXIS));
 		
-		JScrollPane spValues = new JScrollPane();
+		spValues = new JScrollPane();
 		pnlValues.add(spValues);
 		
 		tValues = new JTable();
@@ -214,10 +216,6 @@ public class ConfigFrame extends JFrame {
 		miRemoveValue = new JMenuItem("Удалить");
 		pmValueList.add(miRemoveValue);
 		
-		initControls();
-	}
-	
-	private void initControls(){
 		fieldListController();
 		fieldEditorController();
 	}
@@ -254,7 +252,9 @@ public class ConfigFrame extends JFrame {
 				}
 			}
 			private void showMenu(MouseEvent e) {
-				popup.show(e.getComponent(), e.getX(), e.getY());
+				Component component = e.getComponent(); 
+				if (component != null && component.isEnabled())
+					popup.show(component, e.getX(), e.getY());
 			}
 		});
 	}
@@ -272,23 +272,33 @@ public class ConfigFrame extends JFrame {
 		});
 		
 		miRemoveField.addActionListener((ActionEvent arg0) -> {
-			Core.getConfigModel().removeFields(iFieldList.getSelectedValuesList());
+			List<Field> list = iFieldList.getSelectedValuesList();
+			int id = iFieldList.getSelectedIndex(); 
+			if (id > 0) {
+				iFieldList.setSelectedIndex(id - 1);
+			} else
+				iFieldList.clearSelection();
+			Core.getConfigModel().removeFields(list);
 		});
 	}
 	
 	private void fieldEditorController(){
+		// ComboBox "Format List" model
 		FormatListModel mdlFormatlist = new FormatListModel();
 		iFormat.setModel(mdlFormatlist);
 		
+		// Table "Field Values" model
 		ValueListModel mdlValueList = new ValueListModel();
 		tValues.setModel(mdlValueList);
 		
+		// Config model >> Field List >> onChange 
 		Core.getConfigModel().addFieldListListener((evt) -> {
 			if (evt.getField() == null || evt.getField() == iFieldList.getSelectedValue()) {
 				mdlValueList.setField(iFieldList.getSelectedValue());
 			}
 		});
 		
+		// Select field
 		iFieldList.addListSelectionListener((evt) -> {
 			Field field = iFieldList.getSelectedValue();
 			if (field != null) {
@@ -303,25 +313,23 @@ public class ConfigFrame extends JFrame {
 				
 				mdlFormatlist.refresh();
 				mdlValueList.setField(field);
+			} else {
+				iColumnName.setText("");
+				iFieldDelimiter.setSelectedIndex(-1);
+				iDataType.setSelectedIndex(-1);
+				edtFormat.setText("");
+				iFormat.setSelectedIndex(-1);
+				iOptional.setSelected(false);
 			}
 			
-			iColumnName.setEnabled(field != null);
-			iFieldDelimiter.setEnabled(field != null);
-			iDataType.setEnabled(field != null);
-			edtFormat.setEnabled(field != null);
-			iFormat.setEnabled(field != null);
-			iOptional.setEnabled(field != null);
-			tValues.setEnabled(field != null);
+			updateContolState();
 		});
-		{	Field field = iFieldList.getSelectedValue();
-			iColumnName.setEnabled(field != null);
-			iFieldDelimiter.setEnabled(field != null);
-			iDataType.setEnabled(field != null);
-			edtFormat.setEnabled(field != null);
-			iFormat.setEnabled(field != null);
-			iOptional.setEnabled(field != null);
-			tValues.setEnabled(field != null);
-		}
+		
+		iDataType.addActionListener((evt) -> {
+			//TODO
+		});
+		
+		updateContolState();
 		
 		miAddValue.addActionListener((ActionEvent arg0) -> {
 			Field field = iFieldList.getSelectedValue();
@@ -337,6 +345,25 @@ public class ConfigFrame extends JFrame {
 		miRemoveValue.addActionListener((ActionEvent arg0) -> {
 			Core.getConfigModel().removeFieldValue(iFieldList.getSelectedValue(), tValues.getSelectedRows());
 		});
+	}
+	
+	/** Updates control state: enabled/disabled, clear values */
+	private void updateContolState(){
+		Field currField = iFieldList.getSelectedValue();
+		boolean enabled = currField != null;
+		
+		iColumnName.setEnabled(enabled);
+		iFieldDelimiter.setEnabled(enabled);
+		iDataType.setEnabled(enabled);
+		edtFormat.setEnabled(enabled);
+		iFormat.setEnabled(enabled);
+		iOptional.setEnabled(enabled);
+		tValues.setEnabled(enabled);
+		spValues.setEnabled(enabled);
+	}
+	
+	private Field getSelectedField() {
+		return iFieldList.getSelectedValue();
 	}
 	
 	private class FieldListModel
@@ -359,13 +386,70 @@ public class ConfigFrame extends JFrame {
 		}
 	}
 	
+	private class DataTypeListModel
+	extends AbstractListModel<DataType>
+	implements ComboBoxModel<DataType> {
+		private static final long serialVersionUID = -3972948053898888801L;
+		
+		@Override
+		public DataType getElementAt(int index) {
+			return DataType.values()[index];
+		}
+
+		@Override
+		public int getSize() {
+			return DataType.values().length;
+		}
+
+		@Override
+		public Object getSelectedItem() {
+			Field field = iFieldList.getSelectedValue();
+			if (field != null)
+				return field.getDatatype();
+			
+			return null;
+		}
+
+		@Override
+		public void setSelectedItem(Object object) {
+			Object selectedItem = getSelectedItem();
+			if (selectedItem == null && object == null ||
+				selectedItem != null && selectedItem.equals(object) ||
+				object != null && getIndexOf(object) == -1)
+					return;
+			System.out.println("format setted");
+			
+			getSelectedField().setDatatype((DataType) object);
+			refresh();
+		}
+		
+		/** Refreshes whole list */
+		public void refresh() {
+			fireContentsChanged(this, -1, -1);
+		}
+		
+		/**
+		 * Returns the index of the specified element in the model's item list.
+		 * @param object  the element.
+		 * @return The index of the specified element in the model's item list or -1 if it's not in the list.
+		 * */
+		private int getIndexOf(Object object) {
+			DataType[] values = DataType.values();
+			for (int i = 0; i < values.length; i++) {
+				if (values[i].equals(object))
+					return i;
+			}
+			return -1;
+		}
+	}
+	
 	private class FormatListModel
 	extends AbstractListModel<Format>
 	implements ComboBoxModel<Format> {
 		private static final long serialVersionUID = -3972948053898888801L;
 		
 		/** The selected item */
-		private Format selected;
+		private Format selectedItem;
 		
 		@Override
 		public Format getElementAt(int index) {
@@ -387,17 +471,17 @@ public class ConfigFrame extends JFrame {
 
 		@Override
 		public Object getSelectedItem() {
-			return selected;
+			return selectedItem;
 		}
 
 		@Override
 		public void setSelectedItem(Object object) {
-			if (selected == null && object == null ||
-				selected != null && selected.equals(object) ||
+			if (selectedItem == null && object == null ||
+				selectedItem != null && selectedItem.equals(object) ||
 				object != null && getIndexOf(object) == -1)
 					return;
-			
-			selected = (Format) object;
+			System.out.println("format setted");
+			selectedItem = (Format) object;
 			refresh();
 		}
 		
