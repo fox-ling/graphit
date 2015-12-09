@@ -15,24 +15,40 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.foxling.graphit;
+package com.foxling.graphit.config;
 
-public class Format {
-	public String caption;
-	public String value;
+public enum FieldDelimiter {
+	CRLF("{CR}{LF}", "\n\r"),
+	CR("{CR}", "{CR}"),
+	LF("{LF}", "{LF}"),
+	SEMICOLON("Точка с запятой {;}", ";"),
+	COLON("Двоеточие {:}", ":"),
+	COMMA("Запятая {,}", ","),
+	TAB("Табуляция {t}", "\t"),
+	VBAR("Вертикальная черта {|}", "|"),
+	SEMICOLON_SPACE(";{SPACE}", "; ");
 	
-	public Format(String caption) {
-		this.caption = caption;
-		this.value = caption;
-	}
+	private final String caption;
+	private final String value;
 	
-	public Format(String caption, String value) {
+	private FieldDelimiter(String caption, String value) {
 		this.caption = caption;
 		this.value = value;
+	}
+
+	public String getCaption() {
+		return caption;
+	}
+
+	public String getValue() {
+		return value;
+	}
+	
+	public static FieldDelimiter getDefaultFieldDelimiter() {
+		return FieldDelimiter.SEMICOLON_SPACE;
 	}
 	
 	public String toString(){
 		return caption;
 	}
-
 }

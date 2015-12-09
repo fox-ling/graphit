@@ -15,8 +15,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.foxling.graphit;
+package com.foxling.graphit.config;
 
-public interface Parser<T> {
-	public T parse(String str) throws Exception;
+public class FieldValue {
+	/** Caption/Description of the <code>value</code> */
+	public String caption;
+	public Object value;
+	
+	/** Source string of value */
+	public String source;
+	
+	public FieldValue(Object value){
+		this.value = value;
+		this.caption = value.toString();
+	}
+	
+	public FieldValue(Object value, String caption) {
+		this.value = value;
+		this.caption = caption;
+	}
+	
+	public FieldValue(Object value, String caption, String source) {
+		this.value = value;
+		this.caption = caption;
+		this.source = source;
+	}
+	
+	public String toString(){
+		return caption;
+	}
 }

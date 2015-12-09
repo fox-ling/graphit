@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.foxling.graphit;
+package com.foxling.graphit.config;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -57,10 +57,10 @@ public class DefaultParser {
 		}
 	};
 	
-	public static Parser numericFactory(DataType datatype, final String format) throws IllegalArgumentException {
+	public static Parser numericFactory(DataType datatype, final Format format) throws IllegalArgumentException {
 		final int _radix;
 		final String _prefix;
-		switch (format) {
+		switch (format.value) {
 		case "16":
 			_radix = 16;
 			_prefix = "0x";
@@ -127,8 +127,8 @@ public class DefaultParser {
 	/** Date parser factory
 	 * @param format - Date/Time format pattern, for example: <code>"dd.MM.YYYY HH:mm:ss"</code>
 	 * @see {@link java.text.SimpleDateFormat} */
-	public static Parser datetimeFactory(DataType datatype, final String format) throws IllegalArgumentException {
-		DateTimeFormatter _formatter = DateTimeFormatter.ofPattern(format);
+	public static Parser datetimeFactory(DataType datatype, final Format format) throws IllegalArgumentException {
+		DateTimeFormatter _formatter = DateTimeFormatter.ofPattern(format.value);
 		
 		switch (datatype) {
 		case DATE:
@@ -165,9 +165,9 @@ public class DefaultParser {
 		
 	}
 	
-	public static Parser getDefaultParser(DataType datatype, String format) throws IllegalArgumentException{
+	public static Parser getDefaultParser(DataType datatype, Format format) throws IllegalArgumentException{
 		if (format == null) 
-				format = "";
+				format = new Format("");
 		switch (datatype) {
 			case BOOLEAN:
 				return DefaultParser.BOOLEAN;
@@ -184,7 +184,7 @@ public class DefaultParser {
 			case DATE:
 			case TIME:
 			case DATETIME:
-				if (format == "")
+				if (format.value == "")
 					throw new IllegalArgumentException("Формат даты не предоставлен");
 				return DefaultParser.datetimeFactory(datatype, format);
 			default:

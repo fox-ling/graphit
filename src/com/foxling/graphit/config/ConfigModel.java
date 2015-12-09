@@ -28,7 +28,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
@@ -43,18 +42,14 @@ import org.jdom2.output.XMLOutputter;
 import org.jfree.util.Log;
 
 import com.foxling.graphit.Core;
-import com.foxling.graphit.DefaultParser;
-import com.foxling.graphit.Field;
-import com.foxling.graphit.FieldValue;
 
 public class ConfigModel {
 	public static void main(String[] args) {
-		Logger.getLogger("core").addHandler(new ConsoleHandler());
+		//Logger.getLogger("core").addHandler(new ConsoleHandler());
 		Core.getConfigModel().saveConfig();
-		System.out.println("the end!");
 	}
 	
-	private static Logger LOG = Logger.getLogger("core.config.model"); 
+	private static Logger LOG = Logger.getLogger(ConfigModel.class.getName()); 
 	private static final String FILENAME = "config.xml";
 	private static final String FILE_SEPARATOR = System.getProperty("file.separator");
 	
@@ -308,7 +303,7 @@ public class ConfigModel {
 		}
 		
 		try {
-			field.setParser(DefaultParser.getDefaultParser(field.getDatatype(), field.getFormatValue()));
+			field.setParser(DefaultParser.getDefaultParser(field.getDatatype(), field.getFormat()));
 		} catch (Exception e) {
 			LOG.log(Level.SEVERE, String.format("Ошибка при загрузке свойства поля [%s]. ", field.getName(), e.getMessage()), e);
 		}

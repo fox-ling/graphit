@@ -15,15 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.foxling.graphit;
+package com.foxling.graphit.config;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class Field {
-	private static int g_counter;
+	/** Global field counter */
+	private static int gCounter;
+	
+	/** Current field's id, given by global field counter */
 	private int id;
+	
 	/** Short name of the field, it's gonna appear<br>
 	 *  in the MainFrame's table and at graph's legend */
 	private String name;
@@ -53,43 +57,30 @@ public class Field {
 	/** Object that converts string to field's {@link #datatype} */
 	private Parser parser;
 	
-	{
-		id = ++Field.g_counter;
+	public Field() {
+		id = ++Field.gCounter;
 		name = String.format("<Поле #%d>", id);
-	}
-	
-	public Field() {}
-	
-	public Field(String name) throws IllegalArgumentException {
-		setName(name);
-	}
-	
-	public Field(String name, String description, DataType datatype, String delimiter, String format, String isOptional, String bitmask) throws Exception {
-		try {
-			setName(name);
-			setDescription(description);
-			setDatatype(datatype);
-			setFormat(format);
-			setDelimiter(delimiter);
-			setOptional(isOptional);
-			setBitmask(bitmask);
-			
-			setParser(DefaultParser.getDefaultParser(datatype, format));
-		} catch (Exception e) {
-			throw new Exception("Ошибка при создании поля: " + e.getMessage());
-		}
+		description = "";
+		datatype = DataType.getDefaultDataType();
+		format = datatype.getDefaultFormat();
+		delimiter = FieldDelimiter.getDefaultFieldDelimiter();
+		valueList = new ArrayList<FieldValue>(5);
+		parser = DefaultParser.getDefaultParser(datatype, format);
 	}
 	
 	/** @see {@link #name} */
 	public void setName(String name) throws IllegalArgumentException {
 		if (name == null || name.equals(""))
 			throw new IllegalArgumentException("Имя не должно быть пустым");
-		
+	
 		this.name = name;
 	}
 	
 	/** @see {@link #description} */
 	public void setDescription(String description) {
+		if (description == null)
+			this.description = "";
+		
 		this.description = description;
 	}
 	
@@ -107,24 +98,22 @@ public class Field {
 		if (datatype == null)
 			throw new IllegalArgumentException("Тип данных не должен быть пустым");
 		
+		if (this.datatype.equals(datatype))
+			return;
+		
 		this.datatype = datatype;
-	}
-	
-	/** @see {@link #format} */
-	public void setFormat(Format format) {
-		this.format = format;		
+		
+		setFormat(datatype.getDefaultFormat());
+		setParser(DefaultParser.getDefaultParser(this.datatype, this.format));
 	}
 	
 	/** @see {@link #format} */
 	public void setFormat(String format) throws IllegalStateException {
+		if (datatype == null)
+			throw new IllegalStateException("Тип данных - пустой");
+		
 		if (format == null || format.equals("")) {
-			if (datatype.getFormatList() == null) {
-				this.format = null;
-			} else if (datatype.getFormatList().size() > 0) {
-				this.format = datatype.getFormatList().get(0);
-			} else if (datatype.isFormatRequired()) {
-				throw new IllegalStateException(String.format("Тип данных %s требует явного указания формата", datatype.getCaption()));
-			}	
+			setFormat(datatype.getDefaultFormat());
 		} else {
 			Format f = datatype.getFormat(format);
 			if (f == null) {
@@ -134,14 +123,27 @@ public class Field {
 					throw new IllegalStateException(String.format("У типа данных %s фиксированный набор форматов и формата \"%s\" в нём нет", datatype.getCaption(), format));
 			}
 			
-			this.format = f;
+			setFormat(f);
 		}
 	}
 	
+	/** @see {@link #format} */
+	public void setFormat(Format format) throws IllegalArgumentException {
+		if (format == null)
+			throw new IllegalArgumentException("Попытка установить NULL-формат");
+			
+		if (this.format.equals(format))
+			return;
+		
+		this.format = format;
+		setParser(DefaultParser.getDefaultParser(this.datatype, this.format));
+	}
+	
 	/** @see {@link #delimiter} */
-	public void setDelimiter(String delimiter) {
+	public void setDelimiter(String delimiter) throws IllegalArgumentException {
 		if (delimiter == null || delimiter.equals(""))
 			throw new IllegalArgumentException("Ограничитель не должен быть пустым");
+		
 		setDelimiter(FieldDelimiter.valueOf(delimiter));
 	}
 	
@@ -155,7 +157,10 @@ public class Field {
 	
 	/** @see {@link #optional} */
 	public void setOptional(String optional) {
-		this.optional = parseBoolean(optional);
+		if (optional == null)
+			throw new IllegalArgumentException("setOptional(null)");
+		
+		setOptional(parseBoolean(optional));
 	}
 
 	/** @see {@link #optional} */
@@ -179,22 +184,16 @@ public class Field {
 		}
 	}
 	
-	public void addValue(FieldValue value) throws Exception {
-		int size;
-		if (valueList == null) {
-			size = 0;
-		} else
-			size = valueList.size();
-		
-		addValueAt(size, value);
-	}
-	
-	public void addValueAt(int index, FieldValue value) throws Exception {
+	public void addValue(FieldValue value) throws IllegalArgumentException, IndexOutOfBoundsException {
 		if (value == null)
 			throw new IllegalArgumentException("Попытка вставить null-значение поля");
 		
-		if (valueList == null)
-			valueList = new ArrayList<FieldValue>();
+		addValueAt(valueList.size(), value);
+	}
+	
+	public void addValueAt(int index, FieldValue value) throws IllegalArgumentException, IndexOutOfBoundsException {
+		if (value == null)
+			throw new IllegalArgumentException("Попытка вставить null-значение поля");
 		
 		if (index < 0 || index > valueList.size())
 			throw new IndexOutOfBoundsException(String.format("Попытка вставить значение поля в некорректную позицию (%d)", index));

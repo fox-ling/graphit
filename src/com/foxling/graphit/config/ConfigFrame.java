@@ -18,7 +18,6 @@
 package com.foxling.graphit.config;
 
 import java.awt.EventQueue;
-import java.util.Arrays;
 import java.util.List;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Logger;
@@ -38,11 +37,6 @@ import javax.swing.JComboBox;
 import javax.swing.JCheckBox;
 import javax.swing.border.TitledBorder;
 import com.foxling.graphit.Core;
-import com.foxling.graphit.DataType;
-import com.foxling.graphit.Field;
-import com.foxling.graphit.FieldDelimiter;
-import com.foxling.graphit.FieldValue;
-import com.foxling.graphit.Format;
 
 import javax.swing.JTabbedPane;
 import java.awt.FlowLayout;

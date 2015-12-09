@@ -19,7 +19,7 @@ package com.foxling.graphit.logfile;
 import java.util.List;
 
 import com.foxling.graphit.Core;
-import com.foxling.graphit.Field;
+import com.foxling.graphit.config.Field;
 
 /** Class for storing log-line */
 public class Line {

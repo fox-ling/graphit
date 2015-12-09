@@ -15,13 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.foxling.graphit;
+package com.foxling.graphit.config;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 
 public enum DataType {
@@ -62,11 +63,12 @@ public enum DataType {
 		this.value = value;
 		this._class = _class.getClass();
 		this.fixedFormatList = fixedFormatList;
+		
+		if (formatList == null)
+			formatList = new LinkedList<Format>();
+		
 		if (fixedFormatList) {
-			if (formatList != null) {
-				this.formatList = Collections.unmodifiableList(formatList);
-			} else
-				this.formatList = null;
+			this.formatList = Collections.unmodifiableList(formatList);
 		} else 
 			this.formatList = formatList;
 	}
@@ -94,9 +96,9 @@ public enum DataType {
 		return formatList;
 	}
 	
-	public Format getFormat(String value){
-		if (formatList == null || caption == null)
-			return null;
+	public Format getFormat(String value) throws IllegalArgumentException{
+		if (value == null)
+			throw new IllegalArgumentException("Ошибка при попытка поиска формата с NULL-значением");
 		
 		for (Format format : formatList) {
 			if (format.value.equals(value))
@@ -106,13 +108,15 @@ public enum DataType {
 		return null;
 	}
 	
-	public Format getDefaultFormat() throws IllegalStateException {
-		if (formatList != null && formatList.size() > 0) {
+	public Format getDefaultFormat() {
+		if (formatList == null && formatList.size() == 0) {
+			return Format.EMPTY_FORMAT;
+		} else
 			return formatList.get(0);
-		} else if (isFormatRequired())
-			throw new IllegalStateException(String.format("Невозможно установить формат по умолчанию для типа %s, список форматов пуст", getCaption()));
-		
-		return null;
+	}
+	
+	public static DataType getDefaultDataType() {
+		return DataType.STRING;
 	}
 	
 	@Override

@@ -19,8 +19,6 @@ package com.foxling.graphit.config;
 
 import java.util.EventObject;
 
-import com.foxling.graphit.Field;
-
 public class FieldListEvent extends EventObject {
 	private static final long serialVersionUID = 7587760715994607198L;
 	public static final int DELETE = -1;
