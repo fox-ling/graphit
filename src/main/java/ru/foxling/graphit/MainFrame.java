@@ -67,6 +67,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
@@ -227,7 +228,10 @@ extends JFrame implements ChartProgressListener {
 		        int rowIndex = rowAtPoint(p);
 		        int colIndex = columnAtPoint(p);
 		        int realColumnIndex = convertColumnIndexToModel(colIndex);
-		        return model.getTooltip(rowIndex, realColumnIndex);
+		        if (rowIndex > -1 && realColumnIndex > -1) {
+		        	return model.getTooltip(rowIndex, realColumnIndex);
+		        } else
+		        	return null;
 			}
 		};
 		table.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
@@ -696,7 +700,7 @@ extends JFrame implements ChartProgressListener {
 			
 			configModel.addFieldListener(e -> {
 				// TODO
-				Field field = e.getField(); 
+				Field field = (Field) e.getSource(); 
 				if (field == null || getLink(field) == null) {
 					refreshAxesList();
 					return;
@@ -834,13 +838,15 @@ extends JFrame implements ChartProgressListener {
 		private static final long serialVersionUID = -6341608314922452350L;
 		//private LogFile logFile;
 		private ArrayList<Field> fieldList;
+		
+		/** Records index */
 		private ArrayList<Record> index;
 		
 		public LogFileTableModel(LogFile logFile, boolean wrongLinesOnly) {
 			super();
 			//this.logFile = logFile;
-			index = new ArrayList<Record>(25);
 			fieldList = logFile.getFieldList();
+			index = new ArrayList<Record>(25);
 			for (Startup startup : logFile.getStartups())
 				for(Record record: startup.getRecordset())
 					if (!record.isDirty())
@@ -864,18 +870,50 @@ extends JFrame implements ChartProgressListener {
 		
 		@Override
 		public Class getColumnClass(int columnIndex) {
-			return fieldList.get(columnIndex).getDatatype().get_class();
+			if (fieldList.get(columnIndex).getValueList().isEmpty()) {
+				return fieldList.get(columnIndex).getDatatype().get_class();
+			} else
+				return String.class;
 		}
 
 		@Override
 		public Object getValueAt(int rowIndex, int columnIndex) {
-			return index.get(rowIndex).getValue(columnIndex);
+			Object value = index.get(rowIndex).getValue(columnIndex);
+			if (value == null) return null;
+			List<FieldValue> fValues = fieldList.get(columnIndex).getValueList();
+			if (fValues.isEmpty()) {
+				return value;
+			} else {
+				for (FieldValue fieldValue : fValues) {
+					if (fieldValue.value.equals(value))
+						return fieldValue.caption;
+				}	
+				return value.toString();
+			}
 		}
 		
 		@Override
 	    public boolean isCellEditable(int row, int column) {
 	       return false;
 	    }
+		
+		/** Converts object representation of a whole number to int.
+		 * @param num the object
+		 * @return <code>intValue()</code> or <code>0</code> */
+		private int objectToInt(Object num) {
+			if (num == null)
+				return 0;
+			
+			if (num instanceof Byte) {
+				return ((Byte) num).intValue();
+			} else if (num instanceof Short) {
+				return ((Short) num).intValue();
+			} else if (num instanceof Integer) {
+				return ((Integer) num).intValue();
+			}
+			
+			return 0;
+		}
 		
 		public String getTooltip(int row, int column) {
 			Field field = fieldList.get(column);
@@ -884,46 +922,36 @@ extends JFrame implements ChartProgressListener {
 				return null;
 			List<FieldValue> fValues = field.getValueList();
 			if (fValues.isEmpty()) {
-				return value.toString();
-			} else 
+				return null;
+			} else {
+				StringBuilder result = new StringBuilder();
 				if (field.isBitmask()) {
 					try {
-						Class c = field.getDatatype().get_class();
-						int iVal = ((Integer)c.getMethod("intValue").invoke(value)).intValue();
-						/*if (value instanceof Byte) {
-							iVal = ((Byte) value).intValue();
-						} else if (value instanceof Short) {
-							iVal = ((Short) value).intValue();
-						} else if (value instanceof Integer) {
-							iVal = ((Integer) value).intValue();
-						}*/
-						
+						int iVal = objectToInt(value);
 						if (iVal < 1)
-							return "";
+							return null;
 						
-						StringBuilder result = new StringBuilder("<html>");
 						for (FieldValue fValue : fValues) {
-							int ifVal = ((Integer)c.getMethod("intValue").invoke(fValue.value)).intValue(); 
-									//(int) fValue.value;
-							if ((iVal & ifVal) > 0)
-								result.append(fValue.source).append(": ").append(fValue.caption).append("<br>");
+							int ifVal = objectToInt(fValue.value);
+							if ((iVal & ifVal) > 0 && fValue.description != null && !fValue.description.isEmpty())
+								result.append(fValue.source).append(": ").append(fValue.description).append("<br>");
 						}
-						
-						return result.append("</html>").toString();
 					} catch (Exception e) {
 						LOG.log(Level.WARNING, "Ошибка при попытке собрать всплывающую подсказку", e);
-						return "";
+						return null;
 					}
-				} else {
-					StringBuilder result = new StringBuilder("<html>");
+				} else
 					for (FieldValue fValue : fValues) {
-						if (value.equals(fValue.value)){
-							result.append(fValue.source).append(": ").append(fValue.caption).append("<br>");
+						if (value.equals(fValue.value) && fValue.description != null && !fValue.description.isEmpty()){
+							result.append(fValue.source).append(": ").append(fValue.description).append("<br>");
 							break;
 						}
 					}
-					return result.append("</html>").toString();
-				}
+				if (result.length() != 0) {
+					return result.insert(0, "<html>").append("</html>").toString();
+				} else
+					return null;
+			}
 		}
 		
 	}

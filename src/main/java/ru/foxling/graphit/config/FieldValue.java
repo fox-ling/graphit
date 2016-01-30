@@ -22,17 +22,25 @@ import java.io.Serializable;
 public class FieldValue
 implements Serializable{
 	private static final long serialVersionUID = 7149480690094544822L;
-	
-	/** Caption/Description of the <code>value</code> */
-	public String caption;
-	public Object value;
-	
-	/** Source string of value */
+
+	/** Source string of value.<br>
+	 * <i>*will be shown in the tooltip</i> */
 	public String source;
+	
+	/** Parsed value */
+	public Object value;
+
+	/** Caption of the value.<br>
+	 * <i>*short description, shown in the table</i> */
+	public String caption;
+	
+	/** Full description of the <code>value</code>.<br>
+	 * <i>*will be shown in the tooltip</i> */
+	public String description;
 	
 	public FieldValue(Object value){
 		this.value = value;
-		this.caption = value.toString();
+		this.description = value.toString();
 	}
 	
 	public FieldValue(Object value, String caption) {
@@ -46,7 +54,27 @@ implements Serializable{
 		this.source = source;
 	}
 	
+	public FieldValue(Object value, String caption, String description, String source) {
+		this.value = value;
+		this.caption = caption;
+		this.description = description;
+		this.source = source;
+	}
+	
+	/** @throws Exception 
+	 * @see {@link #valueList} */
+	public void validateValue(Parser parser) throws Exception {
+		value = parser.parse(source);
+	}
+	
 	public String toString(){
-		return caption;
+		if (caption != null) {
+			return caption;
+		} else if (description != null) {
+			return description;
+		} else if (value != null) {
+			return value.toString();
+		} else
+			return null;
 	}
 }

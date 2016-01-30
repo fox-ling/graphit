@@ -22,7 +22,12 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EventListener;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+
+import javax.swing.event.EventListenerList;
 
 public class Field
 implements Serializable {
@@ -69,6 +74,15 @@ implements Serializable {
 	/** The field role... what to do with the field's data */
 	private FieldRole role;
 	
+	/** Caption index from valueList
+	 * <i>*For optimization purposes</i> */
+	private HashMap<Object,String> captionSet;
+	/** Description index from valueList
+	 * <i>*For optimization purposes</i> */
+	private HashMap<Object,String> descriptionSet;
+	
+	protected EventListenerList listenerList = new EventListenerList();
+	
 	public Field() {
 		id = ++Field.gCounter;
 		name = String.format("<Поле #%d>", id);
@@ -77,6 +91,8 @@ implements Serializable {
 		format = datatype.getDefaultFormat();
 		delimiter = FieldDelimiter.getDefaultFieldDelimiter();
 		valueList = new ArrayList<FieldValue>(5);
+		captionSet = new HashMap<>(5);
+		descriptionSet = new HashMap<>(5);
 		parser = DefaultParser.getDefaultParser(datatype, format);
 		role = FieldRole.getDefaultFieldState();
 	}
@@ -202,17 +218,6 @@ implements Serializable {
 		this.parser = parser;
 	}
 	
-	/** @throws Exception 
-	 * @see {@link #valueList} */
-	public void validateValue(FieldValue value) throws Exception {
-		try {
-			value.value = parser.parse(value.source);
-		} catch (Exception e) {
-			value.value = null;
-			throw new Exception(String.format("Не удалось конвертировать строку '%s' в тип %s", value.source, datatype.getCaption()));
-		}
-	}
-	
 	public void addValue(FieldValue value) throws IllegalArgumentException, IndexOutOfBoundsException {
 		if (value == null)
 			throw new IllegalArgumentException("Попытка вставить null-значение поля");
@@ -228,38 +233,50 @@ implements Serializable {
 			throw new IndexOutOfBoundsException(String.format("Попытка вставить значение поля в некорректную позицию (%d)", index));
 		
 		valueList.add(index, value);
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "valueList"));
 	}
 	
 	public void removeValues(int[] index) throws IndexOutOfBoundsException, NullPointerException {
-		int size = valueList.size();
+		if (index.length == 0)
+			return;
 		
 		Arrays.sort(index);
 		for (int i = index.length - 1; i >= 0; i--) {
-			if (index[i] < 0 || index[i] >= size)
+			if (index[i] < 0 || index[i] >= valueList.size())
 				throw new IndexOutOfBoundsException();
 			
 			valueList.remove(index[i]);
 		}
+		
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "valueList"));
 	}
 	
 	/** @see {@link #bitmask} */
 	public void setBitmask(String bitmask) {
-		this.bitmask = parseBoolean(bitmask);
+		this.setBitmask(parseBoolean(bitmask));
 	}
 	
 	/** @see {@link #bitmask} */
 	public void setBitmask(boolean bitmask) {
+		if (this.bitmask == bitmask)
+			return;
+		
 		this.bitmask = bitmask;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "bitmask"));
 	}
 	
 	/** @see {@link #hashsum} */
 	public void setHashsum(String hashsum) {
-		this.hashsum = parseBoolean(hashsum);
+		this.setHashsum(parseBoolean(hashsum));
 	}
 
 	/** @see {@link #hashsum} */
 	public void setHashsum(boolean hashsum) {
+		if (this.hashsum == hashsum)
+			return;
+		
 		this.hashsum = hashsum;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "hashsum"));
 	}
 	
 	/** @see {@link #role} */
@@ -278,8 +295,12 @@ implements Serializable {
 		
 		if (getDatatype() == DataType.STRING && (role == FieldRole.DRAW || role == FieldRole.X_AXIS))
 			throw new IllegalStateException("Строковые данные нельзя поместить на график");
-			
+		
+		if (this.role == role)
+			return;
+		
 		this.role = role;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "role"));
 	}
 
 	/** @see {@link #name} */
@@ -314,6 +335,24 @@ implements Serializable {
 
 	@Override
 	public String toString() { return name; }
+	
+	public void addFieldListener(FieldListener listener) {
+		listenerList.add(FieldListener.class, listener);
+	}
+	
+	public void removeFieldListener(FieldListener listener) {
+		listenerList.remove(FieldListener.class, listener); 
+	}
+	
+	public <T extends EventListener> T[] getListeners(Class<T> listenerType) {
+		return listenerList.getListeners(listenerType);
+	}
+	
+	public void fireFieldChanged(FieldEvent evt) {
+		for (FieldListener listener : getListeners(FieldListener.class))
+			listener.fieldChanged(evt);
+	}
+	
 	
 	/** String to boolean converter
 	 * @return <code>true</code> if <code><b>text</b></code> in ["true", "yes", "1"] */

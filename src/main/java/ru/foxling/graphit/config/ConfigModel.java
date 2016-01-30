@@ -245,7 +245,7 @@ implements Serializable {
 										List<Element> items = e.getChildren();
 										fieldValues = new ArrayList<FieldValue>(items.size());
 										for (Element item : items){
-											fieldValues.add(new FieldValue(null, item.getAttributeValue("text"), item.getAttributeValue("value")));
+											fieldValues.add(new FieldValue(null, item.getAttributeValue("caption"), item.getAttributeValue("description"), item.getAttributeValue("value")));
 										}
 									} catch (Exception ex) {
 										fieldValues = null;
@@ -257,6 +257,7 @@ implements Serializable {
 							
 							Field field = fieldFactory(fieldProperties, fieldValues);
 							fieldList.add(field);
+							fireFieldChanged(new FieldEvent(field, FieldEvent.INSERT));
 						} catch (Exception e) {
 							LOG.log(Level.WARNING, "Ошибка при загрузке конфигурации поля \"{0}\". {1}", new Object[] { properties.get("name"), e });
 						}
@@ -269,7 +270,6 @@ implements Serializable {
 						break;
 				}
 			});
-			fireFieldChanged(new FieldEvent(this, FieldEvent.INSERT, null));
 		} catch(JDOMException e) {
 			e.printStackTrace();
 		} catch(IOException e) {
@@ -311,7 +311,10 @@ implements Serializable {
 	        		 values.forEach((value) -> {
 	        			 Element item = new Element("item");
 	        			 item.setAttribute("value", value.source);
-	        			 item.setAttribute("text", value.caption);
+	        			 if (value.caption != null && !value.caption.isEmpty())
+	        				item.setAttribute("caption", value.caption);
+	        			 if (value.description != null && !value.description.isEmpty())
+	        				item.setAttribute("description", value.description);
 	        			 eValues.addContent(item);
 	        		 });
 	        		 eField.addContent(eValues);
@@ -430,7 +433,11 @@ implements Serializable {
 			for (FieldValue value : values) {
 				try {
 					field.addValue(value);
-					field.validateValue(value);
+					try {
+						value.validateValue(field.getParser());
+					} catch (Exception e) {
+						throw new Exception(String.format("Не удалось конвертировать строку '%s' в тип %s", value.source, field.getDatatype().getCaption()));
+					}
 				} catch (Exception e) {
 					LOG.log(Level.SEVERE, String.format("Ошибка при загрузке значения поля [%s]. ", field.getName(), e.getMessage()), e);
 				}
@@ -482,14 +489,12 @@ implements Serializable {
 			
 			if (fieldList.indexOf(field) == fieldList.size() - 1){
 				field.setDelimiter(getDefaultLineDelimiter());
-				if (prevField != null && prevField.getDelimiter() == getDefaultLineDelimiter()) {
+				if (prevField != null && prevField.getDelimiter() == getDefaultLineDelimiter())
 					prevField.setDelimiter(getDefaultFieldDelimiter());
-					fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, prevField));
-				}
 			} else
 				field.setDelimiter(getDefaultFieldDelimiter());
 			
-			fireFieldChanged(new FieldEvent(this, FieldEvent.INSERT, field));
+			fireFieldChanged(new FieldEvent(field, FieldEvent.INSERT));
 		} catch (Exception e) {
 			LOG.log(Level.SEVERE, "Не удалось создать новое поле", e);
 		}
@@ -500,13 +505,10 @@ implements Serializable {
 	}
 	
 	public void removeFields(List<Field> list) {
-		boolean result = false;
 		for (Field field : list) {
 			if (fieldList.remove(field))
-				result = true;
-		}
-		if (result)
-			fireFieldChanged(new FieldEvent(this, FieldEvent.DELETE, null));
+				fireFieldChanged(new FieldEvent(field, FieldEvent.DELETE));
+		}	
 	}
 	
 	/*
@@ -522,7 +524,6 @@ implements Serializable {
 				return false;
 			
 			field.setName(name);
-			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, field));
 			return true;
 		} catch (Exception e) {
 			LOG.log(Level.SEVERE, "Не удалось изменить имя поля", e);
@@ -536,7 +537,6 @@ implements Serializable {
 				throw new NullPointerException("Поле - NULL");
 			
 			field.setDescription(description);
-			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, field));
 		} catch (Exception e) {
 			LOG.log(Level.SEVERE,"Не удалось изменить описание поля", e);
 		}
@@ -548,7 +548,6 @@ implements Serializable {
 				throw new NullPointerException("Поле - NULL");
 			
 			field.setDatatype(datatype);
-			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, field));
 		} catch (Exception e) {
 			LOG.log(Level.SEVERE, "Не удалось изменить тип данных поля", e);
 		}
@@ -560,7 +559,6 @@ implements Serializable {
 				throw new NullPointerException("Поле - NULL");
 			
 			field.setDelimiter(delimiter);
-			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, field));
 		} catch (Exception e) {
 			LOG.log(Level.SEVERE, "Не удалось изменить тип данных поля", e);
 		}
@@ -572,7 +570,6 @@ implements Serializable {
 				throw new NullPointerException("Поле - NULL");
 			
 			field.setFormat(format);
-			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, field));
 		} catch (Exception e) {
 			LOG.log(Level.SEVERE, "Не удалось изменить формат поля", e);
 		}
@@ -584,7 +581,6 @@ implements Serializable {
 				throw new NullPointerException("Поле - NULL");
 			
 			field.setFormat(format);
-			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, field));
 			return true;
 		} catch (Exception e) {
 			LOG.log(Level.SEVERE, "Не удалось изменить формат поля", e);
@@ -611,10 +607,6 @@ implements Serializable {
 				}
 			
 			field.setOptional(isOptional);
-			
-			if (xField != null)
-				fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, xField));
-			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, field));
 			return true;
 		} catch (Exception e) {
 			if (xField != null) // rolling back optional changing
@@ -630,7 +622,6 @@ implements Serializable {
 				throw new NullPointerException("Поле - NULL");
 			
 			field.setBitmask(isBitmask);
-			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, field));
 		} catch (Exception e) {
 			LOG.log(Level.SEVERE, "Не удалось изменить свойство поля \"битовая маска\"", e);
 		}
@@ -658,10 +649,6 @@ implements Serializable {
 				}
 			
 			field.setHashsum(isHashsum);
-			
-			if (xField != null)
-				fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, xField));
-			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, field));
 			return true;
 		} catch (Exception e) {
 			if (xField != null) // rolling back bitmask changing
@@ -718,11 +705,6 @@ implements Serializable {
 				}
 				
 			field.setRole(role);
-			
-			if (xField != null)
-				fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, xField));
-			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, field));
-			
 			return true;
 		} catch (Exception e) {
 			if (xField != null)
@@ -742,7 +724,6 @@ implements Serializable {
 				field.addValue(value);
 			} else
 				field.addValueAt(index, value);
-			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, field));
 		} catch (Exception e) {
 			LOG.log(Level.SEVERE, "Не удалось добавить значение поля", e);
 		}
@@ -755,7 +736,6 @@ implements Serializable {
 		
 		try {
 			field.removeValues(index);
-			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, field));
 		} catch (Exception e) {
 			LOG.log(Level.SEVERE, "Не удалось удалить значение поля", e);
 		}

@@ -16,8 +16,6 @@
  */
 package ru.foxling.graphit.logfile;
 
-import ru.foxling.graphit.Core;
-
 /** Class for storing log-records */
 public class Record {
 	/** Line number in the file */

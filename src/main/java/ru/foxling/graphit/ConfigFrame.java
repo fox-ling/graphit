@@ -59,6 +59,8 @@ import javax.swing.BoxLayout;
 import java.awt.Component;
 import javax.swing.JTable;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.JTableHeader;
+
 import java.awt.Dimension;
 import javax.swing.JPopupMenu;
 import java.awt.event.MouseAdapter;
@@ -244,7 +246,23 @@ public class ConfigFrame extends JFrame {
 		spValues = new JScrollPane();
 		pnlValues.add(spValues);
 		
-		tValues = new JTable();
+		tValues = new JTable() {
+			private String[] columnToolTips = {
+					"Значение из лог файла",
+					"Короткое пояснение, отображается в таблице",
+					"Длинное описание, отображается в всплывающей подсказке таблицы"};
+			//Implement table header tool tips.
+			protected JTableHeader createDefaultTableHeader() {
+				return new JTableHeader(columnModel) {
+					public String getToolTipText(MouseEvent e) {
+						java.awt.Point p = e.getPoint();
+						int index = columnModel.getColumnIndexAtX(p.x);
+						int realIndex = columnModel.getColumn(index).getModelIndex();
+						return columnToolTips[realIndex];
+					}
+				};
+			}
+		};
 		spValues.setViewportView(tValues);
 		
 		JPopupMenu pmValueList = new JPopupMenu();
@@ -400,10 +418,11 @@ public class ConfigFrame extends JFrame {
 		
 		// Config model >> Field List >> onChange 
 		configModel.addFieldListener((evt) -> {
-			if (evt.getField() == null || evt.getField() == getSelectedField()) {
+			Field field = (Field) evt.getSource(); 
+			if (field == null || field == getSelectedField()) {
 				mdlValueList.setField(getSelectedField());
 			}
-			if (evt.getType() == FieldEvent.UPDATE && evt.getField() == getSelectedField()) {
+			if (evt.getType() == FieldEvent.UPDATE && field == getSelectedField()) {
 				refreshFieldInfo(evt);
 			}
 		});
@@ -810,8 +829,10 @@ public class ConfigFrame extends JFrame {
 	private class ValueListModel
 	extends AbstractTableModel {
 		private static final long serialVersionUID = 3742047021848215242L;
-		private final String[] COLS = { "Значение", "Описание" };
-		private final Class[] COL_CLASS = {Object.class, String.class};
+		
+		private final String[] COLS = { "Значение", "Метка", "Описание" };
+		private final Class[] COL_CLASS = {Object.class, String.class, String.class};
+		
 		private List<FieldValue> valueList;
 		
 		@Override
@@ -847,6 +868,8 @@ public class ConfigFrame extends JFrame {
 					return valueList.get(row).value;
 				case 1:
 					return valueList.get(row).caption;
+				case 2:
+					return valueList.get(row).description;
 				default:
 					return null;
 				}
@@ -865,6 +888,9 @@ public class ConfigFrame extends JFrame {
 					break;
 				case 1:
 					valueList.get(row).caption = value.toString();
+					break;
+				case 2:
+					valueList.get(row).description = value.toString();
 					break;
 				}
 			}

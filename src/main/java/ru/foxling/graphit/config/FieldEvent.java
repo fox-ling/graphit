@@ -30,24 +30,26 @@ public class FieldEvent extends EventObject {
 	
 	/** Event type: {@link #DELETE}, {@link #INSERT}, {@link #UPDATE} */
 	private int type;
-	private Field field;
 	
-	public FieldEvent(Object source) {
+	private String propertyName;
+	
+	public FieldEvent(Field source) {
 		super(source);
 	}
 	
-	public FieldEvent(Object source, int type, Field field) {
+	public FieldEvent(Field source, int type) {
 		super(source);
 		this.type = type;
-		this.field = field;
+	}
+
+	public FieldEvent(Field source, int type, String propertyName) {
+		super(source);
+		this.type = type;
+		this.propertyName = propertyName;
 	}
 	
 	/** Returns the event type {@link #type} */
 	public int getType() {
 		return type;
-	}
-
-	public Field getField() {
-		return field;
 	}
 }
