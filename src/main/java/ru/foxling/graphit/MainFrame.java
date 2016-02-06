@@ -29,7 +29,9 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
 
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
@@ -67,6 +69,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -215,25 +218,7 @@ extends JFrame implements ChartProgressListener {
 		FlowLayout flowLayout = (FlowLayout) chartPanel.getLayout();
 		flowLayout.setAlignment(FlowLayout.LEADING);
 		
-		table = new JTable(){
-			private static final long serialVersionUID = 342278938918028779L;
-
-			@Override
-			public String getToolTipText(MouseEvent e) {
-				if (getModel() instanceof DefaultTableModel)
-					return null;
-				LogFileTableModel model = (LogFileTableModel) getModel();
-				
-		        java.awt.Point p = e.getPoint();
-		        int rowIndex = rowAtPoint(p);
-		        int colIndex = columnAtPoint(p);
-		        int realColumnIndex = convertColumnIndexToModel(colIndex);
-		        if (rowIndex > -1 && realColumnIndex > -1) {
-		        	return model.getTooltip(rowIndex, realColumnIndex);
-		        } else
-		        	return null;
-			}
-		};
+		table = new JTable();
 		table.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
 		table.setCellSelectionEnabled(true);
 		table.setFillsViewportHeight(true);
@@ -390,6 +375,14 @@ extends JFrame implements ChartProgressListener {
 	private void fillTable(boolean wrongLinesOnly){
 		doTableTrack = false;
 		table.setModel(new LogFileTableModel(lf, wrongLinesOnly));
+		ArrayList<Field> fieldList = lf.getFieldList();
+		Enumeration<TableColumn> cols = table.getColumnModel().getColumns();
+		while (cols.hasMoreElements()) {
+			TableColumn col = (TableColumn) cols.nextElement();
+			Field field = fieldList.get(col.getModelIndex());
+			if (!field.getValueList().isEmpty())
+				col.setCellRenderer(new FieldValueRenderer(field));
+		}
 		doTableTrack = true;
 	}
 	
@@ -833,10 +826,83 @@ extends JFrame implements ChartProgressListener {
 		}
 	}
 	
-	class LogFileTableModel
+	static class FieldValueRenderer
+	extends DefaultTableCellRenderer {
+	    private static final long serialVersionUID = 4264832765857567868L;
+	    private Field field;
+	    
+		public FieldValueRenderer(Field field) {
+			super();
+			this.field = field;
+		}
+
+	    public void setValue(Object value) {
+	    	if (value == null) {
+	    		setText("");
+	    		return;
+	    	}
+	    	setText(value.toString());
+	    	
+	    	if (!field.isBitmask()) {
+	    		for (FieldValue fValue : field.getValueList())
+	    			if (fValue.value.equals(value)) {
+	    				if (fValue.caption != null) setText(fValue.caption);
+	    				if (fValue.description != null) setToolTipText(fValue.source + ": " + fValue.description);
+						return;
+					}
+	    	} else {
+				try {
+					StringBuilder result = new StringBuilder();
+					int iVal = objectToInt(value);
+					if (iVal == 0)
+						return;
+					
+					for (FieldValue fValue : field.getValueList()) {
+						if (fValue.value.equals(value)) {
+							if (fValue.caption != null) setText(fValue.caption);
+		    				if (fValue.description != null) setToolTipText(fValue.source + ": " + fValue.description);
+							return;
+						}
+						
+						int ifVal = objectToInt(fValue.value);
+						if ((iVal & ifVal) > 0 && fValue.description != null && !fValue.description.isEmpty())
+							result.append(fValue.source).append(": ").append(fValue.description).append("<br>");
+					}
+
+					if (result.length() != 0) {
+						setToolTipText(result.insert(0, "<html>").append("</html>").toString());
+					}
+				} catch (Exception e) {
+					LOG.log(Level.WARNING, "Ошибка при попытке собрать всплывающую подсказку", e);
+					setText("");
+					return;
+				}
+			}
+	    }
+
+	    /** Converts object representation of a whole number to int.
+		 * @param num the object
+		 * @return <code>intValue()</code> or <code>0</code> */
+		private int objectToInt(Object num) {
+			if (num == null)
+				return 0;
+			
+			if (num instanceof Byte) {
+				return ((Byte) num).intValue();
+			} else if (num instanceof Short) {
+				return ((Short) num).intValue();
+			} else if (num instanceof Integer) {
+				return ((Integer) num).intValue();
+			}
+			
+			return 0;
+		}
+	    
+	}
+	
+	static class LogFileTableModel
 	extends AbstractTableModel {
 		private static final long serialVersionUID = -6341608314922452350L;
-		//private LogFile logFile;
 		private ArrayList<Field> fieldList;
 		
 		/** Records index */
@@ -844,7 +910,6 @@ extends JFrame implements ChartProgressListener {
 		
 		public LogFileTableModel(LogFile logFile, boolean wrongLinesOnly) {
 			super();
-			//this.logFile = logFile;
 			fieldList = logFile.getFieldList();
 			index = new ArrayList<Record>(25);
 			for (Startup startup : logFile.getStartups())
@@ -870,26 +935,12 @@ extends JFrame implements ChartProgressListener {
 		
 		@Override
 		public Class getColumnClass(int columnIndex) {
-			if (fieldList.get(columnIndex).getValueList().isEmpty()) {
-				return fieldList.get(columnIndex).getDatatype().get_class();
-			} else
-				return String.class;
+			return fieldList.get(columnIndex).getDatatype().get_class();
 		}
 
 		@Override
 		public Object getValueAt(int rowIndex, int columnIndex) {
-			Object value = index.get(rowIndex).getValue(columnIndex);
-			if (value == null) return null;
-			List<FieldValue> fValues = fieldList.get(columnIndex).getValueList();
-			if (fValues.isEmpty()) {
-				return value;
-			} else {
-				for (FieldValue fieldValue : fValues) {
-					if (fieldValue.value.equals(value))
-						return fieldValue.caption;
-				}	
-				return value.toString();
-			}
+			return index.get(rowIndex).getValue(columnIndex);
 		}
 		
 		@Override
@@ -913,46 +964,6 @@ extends JFrame implements ChartProgressListener {
 			}
 			
 			return 0;
-		}
-		
-		public String getTooltip(int row, int column) {
-			Field field = fieldList.get(column);
-			Object value = getValueAt(row, column);
-			if (value == null)
-				return null;
-			List<FieldValue> fValues = field.getValueList();
-			if (fValues.isEmpty()) {
-				return null;
-			} else {
-				StringBuilder result = new StringBuilder();
-				if (field.isBitmask()) {
-					try {
-						int iVal = objectToInt(value);
-						if (iVal < 1)
-							return null;
-						
-						for (FieldValue fValue : fValues) {
-							int ifVal = objectToInt(fValue.value);
-							if ((iVal & ifVal) > 0 && fValue.description != null && !fValue.description.isEmpty())
-								result.append(fValue.source).append(": ").append(fValue.description).append("<br>");
-						}
-					} catch (Exception e) {
-						LOG.log(Level.WARNING, "Ошибка при попытке собрать всплывающую подсказку", e);
-						return null;
-					}
-				} else
-					for (FieldValue fValue : fValues) {
-						if (value.equals(fValue.value) && fValue.description != null && !fValue.description.isEmpty()){
-							result.append(fValue.source).append(": ").append(fValue.description).append("<br>");
-							break;
-						}
-					}
-				if (result.length() != 0) {
-					return result.insert(0, "<html>").append("</html>").toString();
-				} else
-					return null;
-			}
-		}
-		
+		}		
 	}
 }

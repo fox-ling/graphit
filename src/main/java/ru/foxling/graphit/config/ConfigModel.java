@@ -394,6 +394,7 @@ implements Serializable {
 	 * @return new field */
 	protected Field fieldFactory(Map<String,String> properties, List<FieldValue> values) {
 		Field field = new Field();
+		field.addFieldListener(this::fireFieldChanged); // Event Propagation
 		
 		for (String property : properties.keySet()) {
 			try {
