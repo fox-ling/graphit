@@ -30,7 +30,6 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
 
 import java.awt.datatransfer.DataFlavor;
@@ -48,13 +47,20 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.JMenuItem;
 
+import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.event.ChartProgressEvent;
 import org.jfree.chart.event.ChartProgressListener;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
+import org.jfree.data.time.Second;
+import org.jfree.data.time.TimeSeries;
+import org.jfree.data.time.TimeSeriesCollection;
+import org.jfree.ui.RectangleInsets;
+
 import ru.foxling.graphit.config.ConfigModel;
 import ru.foxling.graphit.config.DataType;
 import ru.foxling.graphit.config.Field;
@@ -67,10 +73,11 @@ import ru.foxling.graphit.logfile.Startup;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
@@ -321,7 +328,96 @@ extends JFrame implements ChartProgressListener {
 	    pTools.add(cbTable, "cell 2 0,alignx right,aligny top");
 	    
 	    configController = new ConfigController(Core.getConfigModel());
+	    chartPanel.setChart(test());
 	    // TODO 
+	}
+	
+	private JFreeChart test() {
+		LocalDateTime now = LocalDateTime.now();
+		TimeSeriesCollection dsLaunch = new TimeSeriesCollection();
+		TimeSeries tsLaunch = new TimeSeries("Launch");
+		for (int i = 0; i < 100; i++) {
+			LocalDateTime time = now.plusHours(i);
+			Second jfTime = new Second(time.getSecond(), time.getMinute(), time.getHour(), time.getDayOfMonth(), time.getMonthValue(), time.getYear());
+			tsLaunch.addOrUpdate(jfTime, i);
+		}
+		//Second jfTime = new Second(1, 1, 1, 2, 1, 1900);
+		//tsLaunch.addOrUpdate(jfTime, 50);
+		
+		dsLaunch.addSeries(tsLaunch);
+		JFreeChart chart = ChartFactory.createTimeSeriesChart("Chart Title", "xAxisLabel", "yAxisLabel", dsLaunch, false, false, false);
+
+	    XYPlot plot = chart.getXYPlot();
+	    plot.setBackgroundPaint(Color.white);
+        plot.setDomainGridlinePaint(Color.lightGray);
+        plot.setRangeGridlinePaint(Color.lightGray);
+        plot.setAxisOffset(new RectangleInsets(5.0, 5.0, 5.0, 5.0));
+        plot.setDomainCrosshairVisible(true);
+        plot.setDomainCrosshairLockedOnData(true);
+        
+        ValueAxis axis = plot.getRangeAxis();
+        axis.setVisible(false);
+        
+        // TimeSeries count (Launches count)
+        int tsCount = dsLaunch.getSeriesCount();
+        
+        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+        if (tsCount != 0)
+        	renderer.setSeriesShapesVisible(0, false);
+        renderer.setSeriesShapesFilled(0, true);
+    	renderer.setSeriesShapesVisible(0, true);
+    	renderer.setSeriesLinesVisible(0, false);
+    	renderer.setSeriesPaint(0, Color.black);
+    	
+        plot.setRenderer(0, renderer);
+        
+        /*
+        // 2nd AXIS – Depth
+        NumberAxis naDepth = new NumberAxis(sDepth);
+        naDepth.setAutoRangeIncludesZero(false);
+        naDepth.setLabelPaint(Color.red);
+        naDepth.setInverted(true);
+        naDepth.setAutoRangeStickyZero(false);
+        naDepth.setVisible(dsVisible[1]);
+        plot.setRangeAxis(1, naDepth);
+        plot.setRangeAxisLocation(1, AxisLocation.BOTTOM_OR_LEFT);
+        
+        XYDataset xydsDepth = dsDepth;
+        plot.setDataset(1, xydsDepth);
+        plot.mapDatasetToRangeAxis(1, 1);
+        
+        renderer = new XYLineAndShapeRenderer();
+        for (int i = 0; i < dsDepth.getSeriesCount(); i++) {
+        	renderer.setSeriesLinesVisible(i, dsVisible[1]);
+        	renderer.setSeriesPaint(i, Color.red);
+        	renderer.setSeriesShapesVisible(i, false);
+        	renderer.setSeriesShapesFilled(i, false);
+		}
+        plot.setRenderer(1, renderer);
+        
+        // 3rd AXIS – Tension
+        NumberAxis naTension = new NumberAxis(sTension);
+        naTension.setAutoRangeIncludesZero(false);
+        naTension.setLabelPaint(Color.green);
+        naTension.setTickLabelPaint(Color.black);
+        naTension.setVisible(dsVisible[2]);
+        plot.setRangeAxis(2, naTension);
+        plot.setRangeAxisLocation(2, AxisLocation.BOTTOM_OR_LEFT);
+        
+        XYDataset xydsTension = dsTension;
+        plot.setDataset(2, xydsTension);
+        plot.mapDatasetToRangeAxis(2, 2);
+        
+        renderer = new XYLineAndShapeRenderer();
+        for (int i = 0; i < dsTension.getSeriesCount(); i++) {
+        	renderer.setSeriesLinesVisible(i, dsVisible[2]);
+        	renderer.setSeriesPaint(i, Color.GREEN);
+        	renderer.setSeriesShapesVisible(i, false);
+        	renderer.setSeriesShapesFilled(i, false);
+		}
+        plot.setRenderer(2, renderer);*/
+		
+        return chart;
 	}
 	
 	private void openLogFile(File aFile){
@@ -460,13 +556,51 @@ extends JFrame implements ChartProgressListener {
 	}
 	
 	private static class Chart {
-		private static final String sTension = "Натяжение";
-		private static final String sDepth = "Глубина";
+		private JFreeChart chartFactory(LogFile lf) {
+			TimeSeriesCollection dsLaunch = new TimeSeriesCollection();
+			TimeSeries tsLaunch = new TimeSeries("Launch");
+			for (Startup startup : lf.getStartups()) {
+				LocalDateTime date = startup.getDatetime();
+				tsLaunch.addOrUpdate(new Second(date.getSecond(), date.getMinute(), date.getHour(), date.getDayOfMonth(), date.getMonthValue(), date.getYear()), 0);
+			}
+			dsLaunch.addSeries(tsLaunch);
+			JFreeChart chart = ChartFactory.createTimeSeriesChart("Chart Title", "xAxisLabel", "yAxisLabel", dsLaunch, false, false, false);
+
+		    XYPlot plot = chart.getXYPlot();
+		    plot.setBackgroundPaint(Color.white);
+	        plot.setDomainGridlinePaint(Color.lightGray);
+	        plot.setRangeGridlinePaint(Color.lightGray);
+	        plot.setAxisOffset(new RectangleInsets(5.0, 5.0, 5.0, 5.0));
+	        plot.setDomainCrosshairVisible(true);
+	        plot.setDomainCrosshairLockedOnData(true);
+	        
+	        ValueAxis axis = plot.getRangeAxis();
+	        axis.setVisible(false);
+	        
+	        // TimeSeries count (Launches count)
+	        int tsCount = dsLaunch.getSeriesCount();
+	        
+	        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+	        if (tsCount != 0)
+	        	renderer.setSeriesShapesVisible(0, false);
+	        renderer.setSeriesShapesFilled(0, true);
+	    	renderer.setSeriesShapesVisible(0, true);
+	    	renderer.setSeriesLinesVisible(0, false);
+	    	renderer.setSeriesPaint(0, Color.black);
+	    	
+	        plot.setRenderer(0, renderer);
+	        return chart;
+		}
 		
-		/** boolean[] <b>dsVisible</b> = {..., ..., ...}<br>
-		 * There are 3 datasets in chart, variable gotta contain visibility values for each of them */
+		public static TimeSeriesCollection axisFactory(LogFile lf, Field field) {
+			TimeSeriesCollection collection = new TimeSeriesCollection();
+			TimeSeries ts = new TimeSeries(field.getName());
+			return collection;
+		}
+		
+		/*
 		public static JFreeChart createTSChart(LogFile data, boolean[] dsVisible) {
-			/*String chartTitle = "";
+			String chartTitle = "";
 		    String xAxisLabel = "";
 		    
 		    Startup currStartup = null;
@@ -593,9 +727,8 @@ extends JFrame implements ChartProgressListener {
 			}
 	        plot.setRenderer(2, renderer);
 			
-	        return chart;*/
-			return null;
-		}
+	        return chart;
+		}*/
 		
 		public static void setCollectionVisible(JFreeChart chart, int collectionID, boolean visible) {
 			XYPlot plot = chart.getXYPlot();
@@ -946,24 +1079,6 @@ extends JFrame implements ChartProgressListener {
 		@Override
 	    public boolean isCellEditable(int row, int column) {
 	       return false;
-	    }
-		
-		/** Converts object representation of a whole number to int.
-		 * @param num the object
-		 * @return <code>intValue()</code> or <code>0</code> */
-		private int objectToInt(Object num) {
-			if (num == null)
-				return 0;
-			
-			if (num instanceof Byte) {
-				return ((Byte) num).intValue();
-			} else if (num instanceof Short) {
-				return ((Short) num).intValue();
-			} else if (num instanceof Integer) {
-				return ((Integer) num).intValue();
-			}
-			
-			return 0;
-		}		
+	    }		
 	}
 }

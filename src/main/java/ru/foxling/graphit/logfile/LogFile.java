@@ -54,22 +54,14 @@ public class LogFile {
 	private int optionalFieldId = -1;
 	private int hashsumFieldId = -1;
 	
-	// TODO Remove debug block
-	public static void main(String[] args) {
-		LogFile lf = new LogFile("E:\\_dev\\Java\\Workspace\\graphit\\misc\\test.txt");
-		try {
-			lf.readFile();
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.out.println("Shit's gone down: " + e.getMessage());
-		}
-		System.out.println("The End!");
-	}
+	/** Records index */
+	private ArrayList<Record> records;
 	
 	public LogFile(String filename) {
 		this.filename = filename;
 		this.filePath = Paths.get(filename);
 		this.fieldList = Core.getConfigModel().cloneFieldList();
+		records = new ArrayList<Record>(25);
 		for (int i = 0; i < fieldList.size(); i++) {
 			Field field = fieldList.get(i);
 			if (field.isOptional()) optionalFieldId = i;
@@ -115,6 +107,10 @@ public class LogFile {
 	public int getLinesCount() {
 		return linesCount;
 	}
+	
+	public ArrayList<Record> getRecords(){
+		return records;
+	}
 
 	/** Parses log-file header */
 	public void readHeader() {
@@ -153,6 +149,7 @@ public class LogFile {
 
 	/** Parses log-file's startups and their lines */
 	public void readFile() throws IOException {
+		records.clear();
 		try (BufferedReader reader = Files.newBufferedReader(filePath, encoding)){
 			String line;
 			
@@ -206,6 +203,7 @@ public class LogFile {
 							try {
 								parse(rec);
 								startup.addLine(rec);
+								records.add(rec);
 							} catch (ParseExceptionEx e) {
 								rec.setParseError(e);
 								LOG.log(Level.WARNING, e.getMessage(), e);
