@@ -50,6 +50,7 @@ import javax.swing.JMenuItem;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.AxisLocation;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.event.ChartProgressEvent;
@@ -59,6 +60,7 @@ import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.time.Second;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
+import org.jfree.data.xy.XYDataset;
 import org.jfree.ui.RectangleInsets;
 
 import ru.foxling.graphit.config.ConfigModel;
@@ -556,15 +558,24 @@ extends JFrame implements ChartProgressListener {
 	}
 	
 	private static class Chart {
-		private JFreeChart chartFactory(LogFile lf) {
+		private static JFreeChart chart;
+		private static LogFile logFile;
+		private static Field xField;
+		
+		public JFreeChart chartFactory(LogFile logFile) {
+			if (logFile == null) {
+				LOG.log(Level.SEVERE, "logFile is NULL");
+				return null;
+			}
+			
 			TimeSeriesCollection dsLaunch = new TimeSeriesCollection();
 			TimeSeries tsLaunch = new TimeSeries("Launch");
-			for (Startup startup : lf.getStartups()) {
+			for (Startup startup : logFile.getStartups()) {
 				LocalDateTime date = startup.getDatetime();
 				tsLaunch.addOrUpdate(new Second(date.getSecond(), date.getMinute(), date.getHour(), date.getDayOfMonth(), date.getMonthValue(), date.getYear()), 0);
 			}
 			dsLaunch.addSeries(tsLaunch);
-			JFreeChart chart = ChartFactory.createTimeSeriesChart("Chart Title", "xAxisLabel", "yAxisLabel", dsLaunch, false, false, false);
+			chart = ChartFactory.createTimeSeriesChart("Chart Title", "xAxisLabel", "yAxisLabel", dsLaunch, false, false, false);
 
 		    XYPlot plot = chart.getXYPlot();
 		    plot.setBackgroundPaint(Color.white);
@@ -589,16 +600,69 @@ extends JFrame implements ChartProgressListener {
 	    	renderer.setSeriesPaint(0, Color.black);
 	    	
 	        plot.setRenderer(0, renderer);
+	        
+	        LinkedList<Field> yList = new LinkedList<>();
+			for (Field f : logFile.getFieldList()) {
+				if (f.getRole() == FieldRole.X_AXIS) {
+					xField = f;
+				} else if (f.getRole() == FieldRole.DRAW)
+					yList.add(f);
+			}
+			
+			if (xField != null)
+				for (Field yField : yList) {
+					plotFactory(yField);
+				}
+			
+			
 	        return chart;
 		}
 		
-		public static TimeSeriesCollection axisFactory(LogFile lf, Field field) {
+		/** 
+		 * @param xField */
+		private static TimeSeriesCollection plotFactory(Field yField) {
+			if (xField == null) {
+				LOG.log(Level.SEVERE, "Ось X не определена");
+				return null;
+			}
+			if (yField == null) {
+				LOG.log(Level.SEVERE, "Ось Y не определено");
+				return null;
+			}
+			
+			int xFieldId = logFile.getFieldList().indexOf(xField),
+				yFieldId = logFile.getFieldList().indexOf(yField);
+			
+			if (xFieldId == -1 || yFieldId == -1) {
+				LOG.log(Level.SEVERE, "Поля для графика не определились ({0}={1}; {2}={3})", new Object[]{ xField, xFieldId, yField, yFieldId });
+				return null;
+			}
+			
 			TimeSeriesCollection collection = new TimeSeriesCollection();
-			TimeSeries ts = new TimeSeries(field.getName());
+			TimeSeries ts = new TimeSeries(yField.getName());
+			for (Record rec : Chart.logFile.getRecords()) {
+				Object fieldValue = rec.getValue(xFieldId);
+				if (fieldValue == null) continue;
+				if (fieldValue instanceof LocalTime) {
+					LocalTime time = (LocalTime) fieldValue;
+					fieldValue = rec.getValue(yFieldId);
+					if (fieldValue == null) continue;
+					if (fieldValue instanceof Byte ||
+							fieldValue instanceof Short ||
+							fieldValue instanceof Integer ||
+							fieldValue instanceof Float)
+								ts.addOrUpdate(
+										new Second(time.getSecond(),
+													time.getMinute(),
+													time.getHour(), 1, 1, 1900),
+										(double) fieldValue
+								);
+				}
+			}
 			return collection;
 		}
 		
-		/*
+		
 		public static JFreeChart createTSChart(LogFile data, boolean[] dsVisible) {
 			String chartTitle = "";
 		    String xAxisLabel = "";
@@ -617,7 +681,7 @@ extends JFrame implements ChartProgressListener {
 			TimeSeries tsTension = null;
 			TimeSeries tsFix = new TimeSeries("Launch zoom out fix");
 			
-			for (int i = 0; i < data.startup.size(); i++) {
+			/*for (int i = 0; i < data.startup.size(); i++) {
 				currStartup = data.startup.get(i);
 				if (currStartup.time != null) {
 					if (!fixDone) {
@@ -649,10 +713,10 @@ extends JFrame implements ChartProgressListener {
 					dsDepth.addSeries(tsDepth);
 					dsTension.addSeries(tsTension);
 				}
-			}
+			}*/
 			dsLaunch.addSeries(tsLaunch);
 			
-			JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, xAxisLabel, sDepth, dsLaunch, false, false, false);
+			JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, xAxisLabel, "sDepth", dsLaunch, false, false, false);
 
 		    XYPlot plot = chart.getXYPlot();
 		    plot.setBackgroundPaint(Color.white);
@@ -683,7 +747,7 @@ extends JFrame implements ChartProgressListener {
 	        plot.setRenderer(0, renderer);
 	        
 	        // 2nd AXIS – Depth
-	        NumberAxis naDepth = new NumberAxis(sDepth);
+	        NumberAxis naDepth = new NumberAxis("sDepth");
 	        naDepth.setAutoRangeIncludesZero(false);
 	        naDepth.setLabelPaint(Color.red);
 	        naDepth.setInverted(true);
@@ -706,7 +770,7 @@ extends JFrame implements ChartProgressListener {
 	        plot.setRenderer(1, renderer);
 	        
 	        // 3rd AXIS – Tension
-	        NumberAxis naTension = new NumberAxis(sTension);
+	        NumberAxis naTension = new NumberAxis("sTension");
 	        naTension.setAutoRangeIncludesZero(false);
 	        naTension.setLabelPaint(Color.green);
 	        naTension.setTickLabelPaint(Color.black);
@@ -728,7 +792,7 @@ extends JFrame implements ChartProgressListener {
 	        plot.setRenderer(2, renderer);
 			
 	        return chart;
-		}*/
+		}
 		
 		public static void setCollectionVisible(JFreeChart chart, int collectionID, boolean visible) {
 			XYPlot plot = chart.getXYPlot();
@@ -852,6 +916,10 @@ extends JFrame implements ChartProgressListener {
 			
 			refreshAxesList();
 			updateRecentMenu();
+		}
+		
+		public ConfigModel getConfigModel() {
+			return configModel;
 		}
 		
 		
