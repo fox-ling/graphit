@@ -202,12 +202,12 @@ public class LogFile {
 							Record rec = new Record(lineNo, line, fieldList.size());
 							try {
 								parse(rec);
-								startup.addLine(rec);
 								records.add(rec);
 							} catch (ParseExceptionEx e) {
 								rec.setParseError(e);
 								LOG.log(Level.WARNING, e.getMessage(), e);
 							}
+							startup.addLine(rec);
 						}
 				}
 			}
@@ -281,9 +281,8 @@ public class LogFile {
 		}
 			
 		// Parsing string parts --> fields' values
-		offset = -1;
+		offset = 0;
 		for (fid = 0; fid < fieldsCount; fid++) {
-			offset = offsets.get(fid); 
 			String part = parts.get(fid);
 			if (fid == optionalFieldId && part == null)
 				continue;
@@ -292,8 +291,9 @@ public class LogFile {
 				Object value = field.getParser().parse(part);
 				rec.setValue(fid, value);
 			} catch (Exception e) {
-				throw new ParseExceptionEx("Ошибка при попытке преобразовать строковое представление данных: " + e.getMessage(), offset, part.length(), fid);
+				throw new ParseExceptionEx(String.format("Ошибка преобразования строки \"%s\" в тип %s", part, field.getDatatype().getValue()), offset, part.length(), fid);
 			}
+			offset = offsets.get(fid);
 		}
 		
 		// Calculating hash sum of the string

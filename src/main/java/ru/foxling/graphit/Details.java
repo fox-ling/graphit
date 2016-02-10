@@ -19,20 +19,13 @@ package ru.foxling.graphit;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Insets;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.SpringLayout;
 import javax.swing.JSplitPane;
-import javax.swing.event.TreeSelectionEvent;
-import javax.swing.event.TreeSelectionListener;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.DefaultStyledDocument;
-import javax.swing.text.Style;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.StyleContext;
+import javax.swing.JTextArea;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
@@ -43,248 +36,209 @@ import ru.foxling.graphit.logfile.Record;
 import ru.foxling.graphit.logfile.Startup;
 
 import javax.swing.JTree;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultStyledDocument;
+import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyleContext;
+import javax.swing.text.StyledDocument;
 import javax.swing.JCheckBox;
 import javax.swing.JTextPane;
 
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
+import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.LinkedList;
+
+import net.miginfocom.swing.MigLayout;
+import javax.swing.BoxLayout;
 
 public class Details extends JFrame {
 	private static final long serialVersionUID = 1L;
-	private String summaryHdr = "";
+	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
 	
-	private String LINE_SEPARATOR = System.getProperty("line.separator");
+	private JTree tree;
+	private JTextPane iSummary;
+	private JCheckBox iCheckAll;
+	private JCheckBox iWrongHash;
+	private JCheckBox iUnparsable;
+	private LogFile logFile;
+	private JTextPane iLine;
+	private JTextPane iLineNo;
 	
-	public Details(final LogFile lf){
-		super("Details: " + lf.getFileName());
-		
-		summaryHdr = lf.getFileName() + LINE_SEPARATOR;
-		summaryHdr += "file: "+lf.getIntFileName() + LINE_SEPARATOR;
-		summaryHdr += "serial no.: "+lf.getSerialNo() + LINE_SEPARATOR;
-		summaryHdr += "counter: "+Integer.toString(lf.getCounter()) + LINE_SEPARATOR;
-		
+	public static void main(String[] args) {
+		LinkedList<String> recent = Core.getConfigModel().getRecentFiles();
+		if (recent.size() == 0) {
+			System.out.println("No Recent");
+			return;
+		}
+		LogFile f = new LogFile(recent.get(0));
+		try {
+			f.readFile();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			System.out.println("IOException has gone down");
+			e.printStackTrace();
+		}
+		Details fDetails = new Details(f);
+		fDetails.setDefaultCloseOperation(EXIT_ON_CLOSE);
+		fDetails.setVisible(true);
+	}
+	
+	public Details(final LogFile logFile){
+		super("Details" + logFile.getFileName());
 		setBounds(100, 100, 600, 500);
-		
 		JPanel contentPane = new JPanel();
-		SpringLayout sl_contentPane = new SpringLayout();
-		contentPane.setLayout(sl_contentPane);
 		setContentPane(contentPane);
 		
-		final JTextPane tpLines = new JTextPane();
-		tpLines.setEditable(false);
-		JScrollPane scrollPane = new JScrollPane();
-		final JTextArea lines = new JTextArea("");
-		lines.setBackground(Color.LIGHT_GRAY);
-		lines.setEditable(false);
-		scrollPane.setViewportView(tpLines);
-		scrollPane.setRowHeaderView(lines);
-		scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		this.logFile = logFile;
 		
-		/*
+		iLine = new JTextPane();
+		iLine.setEditable(false);
+		JScrollPane spLog = new JScrollPane();
+		
+		iLineNo = new JTextPane();
+		iLineNo.setBackground(Color.LIGHT_GRAY);
+		iLineNo.setEditable(false);
+		
+		spLog.setViewportView(iLine);
+		spLog.setRowHeaderView(iLineNo);
+		spLog.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		
+		JPanel pnlTopLeft = new JPanel();
+	    pnlTopLeft.setPreferredSize(new Dimension(260,250));
+		pnlTopLeft.setLayout(new MigLayout("insets 2", "[grow]", "[grow]2[]0[]0[]"));
+		
+	    iCheckAll = new JCheckBox("...");
+	    iCheckAll.setSelected(true);
+	    iCheckAll.setMargin(new Insets(0, 0, 0, 0));
+	    iCheckAll.addActionListener(e -> {
+	    		iWrongHash.setSelected(iCheckAll.isSelected());
+	    		iUnparsable.setSelected(iCheckAll.isSelected());
+	    		refreshDetails();
+	    });
+	    pnlTopLeft.add(iCheckAll, "cell 0 1");
 	    
+		iWrongHash = new JCheckBox("Неправильный хэш");
+		iWrongHash.setSelected(true);
+		iWrongHash.setMargin(new Insets(0, 0, 0, 0));
+		iWrongHash.addActionListener(e -> {
+			iCheckAll.setSelected(false);
+			refreshDetails();
+		});
+		pnlTopLeft.add(iWrongHash, "cell 0 2");
 		
-	    try {
-			String str = "123 Hello there! Check out this awesome green text! "+ System.getProperty("line.separator");
-			doc.insertString(doc.getLength(), str, doc.getStyle(str));
-			doc.setCharacterAttributes(0, 3, sLineNo, false);
-			doc.setCharacterAttributes(40, 5, sError, false);
-			doc.insertString(doc.getLength(), str, doc.getStyle(str));
-		} catch (BadLocationException ble) {
-		    System.err.println("Couldn't insert initial text into text pane.");
-		}
-	    tpLines.setStyledDocument(doc);
-		lines.setText("1"+ System.getProperty("line.separator")+"2");**/
-		/*doc.addDocumentListener(new DocumentListener(){
-			public String getText(){
-				System.out.println(0);
-				int caretPosition = textPane.getDocument().getLength();
-				Element root = textPane.getDocument().getDefaultRootElement();
-				String text = "1" + System.getProperty("line.separator");
-				for(int i = 2; i < root.getElementIndex( caretPosition ) + 2; i++){
-					text += i + System.getProperty("line.separator");
-				}
-				return text;
-			}
-			@Override
-			public void changedUpdate(DocumentEvent de) {
-				lines.setText(getText());
-				System.out.println(1);
-			}
- 
-			@Override
-			public void insertUpdate(DocumentEvent de) {
-				lines.setText(getText());
-				System.out.println(2);
-			}
- 
-			@Override
-			public void removeUpdate(DocumentEvent de) {
-				lines.setText(getText());
-				System.out.println(3);
-			}
- 
-		});*/
+		iUnparsable = new JCheckBox("Неопределенные");
+		iUnparsable.setSelected(true);
+		iUnparsable.setMargin(new Insets(0, 0, 0, 0));
+		iUnparsable.addActionListener(e -> {
+			iCheckAll.setSelected(false);
+			refreshDetails();
+		});
+		pnlTopLeft.add(iUnparsable, "cell 0 3");
 		
-		JPanel topleft_panel = new JPanel();
-	    SpringLayout sl_tlpanel = new SpringLayout();
-	    topleft_panel.setPreferredSize(new Dimension(260,250));
-	    topleft_panel.setLayout(sl_tlpanel);		
-		
-		JPanel panel = new JPanel();
-		sl_tlpanel.putConstraint(SpringLayout.NORTH, panel, -70, SpringLayout.SOUTH, topleft_panel);
-		sl_tlpanel.putConstraint(SpringLayout.WEST, panel, 0, SpringLayout.WEST, topleft_panel);
-		sl_tlpanel.putConstraint(SpringLayout.SOUTH, panel, 0, SpringLayout.SOUTH, topleft_panel);
-		sl_tlpanel.putConstraint(SpringLayout.EAST, panel, 0, SpringLayout.EAST, topleft_panel);
-		SpringLayout sl_panel = new SpringLayout();
-		panel.setLayout(sl_panel);
-		topleft_panel.add(panel);
 	    
-		final JTree tree = new JTree(makeTree(lf));
-	    JScrollPane sp_tree = new JScrollPane(tree);
+		tree = new JTree(makeTree(logFile));
 	    tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
-	    sl_tlpanel.putConstraint(SpringLayout.NORTH, sp_tree, 0, SpringLayout.NORTH, topleft_panel);
-	    sl_tlpanel.putConstraint(SpringLayout.WEST, sp_tree, 0, SpringLayout.WEST, topleft_panel);
-	    sl_tlpanel.putConstraint(SpringLayout.SOUTH, sp_tree, 0, SpringLayout.NORTH, panel);
-	    sl_tlpanel.putConstraint(SpringLayout.EAST, sp_tree, 0, SpringLayout.EAST, topleft_panel);
-	    topleft_panel.add(sp_tree);
+	    JScrollPane spTree = new JScrollPane(tree);
+	    pnlTopLeft.add(spTree, "cell 0 0,grow");
 		
-		final JTextPane tpSummary = new JTextPane();
-		tpSummary.setText(summaryHdr);
-	    tpSummary.setEditable(false);
-		JScrollPane scrollPane2 = new JScrollPane(tpSummary);
+		iSummary = new JTextPane();
+		iSummary.setText(getSummaryHeader());
+	    iSummary.setEditable(false);
+		JScrollPane spSummary = new JScrollPane(iSummary);
+		contentPane.setLayout(new BoxLayout(contentPane, BoxLayout.X_AXIS));
 		
-		final JSplitPane topsplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, topleft_panel, scrollPane2);
-		topsplitPane.setResizeWeight(.5);
+		final JSplitPane spltTop = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, pnlTopLeft, spSummary);
+		spltTop.setResizeWeight(.5);
 		
-		JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, topsplitPane, scrollPane);
-		splitPane.setResizeWeight(.5);
-		sl_contentPane.putConstraint(SpringLayout.NORTH, splitPane, 0, SpringLayout.NORTH, contentPane);
-		sl_contentPane.putConstraint(SpringLayout.WEST, splitPane, 0, SpringLayout.WEST, contentPane);
-		sl_contentPane.putConstraint(SpringLayout.SOUTH, splitPane, 0, SpringLayout.SOUTH, contentPane);
-		sl_contentPane.putConstraint(SpringLayout.EAST, splitPane, 0, SpringLayout.EAST, contentPane);
-	    contentPane.add(splitPane);
+		JSplitPane spltVertical = new JSplitPane(JSplitPane.VERTICAL_SPLIT, spltTop,
+				spLog);
+				//spRecords);
+		spltVertical.setResizeWeight(.5);
+		contentPane.add(spltVertical);
 		
-	    final JCheckBox chbCheckAll = new JCheckBox("...");
-	    chbCheckAll.setSelected(true);
-		sl_panel.putConstraint(SpringLayout.NORTH, chbCheckAll, 5, SpringLayout.NORTH, panel);
-		sl_panel.putConstraint(SpringLayout.WEST, chbCheckAll, 5, SpringLayout.WEST, panel);
-		panel.add(chbCheckAll);
-		
-		final JCheckBox chbWrongHash = new JCheckBox("\u041D\u0435\u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u044B\u0439 \u0445\u044D\u0448");
-		chbWrongHash.setSelected(true);
-		sl_panel.putConstraint(SpringLayout.NORTH, chbWrongHash, -5, SpringLayout.SOUTH, chbCheckAll);
-		sl_panel.putConstraint(SpringLayout.WEST, chbWrongHash, 5, SpringLayout.WEST, panel);
-		panel.add(chbWrongHash);
-		
-		final JCheckBox chbUnparsable = new JCheckBox("\u041D\u0435\u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u043D\u044B\u0435");
-		chbUnparsable.setSelected(true);
-		sl_panel.putConstraint(SpringLayout.NORTH, chbUnparsable, -5, SpringLayout.SOUTH, chbWrongHash);
-		sl_panel.putConstraint(SpringLayout.WEST, chbUnparsable, 5, SpringLayout.WEST, panel);
-		panel.add(chbUnparsable);
-		
-		chbCheckAll.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent arg0) {
-				chbWrongHash.setSelected(chbCheckAll.isSelected());
-				chbUnparsable.setSelected(chbCheckAll.isSelected());
-				refreshDetails(lf, tree.getSelectionModel().getSelectionPath(), tpSummary, lines, tpLines, chbWrongHash.isSelected(), chbUnparsable.isSelected());
-			}
-		});
-		
-		chbWrongHash.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				chbCheckAll.setSelected(false);
-				refreshDetails(lf, tree.getSelectionModel().getSelectionPath(), tpSummary, lines, tpLines, chbWrongHash.isSelected(), chbUnparsable.isSelected());
-			}
-		});
-		
-		chbUnparsable.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				chbCheckAll.setSelected(false);
-				refreshDetails(lf, tree.getSelectionModel().getSelectionPath(), tpSummary, lines, tpLines, chbWrongHash.isSelected(), chbUnparsable.isSelected());
-			}
-		});
-		
-		tree.getSelectionModel().addTreeSelectionListener(new TreeSelectionListener() {
-		    @Override
-		    public void valueChanged(TreeSelectionEvent e) {
-		    	refreshDetails(lf, e.getPath(), tpSummary, lines, tpLines, chbWrongHash.isSelected(), chbUnparsable.isSelected());
-		    }
-		});
+		tree.getSelectionModel().addTreeSelectionListener(e -> refreshDetails());
+	}
+	
+	private String getSummaryHeader() {
+		StringBuilder text = new StringBuilder(250);
+		text.append(logFile.getFileName()).append(LINE_SEPARATOR)
+			.append("file: ").append(logFile.getIntFileName()).append(LINE_SEPARATOR)
+			.append("serial no.: ").append(logFile.getSerialNo()).append(LINE_SEPARATOR)
+			.append("counter: ").append(logFile.getCounter()).append(LINE_SEPARATOR);
+		return text.toString();
 	}
 
-	protected void refreshDetails(LogFile lf, TreePath path
-					, JTextPane summary, JTextArea lineno, JTextPane lines
-					, boolean showHash, boolean showUnparsable) {
+	protected void refreshDetails() {
+		TreePath path = tree.getSelectionModel().getSelectionPath();
 		if (path.getPathCount() == 0) return;
 		
-		String summarytext = summaryHdr;
-		
-		int startupID = -1;
-		Startup currStartup = null;
-		if (path.getPathCount()>1) {
-			DefaultMutableTreeNode root = (DefaultMutableTreeNode) path.getPathComponent(0);
-			DefaultMutableTreeNode startup = (DefaultMutableTreeNode) path.getPathComponent(1);
-			startupID = root.getIndex(startup);
+		ArrayList<Startup> startups;
+		StringBuilder summarytext = new StringBuilder(getSummaryHeader());
+		if (path.getPathCount() > 1) {
+			startups = new ArrayList<>(1);
+			DefaultMutableTreeNode tnStartup = (DefaultMutableTreeNode) path.getPathComponent(1);
+			StartupNode startupNode = (StartupNode) tnStartup.getUserObject();
 			
-			currStartup = lf.getStartups().get(startupID);
-			summarytext += "--------------------"+LINE_SEPARATOR;
-			summarytext += "STARTUP #"+Integer.toString(startupID)+"::"+LINE_SEPARATOR;
-			summarytext += "- datetime: " + currStartup.getDatetime().format(Core.F_DATETIME)+LINE_SEPARATOR;
-			summarytext += "- line no.: "+Integer.toString(currStartup.getLineNo())+LINE_SEPARATOR;
-			summarytext += "- lines count: "+Integer.toString(currStartup.getRecordset().size())+LINE_SEPARATOR;
-		}
+			Startup startup = startupNode.getStartup(); 
+			summarytext.append("--------------------").append(LINE_SEPARATOR)
+				.append("STARTUP #").append(startupNode.getId()).append("::").append(LINE_SEPARATOR)
+				.append("- datetime: ").append(startup.getDatetime().format(Core.F_DATETIME)).append(LINE_SEPARATOR)
+				.append("- line no.: ").append(startup.getLineNo()).append(LINE_SEPARATOR)
+				.append("- lines count: ").append(startup.getRecordset().size()).append(LINE_SEPARATOR);
+
+			startups.add(startup);
+		} else
+			startups = logFile.getStartups();
 		
-		lineno.setText("");
-		StyleContext sc = new StyleContext();
-		final DefaultStyledDocument doc = new DefaultStyledDocument(sc);
+		iSummary.setText(summarytext.toString());
 		
-		for (int i = 0; i < lf.getStartups().size(); i++) {
-			if (startupID == -1) 
-				currStartup = lf.getStartups().get(i);
-			
-			if (showHash || showUnparsable) {
-				int l = -1;
-				final Style sError = sc.addStyle("Error", null);
-				StyleConstants.setForeground(sError, Color.red);
-				final Style sComment = sc.addStyle("Comment", null);
-				StyleConstants.setForeground(sComment, Color.lightGray);
-				for (Record rec : currStartup.getRecordset()) {
-					int offset, length;
+		StyleContext
+				scLineNo = new StyleContext(),
+				scLine = new StyleContext();
+		StyledDocument
+				dLine = new DefaultStyledDocument(scLine),
+				dLineNo = new DefaultStyledDocument(scLineNo);
+		Style sAlignRight = scLineNo.getStyle(StyleContext.DEFAULT_STYLE),
+				sError = scLine.addStyle("Error", null),
+				sComment = scLine.addStyle("Comment", null);
+		StyleConstants.setAlignment(sAlignRight, StyleConstants.ALIGN_RIGHT);
+		StyleConstants.setForeground(sError, Color.red);
+		StyleConstants.setForeground(sComment, Color.lightGray);
+		for (Startup startup : startups) {
+			if (iWrongHash.isSelected() || iUnparsable.isSelected()) {
+				for (Record rec : startup.getRecordset()) {
+					int l, offset, length;
 					String errorMsg;
-					if (showUnparsable && rec.isDirty()) {
+					if (iUnparsable.isSelected() && rec.isDirty()) {
 						ParseExceptionEx error = rec.getParseError();
 						offset = error.getErrorOffset();
 						length = error.getErrorLength();
 						errorMsg = error.getMessage();
 					} else
-						if (showHash && !rec.isAuthentic() ) {
+						if (iWrongHash.isSelected() && !rec.isAuthentic() ) {
 							offset = -1;
 							length = -1;
 							errorMsg = "Некоррекная хэш сумма строки";
 						} else
 							continue;
 					
-					lineno.append(Integer.toString(rec.getLineno()) + LINE_SEPARATOR);
-					
-					l = doc.getLength();
+					l = dLine.getLength();
 					try {
-						doc.insertString(l, rec.getSourceStr() + "  " + errorMsg + LINE_SEPARATOR, null);
+						dLine.insertString(l, rec.getSourceStr() + "  " + errorMsg + LINE_SEPARATOR, null);
+						dLineNo.insertString(dLineNo.getLength(), Integer.toString(rec.getLineno()) + LINE_SEPARATOR, sAlignRight);
 					} catch (BadLocationException e) {
 						e.printStackTrace();
 					}
 					
-					if (offset != -1) doc.setCharacterAttributes(l + offset, length, sError, false);
-					doc.setCharacterAttributes(l + rec.getSourceStr().length() + 2, errorMsg.length(), sComment, false);
+					if (offset != -1) dLine.setCharacterAttributes(l + offset, length, sError, false);
+					dLine.setCharacterAttributes(l + rec.getSourceStr().length() + 2, errorMsg.length(), sComment, false);
 				}
 			}
-			lines.setStyledDocument(doc);
-			
-			if (startupID != -1)
-				break;
 		}
-		
-		summary.setText(summarytext);
+		iLineNo.setStyledDocument(dLineNo);
+		iLine.setStyledDocument(dLine);
 	}
 
 	private DefaultMutableTreeNode makeTree(LogFile lf) {
@@ -292,11 +246,25 @@ public class Details extends JFrame {
 		
 		DefaultMutableTreeNode root = new DefaultMutableTreeNode(filename);
 		
-		for (int i = 0; i < lf.getStartups().size(); i++) {
-			Startup currStartup = lf.getStartups().get(i);
-			root.add(new DefaultMutableTreeNode(String.format("#%d %s", i, currStartup.getTime().format(Core.F_TIME))));
-		}
+		for (int i = 0; i < lf.getStartups().size(); i++)
+			root.add(new DefaultMutableTreeNode(new StartupNode(i, lf.getStartups().get(i))));
 		
 		return root;
+	}
+	
+	private class StartupNode {
+		private final int id;
+		private final String caption;
+		private final Startup startup;
+		
+		public StartupNode(int id, Startup startup) {
+			this.id = id;
+			this.startup = startup;
+			this.caption = String.format("#%d %s", id, startup.getTime().format(Core.F_TIME));
+		}
+		
+		public int getId() { return id; }
+		public Startup getStartup() { return startup; }
+		public String toString() { return caption; }
 	}
 }
