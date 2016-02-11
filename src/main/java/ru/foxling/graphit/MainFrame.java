@@ -120,7 +120,7 @@ extends JFrame implements ChartProgressListener {
 	
 	private JPanel contentPane;
 	private JMenu mFile = null;
-	private LogFile lf = null;
+	private LogFile logFile = null;
 	//private Chart chart = null;
 	private ChartPanel chartPanel = null;
 	
@@ -182,7 +182,7 @@ extends JFrame implements ChartProgressListener {
 		miDetails.setEnabled(false);
 		miDetails.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				Details fDetails = new Details(lf);
+				Details fDetails = new Details(logFile);
 				fDetails.setVisible(true);
 			}
 		});
@@ -330,119 +330,30 @@ extends JFrame implements ChartProgressListener {
 	    pTools.add(cbTable, "cell 2 0,alignx right,aligny top");
 	    
 	    configController = new ConfigController(Core.getConfigModel());
-	    //chartPanel.setChart(test());
-	    // TODO 
-	}
-	
-	private JFreeChart test() {
-		LocalDateTime now = LocalDateTime.now();
-		TimeSeriesCollection dsLaunch = new TimeSeriesCollection();
-		TimeSeries tsLaunch = new TimeSeries("Launch");
-		for (int i = 0; i < 100; i++) {
-			LocalDateTime time = now.plusHours(i);
-			Second jfTime = new Second(time.getSecond(), time.getMinute(), time.getHour(), time.getDayOfMonth(), time.getMonthValue(), time.getYear());
-			tsLaunch.addOrUpdate(jfTime, i);
-		}
-		//Second jfTime = new Second(1, 1, 1, 2, 1, 1900);
-		//tsLaunch.addOrUpdate(jfTime, 50);
-		
-		dsLaunch.addSeries(tsLaunch);
-		JFreeChart chart = ChartFactory.createTimeSeriesChart("Chart Title", "xAxisLabel", "yAxisLabel", dsLaunch, false, false, false);
-
-	    XYPlot plot = chart.getXYPlot();
-	    plot.setBackgroundPaint(Color.white);
-        plot.setDomainGridlinePaint(Color.lightGray);
-        plot.setRangeGridlinePaint(Color.lightGray);
-        plot.setAxisOffset(new RectangleInsets(5.0, 5.0, 5.0, 5.0));
-        plot.setDomainCrosshairVisible(true);
-        plot.setDomainCrosshairLockedOnData(true);
-        
-        ValueAxis axis = plot.getRangeAxis();
-        axis.setVisible(false);
-        
-        // TimeSeries count (Launches count)
-        int tsCount = dsLaunch.getSeriesCount();
-        
-        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
-        if (tsCount != 0)
-        	renderer.setSeriesShapesVisible(0, false);
-        renderer.setSeriesShapesFilled(0, true);
-    	renderer.setSeriesShapesVisible(0, true);
-    	renderer.setSeriesLinesVisible(0, false);
-    	renderer.setSeriesPaint(0, Color.black);
-    	
-        plot.setRenderer(0, renderer);
-        
-        /*
-        // 2nd AXIS – Depth
-        NumberAxis naDepth = new NumberAxis(sDepth);
-        naDepth.setAutoRangeIncludesZero(false);
-        naDepth.setLabelPaint(Color.red);
-        naDepth.setInverted(true);
-        naDepth.setAutoRangeStickyZero(false);
-        naDepth.setVisible(dsVisible[1]);
-        plot.setRangeAxis(1, naDepth);
-        plot.setRangeAxisLocation(1, AxisLocation.BOTTOM_OR_LEFT);
-        
-        XYDataset xydsDepth = dsDepth;
-        plot.setDataset(1, xydsDepth);
-        plot.mapDatasetToRangeAxis(1, 1);
-        
-        renderer = new XYLineAndShapeRenderer();
-        for (int i = 0; i < dsDepth.getSeriesCount(); i++) {
-        	renderer.setSeriesLinesVisible(i, dsVisible[1]);
-        	renderer.setSeriesPaint(i, Color.red);
-        	renderer.setSeriesShapesVisible(i, false);
-        	renderer.setSeriesShapesFilled(i, false);
-		}
-        plot.setRenderer(1, renderer);
-        
-        // 3rd AXIS – Tension
-        NumberAxis naTension = new NumberAxis(sTension);
-        naTension.setAutoRangeIncludesZero(false);
-        naTension.setLabelPaint(Color.green);
-        naTension.setTickLabelPaint(Color.black);
-        naTension.setVisible(dsVisible[2]);
-        plot.setRangeAxis(2, naTension);
-        plot.setRangeAxisLocation(2, AxisLocation.BOTTOM_OR_LEFT);
-        
-        XYDataset xydsTension = dsTension;
-        plot.setDataset(2, xydsTension);
-        plot.mapDatasetToRangeAxis(2, 2);
-        
-        renderer = new XYLineAndShapeRenderer();
-        for (int i = 0; i < dsTension.getSeriesCount(); i++) {
-        	renderer.setSeriesLinesVisible(i, dsVisible[2]);
-        	renderer.setSeriesPaint(i, Color.GREEN);
-        	renderer.setSeriesShapesVisible(i, false);
-        	renderer.setSeriesShapesFilled(i, false);
-		}
-        plot.setRenderer(2, renderer);*/
-		
-        return chart;
+	    // TODO End of MainFrame.Constructor
 	}
 	
 	private void openLogFile(File aFile){
-		lf = new LogFile(aFile.getPath());
+		logFile = new LogFile(aFile.getPath());
 		try {
-			lf.readFile();
+			logFile.readFile();
 		} catch (IOException e) {
 			JOptionPane.showMessageDialog(null, "Не удалось прочитать файл " + aFile.getName(), "Ошибка", JOptionPane.ERROR_MESSAGE);
 			e.printStackTrace();
 			return;
 		}
-		tfCurrFile.setText(lf.getFileName());
+		tfCurrFile.setText(logFile.getFileName());
 			
 		StringBuilder titleBuilder = new StringBuilder(APPNAME);
 		
-		if (lf.getStartups().size() > 0 && lf.getStartups().get(0).getDate() != null)
-			titleBuilder.append(" Дата: ").append(lf.getStartups().get(0).getDate().format(Core.F_DATE)).append(", ");
+		if (logFile.getStartups().size() > 0 && logFile.getStartups().get(0).getDate() != null)
+			titleBuilder.append(" Дата: ").append(logFile.getStartups().get(0).getDate().format(Core.F_DATE)).append(", ");
 		
-		if (lf.getSerialNo() != null && !lf.getSerialNo().isEmpty())
-			titleBuilder.append("Сер.№ ").append(lf.getSerialNo()).append(", ");
+		if (logFile.getSerialNo() != null && !logFile.getSerialNo().isEmpty())
+			titleBuilder.append("Сер.№ ").append(logFile.getSerialNo()).append(", ");
 		
-		if (lf.getFrimware() != null && !lf.getFrimware().isEmpty())
-			titleBuilder.append("ПО ").append(lf.getFrimware());
+		if (logFile.getFrimware() != null && !logFile.getFrimware().isEmpty())
+			titleBuilder.append("ПО ").append(logFile.getFrimware());
 		
 		String title = titleBuilder.toString();
 		if (title.endsWith(", ")) title = title.substring(0, title.length() - 3);
@@ -454,8 +365,9 @@ extends JFrame implements ChartProgressListener {
 		cbLaunch.setEnabled(true);
 		cbTable.setEnabled(true);
 		
+		configController.refreshAxesList();
 		configController.addRecentFile(aFile.getPath());
-		chartPanel.setChart(Chart.chartFactory(lf));
+		chartPanel.setChart(Chart.chartFactory(logFile));
 	}
 	
 	private void setTableVisible(boolean visible) {
@@ -473,8 +385,8 @@ extends JFrame implements ChartProgressListener {
 	
 	private void fillTable(boolean wrongLinesOnly){
 		doTableTrack = false;
-		table.setModel(new LogFileTableModel(lf, wrongLinesOnly));
-		ArrayList<Field> fieldList = lf.getFieldList();
+		table.setModel(new LogFileTableModel(logFile, wrongLinesOnly));
+		List<Field> fieldList = Core.getConfigModel().getFieldList();
 		Enumeration<TableColumn> cols = table.getColumnModel().getColumns();
 		while (cols.hasMoreElements()) {
 			TableColumn col = (TableColumn) cols.nextElement();
@@ -546,7 +458,6 @@ extends JFrame implements ChartProgressListener {
 				double d = xyplot.getDomainCrosshairValue();
 
 				Date time = new Date((long) d);
-				//TODO
 				/*int i = lf.getId(time);
 				if (i>-1) {
 					Rectangle rect = table.getCellRect(i, 0, true);
@@ -559,13 +470,15 @@ extends JFrame implements ChartProgressListener {
 	}
 	
 	private static class Chart {
+		//TODO Chart class
 		private static JFreeChart chart;
 		private static XYPlot plot;
 		private static LogFile logFile;
 		private static Field xField;
-		private static LinkedList<Field> yFields;
+		private static List<Field> yFields = new LinkedList<>();
 		
 		public static JFreeChart chartFactory(LogFile logFile) {
+			yFields.clear();
 			if (logFile == null) {
 				LOG.log(Level.SEVERE, "logFile is NULL");
 				return null;
@@ -604,8 +517,8 @@ extends JFrame implements ChartProgressListener {
 	    	
 	        plot.setRenderer(0, renderer);
 	        
-	        yFields = new LinkedList<>();
-			for (Field f : logFile.getFieldList()) {
+	        List<Field> yFields = new LinkedList<>();
+			for (Field f : Core.getConfigModel().getFieldList()) {
 				if (f.getRole() == FieldRole.X_AXIS) {
 					xField = f;
 				} else if (f.getRole() == FieldRole.DRAW)
@@ -620,18 +533,50 @@ extends JFrame implements ChartProgressListener {
 	        return chart;
 		}
 		
+		public static void drawField(Field field) {
+			if (field == null)
+				return;
+			
+			if (yFields.indexOf(field) == -1) {
+				plotFactory(field);
+			} else
+				setFieldVisible(field, true);
+		}
+		
+		public static void setFieldVisible(Field field, boolean visible) {
+			if (field == null)
+				return;
+			int id = yFields.indexOf(field);
+			if (id == -1)
+				return;
+			
+			NumberAxis axis = (NumberAxis) plot.getRangeAxis(id);
+			axis.setVisible(visible);
+			
+			XYLineAndShapeRenderer renderer = (XYLineAndShapeRenderer) plot.getRenderer(id);
+			
+			for (int i = 0; i < plot.getDataset(id).getSeriesCount(); i++) {
+				if (id != 0)
+					renderer.setSeriesLinesVisible(i, visible);
+				
+				if (id == 0 && i != 0) {
+					renderer.setSeriesShapesVisible(i, visible);
+				}
+			}
+		}
+		
 		private static boolean plotFactory(Field yField) {
 			if (xField == null) {
 				LOG.log(Level.SEVERE, "Ось X не определена");
 				return false;
 			}
 			if (yField == null) {
-				LOG.log(Level.SEVERE, "Ось Y не определено");
+				LOG.log(Level.SEVERE, "Ось Y не определена");
 				return false;
 			}
 			
-			int xFieldId = logFile.getFieldList().indexOf(xField),
-				yFieldId = logFile.getFieldList().indexOf(yField);
+			int xFieldId = Core.getConfigModel().getFieldList().indexOf(xField),
+				yFieldId = Core.getConfigModel().getFieldList().indexOf(yField);
 			
 			if (xFieldId == -1 || yFieldId == -1) {
 				LOG.log(Level.SEVERE, "Поля для графика не определились ({0}={1}; {2}={3})", new Object[]{ xField, xFieldId, yField, yFieldId });
@@ -670,7 +615,8 @@ extends JFrame implements ChartProgressListener {
 	        numberAxis.setAutoRangeStickyZero(false);
 	        numberAxis.setVisible(true);
 	        
-	        int id = yFields.indexOf(yField);
+	        int id = yFields.size();
+	        yFields.add(yField);
 	        plot.setRangeAxis(id, numberAxis);
 	        plot.setRangeAxisLocation(id, AxisLocation.BOTTOM_OR_LEFT);
 	        
@@ -702,165 +648,12 @@ extends JFrame implements ChartProgressListener {
 				return ((Double) value).doubleValue();
 			return Double.NaN;
 		}
-		
-		
-		/*public static JFreeChart createTSChart(LogFile data, boolean[] dsVisible) {
-			String chartTitle = "";
-		    String xAxisLabel = "";
-		    
-		    Startup currStartup = null;
-			Record currLine = null;
-
-			TimeSeriesCollection dsLaunch = new TimeSeriesCollection();
-			TimeSeriesCollection dsDepth = new TimeSeriesCollection();
-			TimeSeriesCollection dsTension = new TimeSeriesCollection();
-			
-			boolean fixDone = false;
-			Date xTime = null;
-			TimeSeries tsLaunch = new TimeSeries("Launch");
-			TimeSeries tsDepth = null;
-			TimeSeries tsTension = null;
-			TimeSeries tsFix = new TimeSeries("Launch zoom out fix");
-			
-			for (int i = 0; i < data.startup.size(); i++) {
-				currStartup = data.startup.get(i);
-				if (currStartup.time != null) {
-					if (!fixDone) {
-						tsFix.add(new Second(currStartup.time), 1);
-						dsLaunch.addSeries(tsFix);
-						fixDone = true;
-					}
-					tsLaunch.addOrUpdate(new Second(currStartup.time), 0);
-				}
-				
-				tsDepth = new TimeSeries(sDepth+Integer.toString(i));
-				tsTension = new TimeSeries(sTension+Integer.toString(i));
-				int size = currStartup.lines.size();
-				for (int j = 0; j < size; j++) {
-					currLine = currStartup.lines.get(j);
-
-					if (xTime != null && xTime.getTime() < currLine.time.getTime() - 1000) {
-						Date dVoid = new Date(xTime.getTime() + 1000);
-						tsDepth.add(new Second(dVoid), null);
-						tsTension.add(new Second(dVoid), null);
-					}
-					
-					tsDepth.addOrUpdate(new Second(currLine.time), currLine.depth);
-					tsTension.addOrUpdate(new Second(currLine.time), currLine.tension);
-					xTime = currLine.time;
-				}
-				
-				if (size != 0) {
-					dsDepth.addSeries(tsDepth);
-					dsTension.addSeries(tsTension);
-				}
-			}
-			dsLaunch.addSeries(tsLaunch);
-			
-			JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, xAxisLabel, "sDepth", dsLaunch, false, false, false);
-
-		    XYPlot plot = chart.getXYPlot();
-		    plot.setBackgroundPaint(Color.white);
-	        plot.setDomainGridlinePaint(Color.lightGray);
-	        plot.setRangeGridlinePaint(Color.lightGray);
-	        plot.setAxisOffset(new RectangleInsets(5.0, 5.0, 5.0, 5.0));
-	        plot.setDomainCrosshairVisible(true);
-	        plot.setDomainCrosshairLockedOnData(true);
-	        
-	        ValueAxis axis = plot.getRangeAxis();
-	        axis.setVisible(false);
-	        
-	        // TimeSeries count (Launches count)
-	        int tsCount = dsLaunch.getSeriesCount();
-	        
-	        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
-	        
-	        if (tsCount != 0)
-	        	renderer.setSeriesShapesVisible(0, false);
-	        
-	        for (int i = 1; i < tsCount; i++) {
-	        	renderer.setSeriesShapesFilled(i, true);
-	        	renderer.setSeriesShapesVisible(i, dsVisible[0]);
-	        	renderer.setSeriesLinesVisible(i, false);
-	        	renderer.setSeriesPaint(i, Color.black);
-	        	//renderer.setSeriesStroke(i, new BasicStroke(2.0F));
-			}
-	        plot.setRenderer(0, renderer);
-	        
-	        // 2nd AXIS – Depth
-	        NumberAxis naDepth = new NumberAxis("sDepth");
-	        naDepth.setAutoRangeIncludesZero(false);
-	        naDepth.setLabelPaint(Color.red);
-	        naDepth.setInverted(true);
-	        naDepth.setAutoRangeStickyZero(false);
-	        naDepth.setVisible(dsVisible[1]);
-	        plot.setRangeAxis(1, naDepth);
-	        plot.setRangeAxisLocation(1, AxisLocation.BOTTOM_OR_LEFT);
-	        
-	        XYDataset xydsDepth = dsDepth;
-	        plot.setDataset(1, xydsDepth);
-	        plot.mapDatasetToRangeAxis(1, 1);
-	        
-	        renderer = new XYLineAndShapeRenderer();
-	        for (int i = 0; i < dsDepth.getSeriesCount(); i++) {
-	        	renderer.setSeriesLinesVisible(i, dsVisible[1]);
-	        	renderer.setSeriesPaint(i, Color.red);
-	        	renderer.setSeriesShapesVisible(i, false);
-	        	renderer.setSeriesShapesFilled(i, false);
-			}
-	        plot.setRenderer(1, renderer);
-	        
-	        // 3rd AXIS – Tension
-	        NumberAxis naTension = new NumberAxis("sTension");
-	        naTension.setAutoRangeIncludesZero(false);
-	        naTension.setLabelPaint(Color.green);
-	        naTension.setTickLabelPaint(Color.black);
-	        naTension.setVisible(dsVisible[2]);
-	        plot.setRangeAxis(2, naTension);
-	        plot.setRangeAxisLocation(2, AxisLocation.BOTTOM_OR_LEFT);
-	        
-	        XYDataset xydsTension = dsTension;
-	        plot.setDataset(2, xydsTension);
-	        plot.mapDatasetToRangeAxis(2, 2);
-	        
-	        renderer = new XYLineAndShapeRenderer();
-	        for (int i = 0; i < dsTension.getSeriesCount(); i++) {
-	        	renderer.setSeriesLinesVisible(i, dsVisible[2]);
-	        	renderer.setSeriesPaint(i, Color.GREEN);
-	        	renderer.setSeriesShapesVisible(i, false);
-	        	renderer.setSeriesShapesFilled(i, false);
-			}
-	        plot.setRenderer(2, renderer);
-			
-	        return chart;
-		}*/
-		
-		public static void setCollectionVisible(JFreeChart chart, int collectionID, boolean visible) {
-			XYPlot plot = chart.getXYPlot();
-			
-			if (collectionID != 0) {
-				NumberAxis axis = (NumberAxis) plot.getRangeAxis(collectionID);
-				axis.setVisible(visible);
-			}
-			
-			XYLineAndShapeRenderer renderer = (XYLineAndShapeRenderer) plot.getRenderer(collectionID);
-			
-			for (int i = 0; i < plot.getDataset(collectionID).getSeriesCount(); i++) {
-				if (collectionID != 0)
-					renderer.setSeriesLinesVisible(i, visible);
-				
-				if (collectionID == 0 && i != 0) {
-					renderer.setSeriesShapesVisible(i, visible);
-				}
-			}
-		}
 	}
 
 	
 	private class ConfigController {
 		private ConfigModel configModel;
 		private ArrayList<Link> links;
-		private ButtonGroup group = new ButtonGroup();
 		
 		private final Color[] colors = {
 				Color.RED, Color.GREEN, Color.BLUE,
@@ -910,9 +703,9 @@ extends JFrame implements ChartProgressListener {
 		};
 		
 		public ConfigController(ConfigModel configModel) {
-			// TODO
+			// TODO ConfigController
 			this.configModel = configModel;
-			links = new ArrayList<>(configModel.getFieldSetSize());
+			links = new ArrayList<>();
 			configModel.addPropertyListener(e -> {
 				switch (e.getPropertyName()) {
 				case "recent-file":
@@ -930,15 +723,19 @@ extends JFrame implements ChartProgressListener {
 			});
 			
 			configModel.addFieldListener(e -> {
-				// TODO
 				Field field = (Field) e.getSource(); 
-				if (field == null || getLink(field) == null) {
-					refreshAxesList();
-					return;
+				if (field != null) {
+					switch (e.getPropertyName()) {
+					case "role":
+						if (field.getRole() == FieldRole.DRAW) {
+							Chart.drawField(field);
+						} else
+							Chart.setFieldVisible(field, false);
+						break;
+					case "color":
+						break;
+					}
 				}
-				Link link = getLink(field);
-				if (link == null)
-					return;
 			});
 			
 			cbLaunch.setSelected(configModel.getLaunchVisible());
@@ -955,16 +752,10 @@ extends JFrame implements ChartProgressListener {
 				configModel.setTableVisible(cb.isSelected());
 			});
 			
-			refreshAxesList();
 			updateRecentMenu();
 		}
 		
-		public ConfigModel getConfigModel() {
-			return configModel;
-		}
-		
-		
-		public Link getLink(Field field) {
+		/*public Link getLink(Field field) {
 			if (field == null)
 				return null;
 			
@@ -974,7 +765,7 @@ extends JFrame implements ChartProgressListener {
 			}
 			
 			return null;
-		}
+		}*/
 		
 		public Link getLink(JCheckBoxMenuItem menuItem) {
 			if (menuItem == null)
@@ -993,8 +784,8 @@ extends JFrame implements ChartProgressListener {
 			mYAxes.removeAll();
 			links.clear();
 			
-			for (int i = 0; i < configModel.getFieldSetSize(); i++) {
-				Field field = configModel.getField(i);
+			List<Field> fields = Core.getConfigModel().getFieldList(); 
+			for (Field field : fields) {
 				if (field.getDatatype() == DataType.STRING)
 					continue;
 				Link link = new Link(field);
@@ -1051,7 +842,6 @@ extends JFrame implements ChartProgressListener {
 		}
 	
 		private class Link {
-			// TODO
 			public final Field field;
 			public final JCheckBoxMenuItem yMenuItem;
 			public Color color;
@@ -1145,14 +935,14 @@ extends JFrame implements ChartProgressListener {
 	static class LogFileTableModel
 	extends AbstractTableModel {
 		private static final long serialVersionUID = -6341608314922452350L;
-		private ArrayList<Field> fieldList;
+		private List<Field> fieldList;
 		
 		/** Records index */
 		private ArrayList<Record> index;
 		
 		public LogFileTableModel(LogFile logFile, boolean wrongLinesOnly) {
 			super();
-			fieldList = logFile.getFieldList();
+			fieldList = Core.getConfigModel().getFieldList();
 			index = new ArrayList<Record>(25);
 			for (Startup startup : logFile.getStartups())
 				for(Record record: startup.getRecords())
@@ -1176,7 +966,7 @@ extends JFrame implements ChartProgressListener {
 		}
 		
 		@Override
-		public Class getColumnClass(int columnIndex) {
+		public Class<?> getColumnClass(int columnIndex) {
 			return fieldList.get(columnIndex).getDatatype().get_class();
 		}
 

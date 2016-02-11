@@ -24,8 +24,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EventListener;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 
 import javax.swing.event.EventListenerList;
@@ -78,14 +76,7 @@ implements Serializable {
 	/** The color of the line <br>
 	 * *If we gonna draw this data */
 	private Color color;
-	
-	/** Caption index from valueList
-	 * <i>*For optimization purposes</i> */
-	private HashMap<Object,String> captionSet;
-	/** Description index from valueList
-	 * <i>*For optimization purposes</i> */
-	private HashMap<Object,String> descriptionSet;
-	
+
 	protected EventListenerList listenerList = new EventListenerList();
 	
 	public Field() {
@@ -96,8 +87,6 @@ implements Serializable {
 		format = datatype.getDefaultFormat();
 		delimiter = FieldDelimiter.getDefaultFieldDelimiter();
 		valueList = new ArrayList<FieldValue>(5);
-		captionSet = new HashMap<>(5);
-		descriptionSet = new HashMap<>(5);
 		parser = DefaultParser.getDefaultParser(datatype, format);
 		role = FieldRole.getDefaultFieldState();
 		color = Color.RED;
@@ -220,7 +209,7 @@ implements Serializable {
 	}
 
 	/** @see {@link #parser} */
-	public void setParser(Parser parser) {
+	public void setParser(Parser<?> parser) {
 		this.parser = parser;
 	}
 	
@@ -308,6 +297,11 @@ implements Serializable {
 		this.role = role;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "role"));
 	}
+	
+	public void setColor(Color color) {
+		this.color = color;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "color"));
+	}
 
 	/** @see {@link #name} */
 	public String getName() { return name; }
@@ -327,7 +321,7 @@ implements Serializable {
 			return null;
 	}
 	/** @see {@link #parser} */
-	public Parser getParser() { return parser; }
+	public Parser<?> getParser() { return parser; }
 	/** @see {@link #optional} */
 	public boolean isOptional() { return optional; }
 	/** @see {@link #valueList} */
@@ -338,6 +332,7 @@ implements Serializable {
 	public boolean isHashsum() { return hashsum; }
 
 	public FieldRole getRole() { return role; }
+	public Color getColor() { return color;	}
 
 	@Override
 	public String toString() { return name; }

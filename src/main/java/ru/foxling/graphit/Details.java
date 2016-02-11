@@ -186,7 +186,7 @@ public class Details extends JFrame {
 				.append("STARTUP #").append(startupNode.getId()).append("::").append(LINE_SEPARATOR)
 				.append("- datetime: ").append(startup.getDatetime().format(Core.F_DATETIME)).append(LINE_SEPARATOR)
 				.append("- line no.: ").append(startup.getLineNo()).append(LINE_SEPARATOR)
-				.append("- lines count: ").append(startup.getRecordset().size()).append(LINE_SEPARATOR);
+				.append("- lines count: ").append(startup.getRecords().size()).append(LINE_SEPARATOR);
 
 			startups.add(startup);
 		} else
@@ -208,7 +208,7 @@ public class Details extends JFrame {
 		StyleConstants.setForeground(sComment, Color.lightGray);
 		for (Startup startup : startups) {
 			if (iWrongHash.isSelected() || iUnparsable.isSelected()) {
-				for (Record rec : startup.getRecordset()) {
+				for (Record rec : startup.getRecords()) {
 					int l, offset, length;
 					String errorMsg;
 					if (iUnparsable.isSelected() && rec.isDirty()) {

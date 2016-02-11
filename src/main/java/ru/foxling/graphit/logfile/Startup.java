@@ -36,7 +36,7 @@ public class Startup {
 	 *  Дата/время запуска */
 	private LocalDateTime datetime = null;
 	
-	private ArrayList<Record> recordset = new ArrayList<Record>();
+	private ArrayList<Record> records = new ArrayList<Record>();
 	
 	public Startup(int lineno){
 		this.lineno = lineno;
@@ -46,14 +46,14 @@ public class Startup {
 		if (rec == null)
 			throw new IllegalArgumentException();
 		
-		recordset.add(rec);
+		records.add(rec);
 	}
 
 	public int getLineNo() { return lineno; }
 	public LocalDate getDate() { return date; }
 	public LocalTime getTime() { return time; }
 	public LocalDateTime getDatetime() { return datetime; }
-	public ArrayList<Record> getRecordset() { return recordset; }
+	public ArrayList<Record> getRecords() { return records; }
 
 	public void setDate(LocalDate date) {
 		this.date = date;

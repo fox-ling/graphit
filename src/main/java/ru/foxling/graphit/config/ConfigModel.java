@@ -17,13 +17,9 @@
 
 package ru.foxling.graphit.config;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -67,7 +63,7 @@ implements Serializable {
 	private File file;
 	private Map<String,String> properties;
 	private LinkedList<String> recentFiles;
-	private ArrayList<Field> fieldList;
+	private List<Field> fieldList;
 	protected EventListenerList listenerList = new EventListenerList();
 	
 	public ConfigModel() {
@@ -447,12 +443,8 @@ implements Serializable {
 		return field;
 	}
 	
-	public int getFieldSetSize(){
-		return this.fieldList.size();
-	}
-	
-	public Field getField(int index){
-		return this.fieldList.get(index);
+	public List<Field> getFieldList() {
+		return fieldList;
 	}
 	
 	public FieldDelimiter getDefaultFieldDelimiter() {
@@ -801,7 +793,7 @@ implements Serializable {
 		return listenerList.getListeners(listenerType);
 	}
 	
-	public ArrayList<Field> cloneFieldList(){
+	/*public ArrayList<Field> cloneFieldList(){
 		try {
 			byte[] state;
 			
@@ -814,11 +806,12 @@ implements Serializable {
 			
 			ByteArrayInputStream iStream = new ByteArrayInputStream(state);
 			ObjectInputStream in = new ObjectInputStream(iStream);
+			
 			return (ArrayList<Field>) in.readObject();
 		} catch(IOException | ClassNotFoundException ex) {
 			ex.printStackTrace();
 			return null;
 		}
-	}
+	}*/
 }
 

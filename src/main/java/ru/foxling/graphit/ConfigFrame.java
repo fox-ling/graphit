@@ -36,6 +36,7 @@ import javax.swing.JTextField;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JCheckBox;
+import javax.swing.JColorChooser;
 import javax.swing.border.TitledBorder;
 import javax.swing.JTabbedPane;
 import java.awt.FlowLayout;
@@ -76,6 +77,7 @@ import java.time.LocalTime;
 import javax.swing.JMenuItem;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.Insets;
 
 public class ConfigFrame extends JFrame {
 	private static final long serialVersionUID = 3103016344816004897L;
@@ -107,6 +109,7 @@ public class ConfigFrame extends JFrame {
 	private JCheckBox iBitMask;
 	private JCheckBox iHashsum;
 	private JComboBox<FieldRole> iFieldRole;
+	private JButton iColorChooser;
 	
 	public ConfigFrame() {
 		super("Настройки");
@@ -213,7 +216,7 @@ public class ConfigFrame extends JFrame {
 		pnlFormat.add(iFormat);
 		pnlFormat.add(edtFormat);
 		
-		pnlMisc.setLayout(new MigLayout("", "[grow][grow]", "[][][][][][][][grow]"));
+		pnlMisc.setLayout(new MigLayout("", "[grow][grow]", "[][][][][][][][][grow]"));
 		pnlMisc.add(lblFieldName, "cell 0 0");
 		pnlMisc.add(iFieldName, "cell 1 0,growx");
 		pnlMisc.add(lblFieldDelimiter, "cell 0 1");
@@ -227,26 +230,33 @@ public class ConfigFrame extends JFrame {
 		pnlMisc.add(lblRole, "cell 0 4");
 		
 		iFieldRole = new JComboBox<FieldRole>(new DefaultComboBoxModel<>(FieldRole.values()));
-		pnlMisc.add(iFieldRole, "cell 1 4,growx");
-		pnlMisc.add(lblOptional, "cell 0 5");
-		pnlMisc.add(iOptional, "cell 1 5,growx");
+		pnlMisc.add(iFieldRole, "cell 1 4,growx,split 2");
+		
+		iColorChooser = new JButton();
+		iColorChooser.setMinimumSize(new Dimension(18, 18));
+		iColorChooser.setMaximumSize(new Dimension(18, 18));
+		iColorChooser.setMargin(new Insets(0, 0, 0, 0));//new Insets(8, 8, 7, 7));
+		pnlMisc.add(iColorChooser);
+		pnlMisc.add(lblOptional, "cell 0 6");
+		pnlMisc.add(iOptional, "cell 1 6,growx");
 		
 		JLabel lblHashsum = new JLabel("Хэш-сумма");
-		pnlMisc.add(lblHashsum, "cell 0 6");
+		pnlMisc.add(lblHashsum, "cell 0 7");
 		
 		iHashsum = new JCheckBox();
 		iHashsum.setEnabled(false);
-		pnlMisc.add(iHashsum, "cell 1 6");
+		pnlMisc.add(iHashsum, "cell 1 7");
 		
 		JPanel pnlValues = new JPanel();
 		pnlValues.setBorder(new TitledBorder(null, "Набор значений", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-		pnlMisc.add(pnlValues, "cell 0 7 2 1,grow");
+		pnlMisc.add(pnlValues, "cell 0 8 2 1,grow");
 		pnlValues.setLayout(new BorderLayout(0, 0));
 		
 		spValues = new JScrollPane();
 		pnlValues.add(spValues);
 		
 		tValues = new JTable() {
+			private static final long serialVersionUID = 7567104525794311551L;
 			private String[] columnToolTips = {
 					"Значение из лог файла",
 					"Короткое пояснение, отображается в таблице",
@@ -254,6 +264,8 @@ public class ConfigFrame extends JFrame {
 			//Implement table header tool tips.
 			protected JTableHeader createDefaultTableHeader() {
 				return new JTableHeader(columnModel) {
+					private static final long serialVersionUID = 5363995066011938534L;
+
 					public String getToolTipText(MouseEvent e) {
 						java.awt.Point p = e.getPoint();
 						int index = columnModel.getColumnIndexAtX(p.x);
@@ -290,8 +302,7 @@ public class ConfigFrame extends JFrame {
 		
 		JButton btnEventTest = new JButton("Event Test");
 		btnEventTest.addActionListener(e -> {
-			LocalTime lt = LocalTime.now();
-			System.out.println(Duration.between(lt, LocalTime.now()).toMillis());
+			JColorChooser cc = new JColorChooser();
 		});
 		pnlBottom.add(btnEventTest);
 		pnlBottom.add(btnLoad);
@@ -616,12 +627,12 @@ public class ConfigFrame extends JFrame {
 
 		@Override
 		public Field getElementAt(int index) {
-			return configModel.getField(index);
+			return configModel.getFieldList().get(index);
 		}
 
 		@Override
 		public int getSize() {
-			return configModel.getFieldSetSize();
+			return configModel.getFieldList().size();
 		}
 		
 		/** Refreshes whole list */
@@ -831,7 +842,7 @@ public class ConfigFrame extends JFrame {
 		private static final long serialVersionUID = 3742047021848215242L;
 		
 		private final String[] COLS = { "Значение", "Метка", "Описание" };
-		private final Class[] COL_CLASS = {Object.class, String.class, String.class};
+		private final Class<?>[] COL_CLASS = {Object.class, String.class, String.class};
 		
 		private List<FieldValue> valueList;
 		
@@ -846,7 +857,7 @@ public class ConfigFrame extends JFrame {
 		}
 		
 		@Override
-		public Class getColumnClass(int col) {
+		public Class<?> getColumnClass(int col) {
 			return COL_CLASS[col];
 		}
 

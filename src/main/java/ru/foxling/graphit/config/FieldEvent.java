@@ -29,17 +29,20 @@ public class FieldEvent extends EventObject {
 	public static final int UPDATE = 0;
 	
 	/** Event type: {@link #DELETE}, {@link #INSERT}, {@link #UPDATE} */
-	private int type;
+	private final int type;
 	
-	private String propertyName;
+	private final String propertyName;
 	
 	public FieldEvent(Field source) {
 		super(source);
+		type = UPDATE;
+		propertyName = null;
 	}
 	
 	public FieldEvent(Field source, int type) {
 		super(source);
 		this.type = type;
+		this.propertyName = null;
 	}
 
 	public FieldEvent(Field source, int type, String propertyName) {
@@ -51,5 +54,10 @@ public class FieldEvent extends EventObject {
 	/** Returns the event type {@link #type} */
 	public int getType() {
 		return type;
+	}
+	
+	/** Returns name of the changed property {@link #propertyName}}*/
+	public String getPropertyName() {
+		return propertyName;
 	}
 }

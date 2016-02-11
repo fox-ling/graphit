@@ -27,6 +27,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -50,7 +51,6 @@ public class LogFile {
 	private int wStartupCount = 0;
 	private Path filePath;
 	private final Charset encoding = Charset.forName("Cp1251");
-	private ArrayList<Field> fieldList;
 	private int optionalFieldId = -1;
 	private int hashsumFieldId = -1;
 	
@@ -60,7 +60,7 @@ public class LogFile {
 	public LogFile(String filename) {
 		this.filename = filename;
 		this.filePath = Paths.get(filename);
-		this.fieldList = Core.getConfigModel().cloneFieldList();
+		List<Field> fieldList = Core.getConfigModel().getFieldList();
 		records = new ArrayList<Record>(25);
 		for (int i = 0; i < fieldList.size(); i++) {
 			Field field = fieldList.get(i);
@@ -90,10 +90,6 @@ public class LogFile {
 
 	public String getSerialNo() {
 		return serialNo;
-	}
-
-	public ArrayList<Field> getFieldList() {
-		return fieldList;
 	}
 
 	public ArrayList<Startup> getStartups() {
@@ -149,6 +145,7 @@ public class LogFile {
 
 	/** Parses log-file's startups and their lines */
 	public void readFile() throws IOException {
+		int fieldsCount = Core.getConfigModel().getFieldList().size();
 		records.clear();
 		try (BufferedReader reader = Files.newBufferedReader(filePath, encoding)){
 			String line;
@@ -199,7 +196,7 @@ public class LogFile {
 					} else
 						//Parsing data line
 						if (startup != null) {
-							Record rec = new Record(lineNo, line, fieldList.size());
+							Record rec = new Record(lineNo, line, fieldsCount);
 							try {
 								parse(rec);
 								records.add(rec);
@@ -215,7 +212,7 @@ public class LogFile {
 			
 			//Working startups count:
 			for (i = 0; i < startups.size(); i++)
-				if (startups.get(i).getRecordset().size() > 0) wStartupCount++;
+				if (startups.get(i).getRecords().size() > 0) wStartupCount++;
 		}
 	}
 	
@@ -223,6 +220,7 @@ public class LogFile {
 		/** Source string without hash sum */
 		String	valueableStr = "";
 		
+		List<Field> fieldList = Core.getConfigModel().getFieldList();
 		int fieldsCount = fieldList.size();
 		
 		/** The line's fields (string parts) */
@@ -230,6 +228,7 @@ public class LogFile {
 		
 		/** The fields' offsets */
 		ArrayList<Integer> offsets = new ArrayList<Integer>(fieldsCount);
+		
 		
 		// Gotta split the entire string on parts, before parsing,
 		// otherwise there is a case when we won't know if it is
@@ -299,87 +298,6 @@ public class LogFile {
 		// Calculating hash sum of the string
 		if (hashsumFieldId > -1)
 			rec.setAuthentic(parts.get(hashsumFieldId).equals(getCRC(valueableStr)));
-	}
-	
-	private final static short[] KEY = {0x0001, 0x0002, 0x0004
-		, 0x0008, 0x0010, 0x0020
-		, 0x0040, 0x0080, 0x0100};
-	
-	private final static String[] KEY_DESC = {"Запись", "Спуск", "RS-485"
-					, "Подъем", "Минус", "Стоп"
-					, "Ввод", "Режим", "Плюс"};
-	
-	public String getKeyTooltip(String value) {
-		if (value == null || value == "")
-			return null;
-		
-		String result = "";
-		try {
-			short val = Short.parseShort(value, 16);
-			result = getKeyTooltip(val);
-		} catch (NumberFormatException e) {
-			result = "Ошибка: не удалось определить 16-ричное число из строки " + value;
-		}
-		return result;
-	}
-	
-	public String getKeyTooltip(short value) {
-		if (value < 1)
-			return "";
-		
-		String result = "<html>";
-		for (int i = 0; i < KEY.length; i++) {
-			if ((value & KEY[i]) >> i == 1)
-				result += "0x"+Integer.toHexString(KEY[i])+": "+ KEY_DESC[i]+"<br>";
-		}
-		
-		return result+"</html>";
-	}
-	
-	
-	private final static short[] ERROR = {0x0001, 0x0002, 0x0004, 0x0008
-		, 0x0010, 0x0020
-		, 0x0040, 0x0080 // Описаний для этих двух нет – добавил для удобства
-		, 0x0100, 0x0200
-		, 0x0400, 0x0800};
-
-	private final static String[] ERROR_DESC = {"Восстановление после автоматического сброса по \"зависанию\""
-				,"Недостаточно места на карте памяти"
-				,"Ошибка карты памяти SD"
-				,"Ошибка файловой системы на карте памяти SD"
-				,"Ошибка тензоизмерительного модуля (датчик натяжения)"
-				,"Обрыв внешней цепи датчика натяжения"
-				,"unknown","unknown"
-				,"Обнаружены много кратные нажатия одной клавиши"
-				,"Обнаружено длительное удержание одной клавиши, возможно \"залипание\""
-				,"Коэффициенты подстройки датчика натяжения повреждены, использованы значения по умолчанию"
-				,"Обрыв внешней цепи датчика натяжения"};
-	
-	public String getErrorTooltip(String value) {
-		if (value == null || value == "")
-			return null;
-		
-		String result = "";
-		try {
-			short val = Short.parseShort(value, 16);
-			result = getErrorTooltip(val);
-		} catch (NumberFormatException e) {
-			result = "Ошибка: не удалось определить 16-ричное число из строки " + value;
-		}
-		return result;
-	}
-	
-	public String getErrorTooltip(short value) {
-		if (value < 1)
-			return "";
-		
-		String result = "<html>";
-		for (int i = 0; i < ERROR.length; i++) {
-			if ((value & ERROR[i]) >> i == 1)
-				result += "0x"+Integer.toHexString(ERROR[i]) + ": " + ERROR_DESC[i] + "<br>";
-		}
-		
-		return result+"</html>";
 	}
 	
 	// ===== CRC Section ===========================================================================
