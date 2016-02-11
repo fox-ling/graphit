@@ -330,7 +330,7 @@ extends JFrame implements ChartProgressListener {
 	    pTools.add(cbTable, "cell 2 0,alignx right,aligny top");
 	    
 	    configController = new ConfigController(Core.getConfigModel());
-	    chartPanel.setChart(test());
+	    //chartPanel.setChart(test());
 	    // TODO 
 	}
 	
@@ -455,6 +455,7 @@ extends JFrame implements ChartProgressListener {
 		cbTable.setEnabled(true);
 		
 		configController.addRecentFile(aFile.getPath());
+		chartPanel.setChart(Chart.chartFactory(lf));
 	}
 	
 	private void setTableVisible(boolean visible) {
@@ -559,14 +560,17 @@ extends JFrame implements ChartProgressListener {
 	
 	private static class Chart {
 		private static JFreeChart chart;
+		private static XYPlot plot;
 		private static LogFile logFile;
 		private static Field xField;
+		private static LinkedList<Field> yFields;
 		
-		public JFreeChart chartFactory(LogFile logFile) {
+		public static JFreeChart chartFactory(LogFile logFile) {
 			if (logFile == null) {
 				LOG.log(Level.SEVERE, "logFile is NULL");
 				return null;
 			}
+			Chart.logFile = logFile;
 			
 			TimeSeriesCollection dsLaunch = new TimeSeriesCollection();
 			TimeSeries tsLaunch = new TimeSeries("Launch");
@@ -576,8 +580,7 @@ extends JFrame implements ChartProgressListener {
 			}
 			dsLaunch.addSeries(tsLaunch);
 			chart = ChartFactory.createTimeSeriesChart("Chart Title", "xAxisLabel", "yAxisLabel", dsLaunch, false, false, false);
-
-		    XYPlot plot = chart.getXYPlot();
+			plot = chart.getXYPlot();
 		    plot.setBackgroundPaint(Color.white);
 	        plot.setDomainGridlinePaint(Color.lightGray);
 	        plot.setRangeGridlinePaint(Color.lightGray);
@@ -601,33 +604,30 @@ extends JFrame implements ChartProgressListener {
 	    	
 	        plot.setRenderer(0, renderer);
 	        
-	        LinkedList<Field> yList = new LinkedList<>();
+	        yFields = new LinkedList<>();
 			for (Field f : logFile.getFieldList()) {
 				if (f.getRole() == FieldRole.X_AXIS) {
 					xField = f;
 				} else if (f.getRole() == FieldRole.DRAW)
-					yList.add(f);
+					yFields.add(f);
 			}
 			
 			if (xField != null)
-				for (Field yField : yList) {
+				for (Field yField : yFields) {
 					plotFactory(yField);
 				}
-			
 			
 	        return chart;
 		}
 		
-		/** 
-		 * @param xField */
-		private static TimeSeriesCollection plotFactory(Field yField) {
+		private static boolean plotFactory(Field yField) {
 			if (xField == null) {
 				LOG.log(Level.SEVERE, "Ось X не определена");
-				return null;
+				return false;
 			}
 			if (yField == null) {
 				LOG.log(Level.SEVERE, "Ось Y не определено");
-				return null;
+				return false;
 			}
 			
 			int xFieldId = logFile.getFieldList().indexOf(xField),
@@ -635,35 +635,76 @@ extends JFrame implements ChartProgressListener {
 			
 			if (xFieldId == -1 || yFieldId == -1) {
 				LOG.log(Level.SEVERE, "Поля для графика не определились ({0}={1}; {2}={3})", new Object[]{ xField, xFieldId, yField, yFieldId });
-				return null;
+				return false;
 			}
 			
 			TimeSeriesCollection collection = new TimeSeriesCollection();
-			TimeSeries ts = new TimeSeries(yField.getName());
-			for (Record rec : Chart.logFile.getRecords()) {
-				Object fieldValue = rec.getValue(xFieldId);
-				if (fieldValue == null) continue;
-				if (fieldValue instanceof LocalTime) {
-					LocalTime time = (LocalTime) fieldValue;
-					fieldValue = rec.getValue(yFieldId);
+			for (Startup startup : logFile.getStartups()) {
+				TimeSeries timeSeries = new TimeSeries(yField.getName());
+				for (Record rec : startup.getRecords()) {
+					if (rec.isDirty()) continue;
+					Object fieldValue = rec.getValue(xFieldId);
 					if (fieldValue == null) continue;
-					if (fieldValue instanceof Byte ||
-							fieldValue instanceof Short ||
-							fieldValue instanceof Integer ||
-							fieldValue instanceof Float)
-								ts.addOrUpdate(
-										new Second(time.getSecond(),
-													time.getMinute(),
-													time.getHour(), 1, 1, 1900),
-										(double) fieldValue
-								);
+					if (fieldValue instanceof LocalTime) {
+						LocalTime time = (LocalTime) fieldValue;
+						fieldValue = rec.getValue(yFieldId);
+						if (fieldValue == null) continue;
+						double value = objectToDouble(fieldValue);
+						if (value != Double.NaN)
+							timeSeries.addOrUpdate(
+									new Second(time.getSecond(),
+												time.getMinute(),
+												time.getHour(), 1, 1, 1900),
+									value
+							);
+					}
 				}
+				if (!timeSeries.isEmpty())
+					collection.addSeries(timeSeries);
 			}
-			return collection;
+			
+			NumberAxis numberAxis = new NumberAxis(yField.getName());
+	        numberAxis.setAutoRangeIncludesZero(false);
+	        numberAxis.setLabelPaint(Color.red);
+	        numberAxis.setInverted(true);
+	        numberAxis.setAutoRangeStickyZero(false);
+	        numberAxis.setVisible(true);
+	        
+	        int id = yFields.indexOf(yField);
+	        plot.setRangeAxis(id, numberAxis);
+	        plot.setRangeAxisLocation(id, AxisLocation.BOTTOM_OR_LEFT);
+	        
+	        XYDataset xydsDepth = collection;
+	        plot.setDataset(id, xydsDepth);
+	        plot.mapDatasetToRangeAxis(id, id);
+	        
+	        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+	        for (int i = 0; i < collection.getSeriesCount(); i++) {
+	        	renderer.setSeriesLinesVisible(i, true);
+	        	renderer.setSeriesPaint(i, Color.red);
+	        	renderer.setSeriesShapesVisible(i, false);
+	        	renderer.setSeriesShapesFilled(i, false);
+			}
+	        plot.setRenderer(id, renderer);
+	        return true;
+		}
+		
+		private static double objectToDouble(Object value) {
+			if (value instanceof Byte)
+				return ((Byte) value).doubleValue();
+			if (value instanceof Short)
+				return ((Short) value).doubleValue();
+			if (value instanceof Integer)
+				return ((Integer) value).doubleValue();
+			if (value instanceof Float)
+				return ((Float) value).doubleValue();
+			if (value instanceof Double)
+				return ((Double) value).doubleValue();
+			return Double.NaN;
 		}
 		
 		
-		public static JFreeChart createTSChart(LogFile data, boolean[] dsVisible) {
+		/*public static JFreeChart createTSChart(LogFile data, boolean[] dsVisible) {
 			String chartTitle = "";
 		    String xAxisLabel = "";
 		    
@@ -681,7 +722,7 @@ extends JFrame implements ChartProgressListener {
 			TimeSeries tsTension = null;
 			TimeSeries tsFix = new TimeSeries("Launch zoom out fix");
 			
-			/*for (int i = 0; i < data.startup.size(); i++) {
+			for (int i = 0; i < data.startup.size(); i++) {
 				currStartup = data.startup.get(i);
 				if (currStartup.time != null) {
 					if (!fixDone) {
@@ -713,7 +754,7 @@ extends JFrame implements ChartProgressListener {
 					dsDepth.addSeries(tsDepth);
 					dsTension.addSeries(tsTension);
 				}
-			}*/
+			}
 			dsLaunch.addSeries(tsLaunch);
 			
 			JFreeChart chart = ChartFactory.createTimeSeriesChart(chartTitle, xAxisLabel, "sDepth", dsLaunch, false, false, false);
@@ -792,7 +833,7 @@ extends JFrame implements ChartProgressListener {
 	        plot.setRenderer(2, renderer);
 			
 	        return chart;
-		}
+		}*/
 		
 		public static void setCollectionVisible(JFreeChart chart, int collectionID, boolean visible) {
 			XYPlot plot = chart.getXYPlot();
@@ -1114,7 +1155,7 @@ extends JFrame implements ChartProgressListener {
 			fieldList = logFile.getFieldList();
 			index = new ArrayList<Record>(25);
 			for (Startup startup : logFile.getStartups())
-				for(Record record: startup.getRecordset())
+				for(Record record: startup.getRecords())
 					if (!record.isDirty())
 						index.add(record);
 		}

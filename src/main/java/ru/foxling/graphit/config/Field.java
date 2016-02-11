@@ -17,6 +17,7 @@
 
 package ru.foxling.graphit.config;
 
+import java.awt.Color;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
@@ -74,6 +75,10 @@ implements Serializable {
 	/** The field role... what to do with the field's data */
 	private FieldRole role;
 	
+	/** The color of the line <br>
+	 * *If we gonna draw this data */
+	private Color color;
+	
 	/** Caption index from valueList
 	 * <i>*For optimization purposes</i> */
 	private HashMap<Object,String> captionSet;
@@ -95,6 +100,7 @@ implements Serializable {
 		descriptionSet = new HashMap<>(5);
 		parser = DefaultParser.getDefaultParser(datatype, format);
 		role = FieldRole.getDefaultFieldState();
+		color = Color.RED;
 	}
 	
 	/** @see {@link #name} */
