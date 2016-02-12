@@ -75,6 +75,7 @@ import ru.foxling.graphit.logfile.Startup;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -137,7 +138,7 @@ extends JFrame implements ChartProgressListener {
 	private JPopupMenu popupMenu;
 	private JCheckBoxMenuItem miWrongHashOnly;
 	private JMenu mRecent;
-	private JCheckBox cbLaunch;
+	private JCheckBox iLaunch;
 	private JCheckBox cbTable;
 	private ConfigController configController;
 	private JPanel pAxes;
@@ -304,18 +305,11 @@ extends JFrame implements ChartProgressListener {
 	    toppanel.add(pTools, BorderLayout.SOUTH);
 	    pTools.setLayout(new MigLayout("insets 0", "[][grow][67px]", "[23px]"));
 	    
-	    cbLaunch = new JCheckBox("Запуск");
-	    pTools.add(cbLaunch, "cell 0 0");
-	    //cbLaunch.setEnabled(false);
-	    /*
-	    cbLaunch.addActionListener(new ActionListener() {
-	    	public void actionPerformed(ActionEvent e) {
-	    		Chart.setCollectionVisible(chartPanel.getChart(), 0, cbLaunch.isSelected());
-	    	}
-	    });*/
-	    cbLaunch.setBackground(Color.WHITE);
-	    cbLaunch.setForeground(Color.BLACK);
-	    cbLaunch.setFont(new Font("Tahoma", Font.BOLD, 11));
+	    iLaunch = new JCheckBox("Запуск");
+	    pTools.add(iLaunch, "cell 0 0");
+	    iLaunch.setBackground(Color.WHITE);
+	    iLaunch.setForeground(Color.BLACK);
+	    iLaunch.setFont(new Font("Tahoma", Font.BOLD, 11));
 	    
 	    pAxes = new JPanel();
 	    pAxes.setBackground(Color.WHITE);
@@ -330,7 +324,6 @@ extends JFrame implements ChartProgressListener {
 	    pTools.add(cbTable, "cell 2 0,alignx right,aligny top");
 	    
 	    configController = new ConfigController(Core.getConfigModel());
-	    // TODO End of MainFrame.Constructor
 	}
 	
 	private void openLogFile(File aFile){
@@ -362,7 +355,7 @@ extends JFrame implements ChartProgressListener {
 		fillTable();
 		
 		miDetails.setEnabled(true);
-		cbLaunch.setEnabled(true);
+		iLaunch.setEnabled(true);
 		cbTable.setEnabled(true);
 		
 		configController.refreshAxesList();
@@ -470,18 +463,37 @@ extends JFrame implements ChartProgressListener {
 	}
 	
 	private static class Chart {
-		//TODO Chart class
 		private static JFreeChart chart;
 		private static XYPlot plot;
 		private static LogFile logFile;
 		private static Field xField;
 		private static List<Field> yFields = new LinkedList<>();
 		
+		//TODO V
+		private static boolean drawable(LogFile logFile) throws IllegalStateException {
+			if (logFile == null)
+				throw new IllegalStateException("Неизвестная ошибка (LogFile is NULL)");
+			
+			if (logFile.getStartups().size() == 0)
+				throw new IllegalStateException("В файле отсутствуют запуски");
+			
+			if (logFile.getRecords().size() == 0)
+				throw new IllegalStateException("В файле нет ни одной нормальной записи");
+			
+			boolean xAxis = false;
+			boolean yAxis = false;
+			for (Field field : Core.getConfigModel().getFieldList()) {
+				if (field.getRole() == FieldRole.X_AXIS &&)
+			}
+			return true;
+		}
+		
 		public static JFreeChart chartFactory(LogFile logFile) {
 			yFields.clear();
-			if (logFile == null) {
-				LOG.log(Level.SEVERE, "logFile is NULL");
-				return null;
+			try {
+				drawable(logFile);
+			} catch (Exception e) {
+				LOG.log(Level.SEVERE, "Построение графика невозможно", e);
 			}
 			Chart.logFile = logFile;
 			
@@ -590,33 +602,43 @@ extends JFrame implements ChartProgressListener {
 					if (rec.isDirty()) continue;
 					Object fieldValue = rec.getValue(xFieldId);
 					if (fieldValue == null) continue;
+					
+					LocalDateTime datetime;
 					if (fieldValue instanceof LocalTime) {
-						LocalTime time = (LocalTime) fieldValue;
-						fieldValue = rec.getValue(yFieldId);
-						if (fieldValue == null) continue;
-						double value = objectToDouble(fieldValue);
-						if (value != Double.NaN)
-							timeSeries.addOrUpdate(
-									new Second(time.getSecond(),
-												time.getMinute(),
-												time.getHour(), 1, 1, 1900),
-									value
-							);
+						datetime = LocalDateTime.of(startup.getDate(), (LocalTime) fieldValue);
+					} else if (fieldValue instanceof LocalDate) {
+						datetime = LocalDateTime.of((LocalDate) fieldValue, LocalTime.of(0, 0));
+					} else if (fieldValue instanceof LocalDateTime) {
+						datetime = (LocalDateTime) fieldValue;
+					} else
+						throw new IllegalStateException(String.format("Неподдерщиваемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME", xField.getDatatype().getValue()));
+					
+					fieldValue = rec.getValue(yFieldId);
+					if (fieldValue == null) continue;
+					double value = objectToDouble(fieldValue);
+					if (value != Double.NaN) {
+						timeSeries.addOrUpdate(
+								new Second(datetime.getSecond(), datetime.getMinute(), datetime.getHour(),
+											datetime.getDayOfMonth(), datetime.getMonthValue(), datetime.getYear()),
+								value
+						);
 					}
 				}
 				if (!timeSeries.isEmpty())
 					collection.addSeries(timeSeries);
 			}
 			
+			Color color = yField.getColor() != null ? yField.getColor() : Color.PINK;
+			
 			NumberAxis numberAxis = new NumberAxis(yField.getName());
 	        numberAxis.setAutoRangeIncludesZero(false);
-	        numberAxis.setLabelPaint(Color.red);
+	        numberAxis.setLabelPaint(color);
 	        numberAxis.setInverted(true);
 	        numberAxis.setAutoRangeStickyZero(false);
 	        numberAxis.setVisible(true);
 	        
-	        int id = yFields.size();
 	        yFields.add(yField);
+	        int id = yFields.size();
 	        plot.setRangeAxis(id, numberAxis);
 	        plot.setRangeAxisLocation(id, AxisLocation.BOTTOM_OR_LEFT);
 	        
@@ -627,7 +649,7 @@ extends JFrame implements ChartProgressListener {
 	        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
 	        for (int i = 0; i < collection.getSeriesCount(); i++) {
 	        	renderer.setSeriesLinesVisible(i, true);
-	        	renderer.setSeriesPaint(i, Color.red);
+	        	renderer.setSeriesPaint(i, color);
 	        	renderer.setSeriesShapesVisible(i, false);
 	        	renderer.setSeriesShapesFilled(i, false);
 			}
@@ -648,18 +670,21 @@ extends JFrame implements ChartProgressListener {
 				return ((Double) value).doubleValue();
 			return Double.NaN;
 		}
+
+		public static void setLaunchVisible(boolean visible) {
+			XYPlot plot = chart.getXYPlot();
+			XYLineAndShapeRenderer renderer = (XYLineAndShapeRenderer) plot.getRenderer(0);
+			for (int i = 0; i < plot.getDataset(0).getSeriesCount(); i++) {
+				//if (collectionID == 0 && i != 0)
+					renderer.setSeriesShapesVisible(i, visible);
+			}
+		}
 	}
 
 	
 	private class ConfigController {
 		private ConfigModel configModel;
 		private ArrayList<Link> links;
-		
-		private final Color[] colors = {
-				Color.RED, Color.GREEN, Color.BLUE,
-				Color.BLACK, Color.YELLOW, Color.CYAN,
-				Color.PINK, Color.MAGENTA
-		};
 		
 		private final int[] KEY_LIST = {
 				KeyEvent.VK_1, KeyEvent.VK_2, KeyEvent.VK_3
@@ -700,22 +725,25 @@ extends JFrame implements ChartProgressListener {
 			Link link = getLink(mi);
 			if (link == null || link.field == null) return;
 			configModel.toggleYAxis(link.field, mi.isSelected());
+			link.yMenuItem.setForeground(link.getColor());
 		};
 		
 		public ConfigController(ConfigModel configModel) {
-			// TODO ConfigController
 			this.configModel = configModel;
 			links = new ArrayList<>();
 			configModel.addPropertyListener(e -> {
+				boolean visible;
 				switch (e.getPropertyName()) {
 				case "recent-file":
 					updateRecentMenu();
 					break;
 				case "launch-visible":
-					cbLaunch.setSelected(configModel.getLaunchVisible());
+					visible = configModel.getLaunchVisible();
+					iLaunch.setSelected(visible);
+					Chart.setLaunchVisible(visible);
 					break;
 				case "table-visible":
-					boolean visible = configModel.getTableVisible();
+					visible = configModel.getTableVisible();
 					cbTable.setSelected(visible);
 					setTableVisible(visible);
 					break;
@@ -738,9 +766,9 @@ extends JFrame implements ChartProgressListener {
 				}
 			});
 			
-			cbLaunch.setSelected(configModel.getLaunchVisible());
-			cbLaunch.addActionListener(e -> {
-				JCheckBox cb = (JCheckBox)e.getSource(); 
+			iLaunch.setSelected(configModel.getLaunchVisible());
+			iLaunch.addActionListener(e -> {
+				JCheckBox cb = (JCheckBox) e.getSource(); 
 				configModel.setLaunchVisible(cb.isSelected());
 			});
 			
@@ -748,7 +776,7 @@ extends JFrame implements ChartProgressListener {
 			setTableVisible(configModel.getTableVisible());
 			cbTable.setSelected(configModel.getTableVisible());
 			cbTable.addActionListener(e -> {
-				JCheckBox cb = (JCheckBox)e.getSource(); 
+				JCheckBox cb = (JCheckBox) e.getSource(); 
 				configModel.setTableVisible(cb.isSelected());
 			});
 			
@@ -786,8 +814,9 @@ extends JFrame implements ChartProgressListener {
 			
 			List<Field> fields = Core.getConfigModel().getFieldList(); 
 			for (Field field : fields) {
-				if (field.getDatatype() == DataType.STRING)
-					continue;
+				if (field.getDatatype() == DataType.STRING ||
+						field.getRole() == FieldRole.X_AXIS)
+							continue;
 				Link link = new Link(field);
 				links.add(link);
 				mYAxes.add(link.yMenuItem);
@@ -834,26 +863,26 @@ extends JFrame implements ChartProgressListener {
 			mRecent.setEnabled(paths.size() > 0);
 		}
 		
-		private Color getColor(int i) {
-			if (colors.length > i) {
-				return colors[i];
-			} else
-				return Color.BLACK;
-		}
-	
 		private class Link {
 			public final Field field;
 			public final JCheckBoxMenuItem yMenuItem;
-			public Color color;
 			
 			public Link(Field field) {
 				this.field = field;
-				color = getColor(links.size());
 				
 				yMenuItem = new JCheckBoxMenuItem(field.getName());
-				yMenuItem.setForeground(color);
 				yMenuItem.setFont(new Font("Tahoma", Font.BOLD, 11));
+				yMenuItem.setForeground(getColor());
 				yMenuItem.setSelected(field.getRole() == FieldRole.DRAW);
+			}
+			
+			public Color getColor() {
+				if (field != null &&
+						field.getRole() == FieldRole.DRAW &&
+						field.getColor() != null) {
+							return field.getColor();
+				} else
+					return Color.BLACK;
 			}
 		}
 	}

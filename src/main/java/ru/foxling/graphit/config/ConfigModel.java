@@ -17,6 +17,7 @@
 
 package ru.foxling.graphit.config;
 
+import java.awt.Color;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -31,6 +32,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
@@ -57,6 +59,9 @@ implements Serializable {
 	public static final String WORKDIR_PATH = getWorkDirPath() + FILENAME;
 	public static final String APPDATA_PATH = getAppDataPath() + FILENAME; 
 	
+	/** Good colors */
+	private static final List<Color> COLORS = Arrays.asList( Color.RED, Color.GREEN, Color.BLUE, Color.BLACK, Color.CYAN, Color.PINK, Color.MAGENTA);
+	
 	/** List of file paths where configuration file could be placed in order of priority */
 	private final LinkedHashSet<String> PATHS = new LinkedHashSet<String>(Arrays.asList(WORKDIR_PATH, APPDATA_PATH));
 	
@@ -70,6 +75,7 @@ implements Serializable {
 		properties = new HashMap<String,String>();
 		recentFiles = new LinkedList<String>();
 		fieldList = new ArrayList<Field>();
+		
 		
 		setDefaults();
 		try {
@@ -290,7 +296,10 @@ implements Serializable {
 	        	 eField.addContent(xmlElementFactory("delimiter", field.getDelimiter().name()));
 	        	 eField.addContent(xmlElementFactory("datatype", field.getDatatype().getValue()));
 	        	 eField.addContent(xmlElementFactory("format", field.getFormatValue()));
-	        	 eField.addContent(xmlElementFactory("state", field.getRole().name()));
+	        	 eField.addContent(xmlElementFactory("role", field.getRole().name()));
+	        	 
+	        	 if (field.getRole() == FieldRole.DRAW && field.getColor() != null)
+	        		 eField.addContent(xmlElementFactory("color", Integer.toHexString(field.getColor().getRGB())));
 	        	 
 	        	 if (field.isOptional())
 	        		 eField.addContent(xmlElementFactory("optional", "1"));
@@ -406,8 +415,15 @@ implements Serializable {
 						field.setDelimiter(value); break;
 					case "format":
 						field.setFormat(value); break;
-					case "state":
+					case "role":
 						field.setRole(value); break;
+					case "color":
+						try {
+							field.setColor(new Color(Integer.parseInt(value, 16), true));
+						} catch (Exception e) {
+							field.setColor(getNextColor());
+						}
+						break;
 					case "optional":
 						field.setOptional(value); break;
 					case "bitmask":
@@ -651,6 +667,40 @@ implements Serializable {
 		}
 	}
 	
+	public void setFieldColor(Field field, Color color) {
+		try {
+			if (field == null)
+				throw new NullPointerException("Поле - NULL");
+			
+			field.setColor(color);
+		} catch (Exception e) {
+			LOG.log(Level.SEVERE, "Не удалось изменить цвет поля ", e);
+		}
+	}
+	
+	/** @return Next free <i>(not used)</i> color */ 
+	private Color getNextColor() {
+		for (Color color : COLORS) {
+			boolean inuse = false;
+			for (Field field : fieldList) {
+				if (field.getRole() == FieldRole.DRAW &&
+						field.getColor() != null &&
+						field.getColor().equals(color)) {
+					inuse = true;
+					break;
+				}
+			}
+			if (!inuse)
+				return color;
+		}
+		return getRandomColor();				
+	}
+	
+	private Color getRandomColor() {
+		Random rnd = new Random();
+		return new Color(rnd.nextInt(255), rnd.nextInt(255), rnd.nextInt(255));
+	}
+	
 	/**
 	 * @param field which axis you wanna toggle
 	 * @param visible wanna draw it or not */
@@ -661,7 +711,7 @@ implements Serializable {
 			
 			FieldRole role = field.getRole();
 			if (visible && role == FieldRole.X_AXIS)
-				throw new IllegalStateException(String.format("Поле \"%s\" является X-осью"));
+				throw new IllegalStateException(String.format("Поле \"%s\" является X-осью", field));
 			if (visible && role == FieldRole.DRAW ||
 					!visible && role == FieldRole.NONE)
 						return true;
@@ -696,7 +746,10 @@ implements Serializable {
 							return false;
 					}
 				}
-				
+			
+			if (role == FieldRole.DRAW)
+				field.setColor(getNextColor());
+			
 			field.setRole(role);
 			return true;
 		} catch (Exception e) {

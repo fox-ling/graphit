@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EventListener;
 import java.util.List;
-
 import javax.swing.event.EventListenerList;
 
 public class Field
@@ -89,7 +88,6 @@ implements Serializable {
 		valueList = new ArrayList<FieldValue>(5);
 		parser = DefaultParser.getDefaultParser(datatype, format);
 		role = FieldRole.getDefaultFieldState();
-		color = Color.RED;
 	}
 	
 	/** @see {@link #name} */
@@ -288,8 +286,11 @@ implements Serializable {
 		if (role == null)
 			throw new IllegalArgumentException("Состояние не может быть NULL");
 		
-		if (getDatatype() == DataType.STRING && (role == FieldRole.DRAW || role == FieldRole.X_AXIS))
+		if (getDatatype() == DataType.STRING && (role == FieldRole.DRAW))
 			throw new IllegalStateException("Строковые данные нельзя поместить на график");
+		
+		if (role == FieldRole.X_AXIS && !Arrays.asList(DataType.DATE, DataType.TIME, DataType.DATETIME).contains(getDatatype()))
+			throw new IllegalStateException("На данный момент в качестве данных для оси X поддерживаются только временные типы (date/time/datetime)");
 		
 		if (this.role == role)
 			return;
@@ -299,6 +300,9 @@ implements Serializable {
 	}
 	
 	public void setColor(Color color) {
+		if (this.color != null && this.color.equals(color))
+			return;
+		
 		this.color = color;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "color"));
 	}

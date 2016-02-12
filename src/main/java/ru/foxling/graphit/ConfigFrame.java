@@ -71,13 +71,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.time.Duration;
-import java.time.LocalTime;
-
 import javax.swing.JMenuItem;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.Insets;
+import javax.swing.border.EtchedBorder;
 
 public class ConfigFrame extends JFrame {
 	private static final long serialVersionUID = 3103016344816004897L;
@@ -110,6 +108,7 @@ public class ConfigFrame extends JFrame {
 	private JCheckBox iHashsum;
 	private JComboBox<FieldRole> iFieldRole;
 	private JButton iColorChooser;
+	private JPanel pnlMisc;
 	
 	public ConfigFrame() {
 		super("Настройки");
@@ -193,7 +192,7 @@ public class ConfigFrame extends JFrame {
 		miRemoveField = new JMenuItem("Удалить");
 		pmFieldList.add(miRemoveField);
 		
-		JPanel pnlMisc = new JPanel();
+		pnlMisc = new JPanel();
 		pnlFields.add(pnlMisc, "cell 1 0,grow");
 		
 		
@@ -233,9 +232,10 @@ public class ConfigFrame extends JFrame {
 		pnlMisc.add(iFieldRole, "cell 1 4,growx,split 2");
 		
 		iColorChooser = new JButton();
+		iColorChooser.setBorder(new EtchedBorder(EtchedBorder.LOWERED, null, null));
 		iColorChooser.setMinimumSize(new Dimension(18, 18));
 		iColorChooser.setMaximumSize(new Dimension(18, 18));
-		iColorChooser.setMargin(new Insets(0, 0, 0, 0));//new Insets(8, 8, 7, 7));
+		iColorChooser.setMargin(new Insets(0, 0, 0, 0));
 		pnlMisc.add(iColorChooser);
 		pnlMisc.add(lblOptional, "cell 0 6");
 		pnlMisc.add(iOptional, "cell 1 6,growx");
@@ -300,11 +300,6 @@ public class ConfigFrame extends JFrame {
 			configModel.loadConfig();
 		});
 		
-		JButton btnEventTest = new JButton("Event Test");
-		btnEventTest.addActionListener(e -> {
-			JColorChooser cc = new JColorChooser();
-		});
-		pnlBottom.add(btnEventTest);
 		pnlBottom.add(btnLoad);
 		
 		JButton btnSave = new JButton("Save");
@@ -459,6 +454,12 @@ public class ConfigFrame extends JFrame {
 				if (!configModel.setFieldRole(field, (FieldRole) iFieldRole.getSelectedItem()))
 					iFieldRole.setSelectedItem(field.getRole());
 		});
+		
+		iColorChooser.addActionListener(e -> {
+			Color color = JColorChooser.showDialog(this, "Выберите цвет для графика", null);
+			if (color != null)
+				configModel.setFieldColor(getSelectedField(), color);
+		});
 
 		// FieldName Change
 		MyVerifier nameVerifier = new MyVerifier((c, a) -> {
@@ -565,30 +566,37 @@ public class ConfigFrame extends JFrame {
 	/** Updates control state: enabled/disabled, clear values */
 	private void updateContolState(){
 		Field field = getSelectedField();
-		boolean selected = field != null;
+		boolean isFieldSelected = field != null,
+				isBitmaskVisible = false,
+				isColorChooserVisible = false;
 		
-		iFieldName.setEnabled(selected);
-		iFieldDelimiter.setEnabled(selected);
-		iDataType.setEnabled(selected);
-		iFormat.setEnabled(selected);
-		edtFormat.setEnabled(selected);
-		iFieldRole.setEnabled(selected);
-		iOptional.setEnabled(selected);
-		tValues.setEnabled(selected);
-		spValues.setEnabled(selected);
-		iHashsum.setEnabled(selected);
+		iFieldName.setEnabled(isFieldSelected);
+		iFieldDelimiter.setEnabled(isFieldSelected);
+		iDataType.setEnabled(isFieldSelected);
+		iOptional.setEnabled(isFieldSelected);
+		tValues.setEnabled(isFieldSelected);
+		spValues.setEnabled(isFieldSelected);
+		iHashsum.setEnabled(isFieldSelected);
 		
-		if (selected) {
+		
+		edtFormat.setEnabled(false);
+		iFormat.setEnabled(false);
+		iBitMask.setVisible(false);
+		iFieldRole.setEnabled(false);
+		if (isFieldSelected) {
 			DataType datatype = field.getDatatype();
 			if (datatype != null) {
 				edtFormat.setEnabled(!datatype.isFixedFormatList());
 				iFormat.setEnabled(!(datatype.getFormatList().size() == 0 ||
 									datatype.getFormatList().size() == 1 &&
 									datatype.getFormatList().get(0).equals(Format.EMPTY_FORMAT)));
-				iBitMask.setVisible(datatype == DataType.BYTE || datatype == DataType.SHORT || datatype == DataType.INTEGER);
+				isBitmaskVisible = datatype == DataType.BYTE || datatype == DataType.SHORT || datatype == DataType.INTEGER;
 				iFieldRole.setEnabled(datatype != DataType.STRING);
 			}
+			isColorChooserVisible = field.getRole() == FieldRole.DRAW;
 		}
+		iBitMask.setVisible(isBitmaskVisible);
+		iColorChooser.setVisible(isColorChooserVisible);
 	}
 	
 	private Field getSelectedField() {
@@ -596,6 +604,7 @@ public class ConfigFrame extends JFrame {
 	}
 	
 	private void refreshFieldInfo(EventObject evt) {
+		Color color = pnlMisc.getBackground();
 		Field field = getSelectedField();
 		if (field != null) {
 			iFieldName.setText(field.getName());
@@ -606,6 +615,8 @@ public class ConfigFrame extends JFrame {
 			iFieldRole.setSelectedItem(field.getRole());
 			iBitMask.setSelected(field.isBitmask());
 			iHashsum.setSelected(field.isHashsum());
+			if (field.getRole() == FieldRole.DRAW && field.getColor() != null)
+				color = field.getColor();
 		} else {
 			iFieldName.setText("");
 			iFieldDelimiter.setSelectedIndex(-1);
@@ -618,6 +629,7 @@ public class ConfigFrame extends JFrame {
 			iHashsum.setSelected(false);
 		}
 		
+		iColorChooser.setBackground(color);
 		updateContolState();
 	}
 	
