@@ -63,18 +63,18 @@ implements Serializable {
 	/** <code>True</code> if the field contains hash sum of the log line */
 	private boolean hashsum;
 	
-	/** Contains values that could appear in the field and its' descriptions */
-	private List<FieldValue> valueList;
-	
-	/** Object that converts string to field's {@link #datatype} */
-	private Parser<?> parser;
-	
 	/** The field role... what to do with the field's data */
 	private FieldRole role;
 	
 	/** The color of the line <br>
 	 * *If we gonna draw this data */
 	private Color color;
+	
+	/** Contains values that could appear in the field and its' descriptions */
+	private List<FieldValue> valueList;
+	
+	/** Object that converts string to field's {@link #datatype} */
+	private Parser<?> parser;
 
 	protected EventListenerList listenerList = new EventListenerList();
 	
@@ -90,6 +90,12 @@ implements Serializable {
 		role = FieldRole.getDefaultFieldState();
 	}
 	
+	
+	/* ---=== NAME ===--- */
+
+	/** @see {@link #name} */
+	public String getName() { return name; }
+	
 	/** @see {@link #name} */
 	public void setName(String name) throws IllegalArgumentException {
 		if (name == null || name.equals(""))
@@ -97,6 +103,12 @@ implements Serializable {
 	
 		this.name = name;
 	}
+	
+	
+	/* ---=== DESCRIPTION ===---*/
+	
+	/** @see {@link #description} */
+	public String getDescription() { return description; }
 	
 	/** @see {@link #description} */
 	public void setDescription(String description) {
@@ -106,14 +118,10 @@ implements Serializable {
 		this.description = description;
 	}
 	
+	
+	/* ---=== DATATYPE ===--- */
 	/** @see {@link #datatype} */
-	public void setDatatype(String datatype) throws IllegalArgumentException {
-		DataType value = DataType.valueOf(datatype);
-		if (value == null)
-			throw new IllegalArgumentException("Неподдерживаемый тип данных");
-		
-		setDatatype(value);
-	}
+	public DataType getDatatype() { return datatype; }
 	
 	/** @see {@link #datatype} */
 	public void setDatatype(DataType datatype) throws IllegalArgumentException {
@@ -130,6 +138,12 @@ implements Serializable {
 		
 		setParser(DefaultParser.getDefaultParser(this.datatype, this.format));
 	}
+	
+	
+	/* ---=== FORMAT ===--- */
+	
+	/** @see {@link #format} */
+	public Format getFormat() { return format; }
 	
 	/** @see {@link #format} */
 	public void setFormat(String format) throws IllegalStateException {
@@ -177,13 +191,19 @@ implements Serializable {
 		setParser(DefaultParser.getDefaultParser(this.datatype, this.format));
 	}
 	
-	/** @see {@link #delimiter} */
-	public void setDelimiter(String delimiter) throws IllegalArgumentException {
-		if (delimiter == null || delimiter.equals(""))
-			throw new IllegalArgumentException("Ограничитель не должен быть пустым");
-		
-		setDelimiter(FieldDelimiter.valueOf(delimiter));
+	/** @see {@link #format} */
+	public String getFormatValue() {
+		if (format != null) {
+			return format.value;
+		} else
+			return null;
 	}
+	
+	
+	/* ---=== DELIMITER ===--- */
+	
+	/** @see {@link #delimiter} */
+	public FieldDelimiter getDelimiter() { return delimiter; }
 	
 	/** @see {@link #delimiter} */
 	public void setDelimiter(FieldDelimiter delimiter) {
@@ -193,23 +213,94 @@ implements Serializable {
 		this.delimiter = delimiter;
 	}
 	
+	
+	/* ---=== OPTIONAL ===--- */
+	
 	/** @see {@link #optional} */
-	public void setOptional(String optional) {
-		if (optional == null)
-			throw new IllegalArgumentException("setOptional(null)");
-		
-		setOptional(parseBoolean(optional));
-	}
-
+	public boolean isOptional() { return optional; }
+	
 	/** @see {@link #optional} */
 	public void setOptional(boolean optional) {
 		this.optional = optional;
 	}
+	
+	
+	/* ---=== BITMASK ===--- */
+	
+	/** @see {@link #bitmask} */
+	public boolean isBitmask() { return bitmask; }
+	
+	/** @see {@link #bitmask} */
+	public void setBitmask(boolean bitmask) {
+		if (this.bitmask == bitmask)
+			return;
+		
+		this.bitmask = bitmask;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "bitmask"));
+	}
+	
+	
+	/* ---=== HASHSUM ===--- */
+	
+	/** @see {@link #hashsum} */
+	public boolean isHashsum() { return hashsum; }
+	
+	/** @see {@link #hashsum} */
+	public void setHashsum(boolean hashsum) {
+		if (this.hashsum == hashsum)
+			return;
+		
+		this.hashsum = hashsum;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "hashsum"));
+	}
+	
+	
+	/* ---=== ROLE ===--- */
+	
+	/** @see {@link #role} */
+	public FieldRole getRole() { return role; }
+	
+	/** @see {@link #role} */
+	public void setRole(FieldRole role) throws IllegalArgumentException, IllegalStateException {
+		if (role == null)
+			throw new IllegalArgumentException("Состояние не может быть NULL");
+		
+		if (this.role == role)
+			return;
+		
+		this.role = role;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "role"));
+	}
+	
+	
+	/* ---=== COLOR ===--- */
+	
+	public Color getColor() { return color;	}
+	
+	public void setColor(Color color) {
+		if (this.color != null && this.color.equals(color))
+			return;
+		
+		this.color = color;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "color"));
+	}
+	
+	
+	/* ---=== PARSER ===--- */
 
+	/** @see {@link #parser} */
+	public Parser<?> getParser() { return parser; }
+	
 	/** @see {@link #parser} */
 	public void setParser(Parser<?> parser) {
 		this.parser = parser;
 	}
+	
+	
+	/* ---=== FIELD VALUES ===--- */
+	
+	/** @see {@link #valueList} */
+	public List<FieldValue> getValueList() { return valueList; }
 	
 	public void addValue(FieldValue value) throws IllegalArgumentException, IndexOutOfBoundsException {
 		if (value == null)
@@ -244,103 +335,9 @@ implements Serializable {
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "valueList"));
 	}
 	
-	/** @see {@link #bitmask} */
-	public void setBitmask(String bitmask) {
-		this.setBitmask(parseBoolean(bitmask));
-	}
 	
-	/** @see {@link #bitmask} */
-	public void setBitmask(boolean bitmask) {
-		if (this.bitmask == bitmask)
-			return;
-		
-		this.bitmask = bitmask;
-		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "bitmask"));
-	}
-	
-	/** @see {@link #hashsum} */
-	public void setHashsum(String hashsum) {
-		this.setHashsum(parseBoolean(hashsum));
-	}
+	/* ---=== EVENTS ===--- */	
 
-	/** @see {@link #hashsum} */
-	public void setHashsum(boolean hashsum) {
-		if (this.hashsum == hashsum)
-			return;
-		
-		this.hashsum = hashsum;
-		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "hashsum"));
-	}
-	
-	/** @see {@link #role} */
-	public void setRole(String role) throws IllegalArgumentException, IllegalStateException {
-		FieldRole value = FieldRole.valueOf(role);
-		if (value == null)
-			throw new IllegalArgumentException("Неподдерживаемое состояние поля");
-		
-		setRole(value);
-	}
-	
-	/** @see {@link #role} */
-	public void setRole(FieldRole role) throws IllegalArgumentException, IllegalStateException {
-		if (role == null)
-			throw new IllegalArgumentException("Состояние не может быть NULL");
-		
-		if (getDatatype() == DataType.STRING && (role == FieldRole.DRAW))
-			throw new IllegalStateException("Строковые данные нельзя поместить на график");
-		
-		if (role == FieldRole.X_AXIS && !Arrays.asList(DataType.DATE, DataType.TIME, DataType.DATETIME).contains(getDatatype()))
-			throw new IllegalStateException("На данный момент в качестве данных для оси X поддерживаются только временные типы (date/time/datetime)");
-		
-		if (this.role == role)
-			return;
-		
-		this.role = role;
-		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "role"));
-	}
-	
-	public void setColor(Color color) {
-		if (this.color != null && this.color.equals(color))
-			return;
-		
-		this.color = color;
-		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "color"));
-	}
-
-	/** @see {@link #name} */
-	public String getName() { return name; }
-	/** @see {@link #description} */
-	public String getDescription() { return description; }
-	/** @see {@link #datatype} */
-	public DataType getDatatype() { return datatype; }
-	/** @see {@link #delimiter} */
-	public FieldDelimiter getDelimiter() { return delimiter; }
-	/** @see {@link #format} */
-	public Format getFormat() { return format; }
-	/** @see {@link #format} */
-	public String getFormatValue() {
-		if (format != null) {
-			return format.value;
-		} else
-			return null;
-	}
-	/** @see {@link #parser} */
-	public Parser<?> getParser() { return parser; }
-	/** @see {@link #optional} */
-	public boolean isOptional() { return optional; }
-	/** @see {@link #valueList} */
-	public List<FieldValue> getValueList() { return valueList; }
-	/** @see {@link #bitmask} */
-	public boolean isBitmask() { return bitmask; }
-	/** @see {@link #hashsum} */
-	public boolean isHashsum() { return hashsum; }
-
-	public FieldRole getRole() { return role; }
-	public Color getColor() { return color;	}
-
-	@Override
-	public String toString() { return name; }
-	
 	public void addFieldListener(FieldListener listener) {
 		listenerList.add(FieldListener.class, listener);
 	}
@@ -359,12 +356,11 @@ implements Serializable {
 	}
 	
 	
-	/** String to boolean converter
-	 * @return <code>true</code> if <code><b>text</b></code> in ["true", "yes", "1"] */
-	private boolean parseBoolean(String text) {
-		return text != null && (text.equals("true") || text.equals("yes") || text.equals("1"));
-	}
+	/* ---=== STUFF ===--- */
 	
+	@Override
+	public String toString() { return name; }
+		
 	/** Serialization customization */
 	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
 		in.defaultReadObject();
@@ -374,4 +370,5 @@ implements Serializable {
 		if (type == DataType.DATE || type == DataType.TIME || type == DataType.DATETIME)
 			setParser(DefaultParser.datetimeFactory(type, getFormat()));
 	}
+	
 }

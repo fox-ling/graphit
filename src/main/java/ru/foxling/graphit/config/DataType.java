@@ -55,11 +55,11 @@ public enum DataType {
 	
 	private final String caption;
 	private final String value;
-	private final Class _class;
+	private final Class<?> _class;
 	private final boolean fixedFormatList;
 	private final List<Format> formatList;
 	
-	DataType(String caption, String value, Class _class, boolean fixedFormatList, List<Format> formatList){
+	DataType(String caption, String value, Class<?> _class, boolean fixedFormatList, List<Format> formatList){
 		this.caption = caption;
 		this.value = value;
 		this._class = _class;
@@ -81,7 +81,7 @@ public enum DataType {
 	public String getValue() {
 		return value;
 	}
-	public Class get_class() {
+	public Class<?> get_class() {
 		return _class;
 	}
 

@@ -31,6 +31,7 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumn;
+import javax.xml.crypto.Data;
 
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
@@ -79,6 +80,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.LinkedList;
@@ -483,7 +485,12 @@ extends JFrame implements ChartProgressListener {
 			boolean xAxis = false;
 			boolean yAxis = false;
 			for (Field field : Core.getConfigModel().getFieldList()) {
-				if (field.getRole() == FieldRole.X_AXIS &&)
+				if (field.getRole() == FieldRole.X_AXIS)
+					if (Arrays.asList(DataType.TIME, DataType.DATETIME, DataType.DATE).contains(field.getDatatype())) {
+						xAxis = true;
+					} else
+						throw new IllegalStateException("");
+					
 			}
 			return true;
 		}

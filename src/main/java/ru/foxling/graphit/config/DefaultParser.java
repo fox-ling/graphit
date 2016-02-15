@@ -66,7 +66,7 @@ implements Serializable {
 		}
 	};
 	
-	public static Parser numericFactory(DataType datatype, final Format format) throws IllegalArgumentException {
+	public static Parser<?> numericFactory(DataType datatype, final Format format) throws IllegalArgumentException {
 		final int _radix;
 		final String _prefix;
 		switch (format.value) {
@@ -139,7 +139,7 @@ implements Serializable {
 	/** Date parser factory
 	 * @param format - Date/Time format pattern, for example: <code>"dd.MM.yyyy HH:mm:ss"</code>
 	 * @see {@link java.text.SimpleDateFormat} */
-	public static Parser datetimeFactory(DataType datatype, final Format format) throws IllegalArgumentException {
+	public static Parser<?> datetimeFactory(DataType datatype, final Format format) throws IllegalArgumentException {
 		DateTimeFormatter _formatter = DateTimeFormatter.ofPattern(format.value);
 		
 		switch (datatype) {
@@ -180,7 +180,7 @@ implements Serializable {
 		
 	}
 	
-	public static Parser getDefaultParser(DataType datatype, Format format) throws IllegalArgumentException{
+	public static Parser<?> getDefaultParser(DataType datatype, Format format) throws IllegalArgumentException{
 		if (format == null) 
 				format = new Format("");
 		switch (datatype) {

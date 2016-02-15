@@ -63,7 +63,7 @@ implements Serializable{
 	
 	/** @throws Exception 
 	 * @see {@link #valueList} */
-	public void validateValue(Parser parser) throws Exception {
+	public void validateValue(Parser<?> parser) throws Exception {
 		value = parser.parse(source);
 	}
 	

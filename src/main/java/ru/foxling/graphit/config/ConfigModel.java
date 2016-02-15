@@ -404,32 +404,65 @@ implements Serializable {
 		for (String property : properties.keySet()) {
 			try {
 				String value = properties.get(property);
+				if (value == null)
+					throw new IllegalArgumentException("Не предоставлено значения для опции " + property);
 				switch (property) {
 					case "name":
-						field.setName(value); break;
+						field.setName(value);
+						break;
 					case "description":
-						field.setDescription(value); break;
+						field.setDescription(value);
+						break;
 					case "datatype":
-						field.setDatatype(value); break;
+						DataType datatype = DataType.valueOf(value);
+						if (datatype == null)
+							throw new IllegalArgumentException("Неподдерживаемый тип данных");
+						field.setDatatype(datatype);
+						break;
 					case "delimiter":
-						field.setDelimiter(value); break;
+						if (value.length() == 0)
+							throw new IllegalArgumentException("Ограничитель не должен быть пустым");
+						
+						FieldDelimiter delimiter = FieldDelimiter.valueOf(value);
+						field.setDelimiter(delimiter);
+						break;
 					case "format":
 						field.setFormat(value); break;
+					case "optional":
+						boolean optional = parseBoolean(value);
+						field.setOptional(optional);
+						break;
+					case "bitmask":
+						boolean bitmask = parseBoolean(value);
+						field.setBitmask(bitmask);
+						break;
+					case "hashsum":
+						boolean hashsum = parseBoolean(value);
+						field.setHashsum(hashsum);
+						break;
 					case "role":
-						field.setRole(value); break;
+						FieldRole role = FieldRole.valueOf(value);
+						if (role == null)
+							throw new IllegalArgumentException("Неподдерживаемое состояние поля");
+						field.setRole(role);
+						break;
 					case "color":
 						try {
-							field.setColor(new Color(Integer.parseInt(value, 16), true));
+							Integer iValue = Integer.parseInt(value, 16);
+							
+							if (value.length() == 8) {
+								Color color = new Color(iValue, true);
+								field.setColor(color);
+							} else if (value.length() == 6) {
+								Color color = new Color(iValue, false);
+								field.setColor(color);
+							} else
+								throw new Exception("В опции color ожидается hex-строка длинной 6(rrggbb) или 8(aarrggbb) символов без решётки; [a - alpha, r - red, g - green, b - blue]"); 
 						} catch (Exception e) {
 							field.setColor(getNextColor());
+							throw new Exception(e.getMessage());
 						}
 						break;
-					case "optional":
-						field.setOptional(value); break;
-					case "bitmask":
-						field.setBitmask(value); break;
-					case "hashsum":
-						field.setHashsum(value); break;
 				}
 			} catch (Exception e) {
 				LOG.log(Level.SEVERE, String.format("Ошибка при загрузке свойства поля [%s]. ", field.getName(), e.getMessage()), e);
@@ -532,12 +565,24 @@ implements Serializable {
 			if (field.getName().equals(name))
 				return false;
 			
+			validateFieldName(field, name);
+			
 			field.setName(name);
 			return true;
 		} catch (Exception e) {
 			LOG.log(Level.SEVERE, "Не удалось изменить имя поля", e);
 			return false;
 		}
+	}
+	
+	public void validateFieldName(Field field, String name) throws UniqueFieldException {
+		for (Field f : getFieldList())
+			if (!field.equals(f) && field.getName().equals(name)) {
+				if (field.getRole() == FieldRole.DRAW) {
+					throw new UniqueFieldException("Имена рисуемых полей должны быть уникальными.", field, f, name);
+				} else
+					LOG.log(Level.INFO, "Уже есть поле с именем " + name);
+			}
 	}
 
 	public void setFieldDescription(Field field, String description) {
@@ -597,31 +642,38 @@ implements Serializable {
 		}
 	}
 	
-	public boolean setFieldOptional(Field field, boolean isOptional) {
+	public boolean setFieldOptional(Field field, boolean optional) {
 		Field xField = null;
 		try {
 			if (field == null)
 				throw new NullPointerException("Поле - NULL");
 			
-			if (isOptional)
-				for (Field f : fieldList) {
-					if (!f.equals(field) && f.isOptional()) {
-						if (JOptionPane.showConfirmDialog(null, String.format("В наборе полей уже есть необязательное поле - \"%s\". "
-								+ "Может быть только одно необязательное поле.\n\rУбрать флажок с поля %s? ", f, f)) == JOptionPane.YES_OPTION) {
-							f.setOptional(false);
-							xField = f;
-						} else
-							return false;
-					}
-				}
+			try {
+				validateFieldOptional(field, optional);
+			} catch (UniqueFieldException e) {
+				xField = e.getPrimalField();
+				if (JOptionPane.showConfirmDialog(null, String.format("В наборе полей уже есть необязательное поле - \"%s\". "
+						+ "Может быть только одно необязательное поле.\n\rУбрать флажок с поля %s? ", xField, xField)) == JOptionPane.YES_OPTION) {
+					xField.setOptional(false);
+				} else
+					return false;
+			}
 			
-			field.setOptional(isOptional);
+			field.setOptional(optional);
 			return true;
 		} catch (Exception e) {
 			if (xField != null) // rolling back optional changing
 				xField.setOptional(true);
 			LOG.log(Level.SEVERE, "Не удалось изменить опциональность поля", e);
 			return false;
+		}
+	}
+	
+	public void validateFieldOptional(Field field, boolean optional) throws UniqueFieldException {
+		if (optional) {
+			for (Field f : fieldList)
+				if (!f.equals(field) && f.isOptional())
+					throw new UniqueFieldException(field, f, "Необязательное");
 		}
 	}
 	
@@ -636,28 +688,26 @@ implements Serializable {
 		}
 	}
 	
-	public boolean setFieldHashsum(Field field, boolean isHashsum) {
+	public boolean setFieldHashsum(Field field, boolean hashsum) {
 		Field xField = null;
 		try {
 			if (field == null)
 				throw new NullPointerException("Поле - NULL");
 			
-			if (field.isHashsum() == isHashsum)
+			if (field.isHashsum() == hashsum)
 				return true;
 			
-			if (isHashsum)
-				for (Field f : fieldList) {
-					if (!f.equals(field) && f.isHashsum()) {
-						if (JOptionPane.showConfirmDialog(null, String.format("В наборе полей уже есть хэш-сумма - поле \"%s\". "
-								+ "Может быть только одно поле хранящее хэш-сумму.\n\rУбрать флажок с поля %s? ", f, f)) == JOptionPane.YES_OPTION) {
-							f.setHashsum(false);
-							xField = f;
-						} else
-							return false;
-					}
-				}
+			try {
+				validateFieldHashsum(field, hashsum);
+			} catch (UniqueFieldException e) {
+				xField = e.getPrimalField();
+				if (JOptionPane.showConfirmDialog(null, String.format("В наборе полей уже есть хэш-сумма - поле \"%s\". Может быть только одно поле хранящее хэш-сумму.\n\rУбрать флажок с поля %s? ", xField, xField)) == JOptionPane.YES_OPTION) {
+					xField.setHashsum(false);
+				} else
+					return false;
+			}
 			
-			field.setHashsum(isHashsum);
+			field.setHashsum(hashsum);
 			return true;
 		} catch (Exception e) {
 			if (xField != null) // rolling back bitmask changing
@@ -665,6 +715,13 @@ implements Serializable {
 			LOG.log(Level.SEVERE, "Не удалось изменить свойство поля \"битовая маска\"", e);
 			return false;
 		}
+	}
+	
+	public void validateFieldHashsum(Field field, boolean hashsum) throws UniqueFieldException {
+		if (hashsum)
+			for (Field f : fieldList)
+				if (!f.equals(field) && f.isHashsum())
+					throw new UniqueFieldException(field, f, "Хэш-сумма");
 	}
 	
 	public void setFieldColor(Field field, Color color) {
@@ -735,17 +792,16 @@ implements Serializable {
 			if (field == null)
 				throw new NullPointerException("Поле - NULL");
 			
-			if (role == FieldRole.X_AXIS)
-				for (Field f : fieldList) {
-					if (!f.equals(field) && f.getRole() == FieldRole.X_AXIS) {
-						if (JOptionPane.showConfirmDialog(null, String.format("В наборе полей уже есть поле отмеченное как ось X - \"%s\". "
-								+ "Может быть только одна ось X.\n\rУбрать признак с поля %s? ", f, f)) == JOptionPane.YES_OPTION) {
-							f.setRole(FieldRole.NONE);
-							xField = f;
-						} else
-							return false;
-					}
-				}
+			try {
+				validateFieldRole(field, role);
+			} catch (UniqueFieldException e) {
+				xField = e.getPrimalField();
+				if (JOptionPane.showConfirmDialog(null, String.format("В наборе полей уже есть поле отмеченное как ось X - \"%s\". "
+						+ "Может быть только одна ось X.\n\rУбрать признак с поля %s? ", xField, xField)) == JOptionPane.YES_OPTION) {
+					xField.setRole(FieldRole.NONE);
+				} else
+					return false;
+			}
 			
 			if (role == FieldRole.DRAW)
 				field.setColor(getNextColor());
@@ -761,6 +817,22 @@ implements Serializable {
 				}
 			LOG.log(Level.SEVERE, "Не удалось изменить роль поля", e);
 			return false;
+		}
+	}
+	
+	/** @see {@link #role} */
+	public void validateFieldRole(Field field, FieldRole role) throws IllegalStateException, UniqueFieldException {
+		DataType type = field.getDatatype();  
+		if (role == FieldRole.DRAW && type == DataType.STRING)
+			throw new IllegalStateException("Строковые данные нельзя поместить на график");
+		
+		if (role == FieldRole.X_AXIS) {
+			if (!Arrays.asList(DataType.DATE, DataType.TIME, DataType.DATETIME).contains(field.getDatatype()))
+				throw new IllegalStateException("В качестве данных для оси X поддерживаются только временнЫе типы (date/time/datetime)");
+		
+			for (Field f : fieldList)
+				if (!f.equals(field) && f.getRole() == FieldRole.X_AXIS)
+					throw new UniqueFieldException(field, f, FieldRole.X_AXIS.toString());
 		}
 	}
 	
@@ -787,6 +859,35 @@ implements Serializable {
 		}
 	}
 	
+	public void validateField(Field field) throws UniqueFieldException, IllegalStateException {
+		validateFieldName(field, field.getName());
+		validateFieldHashsum(field, field.isHashsum());
+		validateFieldOptional(field, field.isOptional());
+		validateFieldRole(field, field.getRole());
+	}
+	
+	public boolean validateFieldList() {
+		String msg = "";
+		Field field = null;
+		try {
+			for (int i = 0; i < getFieldList().size(); i++) {
+				field = getFieldList().get(i);
+				validateField(field);
+			}
+			return true;
+		} catch (UniqueFieldException e) {
+			if (e.getMessage() != null) {
+				msg = e.getMessage();
+			} else
+				msg = String.format("В наборе полей должно быть только одно поле со свойством \"%s\", но у поля [%s] это уже есть", e.getUniqueProperty(), e.getPrimalField());
+		} catch (IllegalStateException e) {
+			msg = e.getMessage();
+		}
+		if (field != null)
+			LOG.log(Level.SEVERE, "Ошибка при валидации поля \"" + field.toString() + "\": " + msg);
+		return false;
+	}
+	
 	public boolean getLaunchVisible() {
 		String value = getProperty("launch-visible");
 		return value != null && value.equals("1");
@@ -809,6 +910,12 @@ implements Serializable {
 			setProperty("table-visible", "1");
 		} else
 			setProperty("table-visible", "0");
+	}
+	
+	/** String to boolean converter
+	 * @return <code>true</code> if <code><b>text</b></code> in ["true", "yes", "1"] */
+	private boolean parseBoolean(String text) {
+		return text != null && (text.equals("true") || text.equals("yes") || text.equals("1"));
 	}
 	
 	
