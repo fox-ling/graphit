@@ -33,6 +33,7 @@ import javax.swing.InputVerifier;
 import javax.swing.JButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.ListCellRenderer;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JCheckBox;
@@ -191,6 +192,8 @@ public class ConfigFrame extends JFrame {
 		
 		miRemoveField = new JMenuItem("Удалить");
 		pmFieldList.add(miRemoveField);
+		
+		pmFieldList.addSeparator();
 		
 		pnlMisc = new JPanel();
 		pnlFields.add(pnlMisc, "cell 1 0,grow");
@@ -386,11 +389,7 @@ public class ConfigFrame extends JFrame {
 	private void configController(){
 		mdlFieldList = new FieldListModel();
 		iFieldList.setModel(mdlFieldList);
-		
-		// ConfigModel.onChange
-		configModel.addFieldListener(evt -> {
-			mdlFieldList.refresh();
-		});
+		iFieldList.setCellRenderer(new FieldListCellRenderer());
 		
 		// Field List - Context Menu > Add field
 		miAddField.addActionListener((ActionEvent arg0) -> {
@@ -424,7 +423,18 @@ public class ConfigFrame extends JFrame {
 		
 		// Config model >> Field List >> onChange 
 		configModel.addFieldListener((evt) -> {
-			Field field = (Field) evt.getSource(); 
+			Field field = (Field) evt.getSource();
+			
+			if (field != null)
+				try {
+					configModel.validateField(field);
+					field.setValid(true);
+				} catch (Exception e1) {
+					field.setValid(false);
+				}
+			
+			mdlFieldList.refresh();
+			
 			if (field == null || field == getSelectedField()) {
 				mdlValueList.setField(getSelectedField());
 			}
@@ -456,7 +466,11 @@ public class ConfigFrame extends JFrame {
 		});
 		
 		iColorChooser.addActionListener(e -> {
-			Color color = JColorChooser.showDialog(this, "Выберите цвет для графика", null);
+			Field field = getSelectedField();
+			if (field == null)
+				return;
+			
+			Color color = JColorChooser.showDialog(this, "Выберите цвет для графика", field.getColor());
 			if (color != null)
 				configModel.setFieldColor(getSelectedField(), color);
 		});
@@ -564,7 +578,7 @@ public class ConfigFrame extends JFrame {
 	}
 	
 	/** Updates control state: enabled/disabled, clear values */
-	private void updateContolState(){
+	private void updateContolState() {
 		Field field = getSelectedField();
 		boolean isFieldSelected = field != null,
 				isBitmaskVisible = false,
@@ -604,7 +618,8 @@ public class ConfigFrame extends JFrame {
 	}
 	
 	private void refreshFieldInfo(EventObject evt) {
-		Color color = pnlMisc.getBackground();
+		iColorChooser.setBackground(pnlMisc.getBackground());
+		
 		Field field = getSelectedField();
 		if (field != null) {
 			iFieldName.setText(field.getName());
@@ -616,7 +631,7 @@ public class ConfigFrame extends JFrame {
 			iBitMask.setSelected(field.isBitmask());
 			iHashsum.setSelected(field.isHashsum());
 			if (field.getRole() == FieldRole.DRAW && field.getColor() != null)
-				color = field.getColor();
+				iColorChooser.setBackground(field.getColor());
 		} else {
 			iFieldName.setText("");
 			iFieldDelimiter.setSelectedIndex(-1);
@@ -629,7 +644,6 @@ public class ConfigFrame extends JFrame {
 			iHashsum.setSelected(false);
 		}
 		
-		iColorChooser.setBackground(color);
 		updateContolState();
 	}
 	
@@ -650,6 +664,29 @@ public class ConfigFrame extends JFrame {
 		/** Refreshes whole list */
 		public void refresh() {
 			fireContentsChanged(this, -1, -1);
+		}
+	}
+	
+	private class FieldListCellRenderer
+	extends JLabel
+	implements ListCellRenderer<Field> {
+		private static final long serialVersionUID = -119483135875095517L;
+		public Component getListCellRendererComponent(JList<? extends Field> list,
+														Field field,             // value to display
+														int index,               // cell index
+														boolean isSelected,      // is the cell selected
+														boolean cellHasFocus) {  // does the cell have focus
+			
+			setText(field.toString());
+			if (field.isValid()) {
+				setForeground(Color.BLACK);
+			} else
+				setForeground(Color.RED);
+			
+			//setEnabled(list.isEnabled());
+			//setFont(list.getFont());
+			//setOpaque(true);
+			return this;
 		}
 	}
 	

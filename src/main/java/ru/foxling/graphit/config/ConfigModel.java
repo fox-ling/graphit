@@ -145,7 +145,7 @@ implements Serializable {
 			xLocation = file.getAbsolutePath();
 		
 		if (!f.exists()) {
-			LOG.severe("Не удалось установить файл настроек: " + f.getAbsolutePath() + " - не существует");
+			LOG.log(Level.WARNING, "Не удалось установить файл настроек: " + f.getAbsolutePath() + " - не существует");
 			return false;
 		}
 		
@@ -298,8 +298,12 @@ implements Serializable {
 	        	 eField.addContent(xmlElementFactory("format", field.getFormatValue()));
 	        	 eField.addContent(xmlElementFactory("role", field.getRole().name()));
 	        	 
-	        	 if (field.getRole() == FieldRole.DRAW && field.getColor() != null)
-	        		 eField.addContent(xmlElementFactory("color", Integer.toHexString(field.getColor().getRGB())));
+	        	 if (field.getRole() == FieldRole.DRAW && field.getColor() != null) {
+	        		 String hexStr = Integer.toHexString(field.getColor().getRGB());
+	        		 if (hexStr.length() == 7)
+	        			 hexStr = "0" + hexStr;
+	        		 eField.addContent(xmlElementFactory("color", hexStr));
+	        	 }
 	        	 
 	        	 if (field.isOptional())
 	        		 eField.addContent(xmlElementFactory("optional", "1"));
@@ -448,31 +452,35 @@ implements Serializable {
 						break;
 					case "color":
 						try {
-							Integer iValue = Integer.parseInt(value, 16);
+							int l = value.length();
+							if (l != 8 && l != 6)
+								throw new Exception("В опции color ожидается hex-строка длинной 6(rrggbb) или 8(aarrggbb) символов без решётки; [a - alpha, r - red, g - green, b - blue] (Предоставлена строка '" + value + " [" + Integer.toString(l) + "]')");
 							
-							if (value.length() == 8) {
-								Color color = new Color(iValue, true);
-								field.setColor(color);
-							} else if (value.length() == 6) {
-								Color color = new Color(iValue, false);
-								field.setColor(color);
-							} else
-								throw new Exception("В опции color ожидается hex-строка длинной 6(rrggbb) или 8(aarrggbb) символов без решётки; [a - alpha, r - red, g - green, b - blue]"); 
+							int r = Integer.parseInt(value.substring(l-6, l-4), 16);
+							int g = Integer.parseInt(value.substring(l-4, l-2), 16);
+							int b = Integer.parseInt(value.substring(l-2), 16);
+							int a = 255;
+							if (l == 8)
+								a = Integer.parseInt(value.substring(0,2), 16);
+							Color color = new Color(r,g,b,a);
+							field.setColor(color);
+						} catch (NumberFormatException e) {
+							throw new Exception("Ошибка преобразования hex строки: " + e.getMessage(), e);
 						} catch (Exception e) {
 							field.setColor(getNextColor());
-							throw new Exception(e.getMessage());
+							throw new Exception(e.getMessage(), e);
 						}
 						break;
 				}
 			} catch (Exception e) {
-				LOG.log(Level.SEVERE, String.format("Ошибка при загрузке свойства поля [%s]. ", field.getName(), e.getMessage()), e);
+				LOG.log(Level.WARNING, String.format("Ошибка при загрузке свойства <%s> поля [%s]. ", property, field.getName(), e.getMessage()), e);
 			}
 		}
 		
 		try {
 			field.setParser(DefaultParser.getDefaultParser(field.getDatatype(), field.getFormat()));
 		} catch (Exception e) {
-			LOG.log(Level.SEVERE, String.format("Ошибка при загрузке свойства поля [%s]. ", field.getName(), e.getMessage()), e);
+			LOG.log(Level.WARNING, String.format("Ошибка при загрузке свойства поля [%s]. ", field.getName(), e.getMessage()), e);
 		}
 		
 		if (values != null)
@@ -485,9 +493,16 @@ implements Serializable {
 						throw new Exception(String.format("Не удалось конвертировать строку '%s' в тип %s", value.source, field.getDatatype().getCaption()));
 					}
 				} catch (Exception e) {
-					LOG.log(Level.SEVERE, String.format("Ошибка при загрузке значения поля [%s]. ", field.getName(), e.getMessage()), e);
+					LOG.log(Level.WARNING, String.format("Ошибка при загрузке значения поля [%s]. ", field.getName(), e.getMessage()), e);
 				}
 			}
+		
+		try {
+			validateField(field);
+			field.setValid(true);
+		} catch (Exception e) {
+			field.setValid(false);
+		}
 		
 		return field;
 	}
@@ -538,7 +553,7 @@ implements Serializable {
 			
 			fireFieldChanged(new FieldEvent(field, FieldEvent.INSERT));
 		} catch (Exception e) {
-			LOG.log(Level.SEVERE, "Не удалось создать новое поле", e);
+			LOG.log(Level.WARNING, "Не удалось создать новое поле", e);
 		}
 	}
 	
@@ -570,7 +585,7 @@ implements Serializable {
 			field.setName(name);
 			return true;
 		} catch (Exception e) {
-			LOG.log(Level.SEVERE, "Не удалось изменить имя поля", e);
+			LOG.log(Level.WARNING, "Не удалось изменить имя поля", e);
 			return false;
 		}
 	}
@@ -592,7 +607,7 @@ implements Serializable {
 			
 			field.setDescription(description);
 		} catch (Exception e) {
-			LOG.log(Level.SEVERE,"Не удалось изменить описание поля", e);
+			LOG.log(Level.WARNING,"Не удалось изменить описание поля", e);
 		}
 	}
 	
@@ -603,7 +618,7 @@ implements Serializable {
 			
 			field.setDatatype(datatype);
 		} catch (Exception e) {
-			LOG.log(Level.SEVERE, "Не удалось изменить тип данных поля", e);
+			LOG.log(Level.WARNING, "Не удалось изменить тип данных поля", e);
 		}
 	}
 
@@ -614,7 +629,7 @@ implements Serializable {
 			
 			field.setDelimiter(delimiter);
 		} catch (Exception e) {
-			LOG.log(Level.SEVERE, "Не удалось изменить тип данных поля", e);
+			LOG.log(Level.WARNING, "Не удалось изменить тип данных поля", e);
 		}
 	}
 	
@@ -625,7 +640,7 @@ implements Serializable {
 			
 			field.setFormat(format);
 		} catch (Exception e) {
-			LOG.log(Level.SEVERE, "Не удалось изменить формат поля", e);
+			LOG.log(Level.WARNING, "Не удалось изменить формат поля", e);
 		}
 	}
 	
@@ -637,7 +652,7 @@ implements Serializable {
 			field.setFormat(format);
 			return true;
 		} catch (Exception e) {
-			LOG.log(Level.SEVERE, "Не удалось изменить формат поля", e);
+			LOG.log(Level.WARNING, "Не удалось изменить формат поля", e);
 			return false;
 		}
 	}
@@ -664,7 +679,7 @@ implements Serializable {
 		} catch (Exception e) {
 			if (xField != null) // rolling back optional changing
 				xField.setOptional(true);
-			LOG.log(Level.SEVERE, "Не удалось изменить опциональность поля", e);
+			LOG.log(Level.WARNING, "Не удалось изменить опциональность поля", e);
 			return false;
 		}
 	}
@@ -684,7 +699,7 @@ implements Serializable {
 			
 			field.setBitmask(isBitmask);
 		} catch (Exception e) {
-			LOG.log(Level.SEVERE, "Не удалось изменить свойство поля \"битовая маска\"", e);
+			LOG.log(Level.WARNING, "Не удалось изменить свойство поля \"битовая маска\"", e);
 		}
 	}
 	
@@ -712,7 +727,7 @@ implements Serializable {
 		} catch (Exception e) {
 			if (xField != null) // rolling back bitmask changing
 				xField.setBitmask(true);
-			LOG.log(Level.SEVERE, "Не удалось изменить свойство поля \"битовая маска\"", e);
+			LOG.log(Level.WARNING, "Не удалось изменить свойство поля \"битовая маска\"", e);
 			return false;
 		}
 	}
@@ -731,7 +746,7 @@ implements Serializable {
 			
 			field.setColor(color);
 		} catch (Exception e) {
-			LOG.log(Level.SEVERE, "Не удалось изменить цвет поля ", e);
+			LOG.log(Level.WARNING, "Не удалось изменить цвет поля ", e);
 		}
 	}
 	
@@ -813,9 +828,9 @@ implements Serializable {
 				try {     // try to rollback role changing
 					xField.setRole(FieldRole.X_AXIS);
 				} catch (Exception e2) {
-					LOG.log(Level.SEVERE, "Не удалось откатить роль поля ", e);
+					LOG.log(Level.WARNING, "Не удалось откатить роль поля ", e);
 				}
-			LOG.log(Level.SEVERE, "Не удалось изменить роль поля", e);
+			LOG.log(Level.WARNING, "Не удалось изменить роль поля", e);
 			return false;
 		}
 	}
@@ -843,7 +858,7 @@ implements Serializable {
 			} else
 				field.addValueAt(index, value);
 		} catch (Exception e) {
-			LOG.log(Level.SEVERE, "Не удалось добавить значение поля", e);
+			LOG.log(Level.WARNING, "Не удалось добавить значение поля", e);
 		}
 		
 	}
@@ -855,7 +870,7 @@ implements Serializable {
 		try {
 			field.removeValues(index);
 		} catch (Exception e) {
-			LOG.log(Level.SEVERE, "Не удалось удалить значение поля", e);
+			LOG.log(Level.WARNING, "Не удалось удалить значение поля", e);
 		}
 	}
 	
@@ -884,7 +899,7 @@ implements Serializable {
 			msg = e.getMessage();
 		}
 		if (field != null)
-			LOG.log(Level.SEVERE, "Ошибка при валидации поля \"" + field.toString() + "\": " + msg);
+			LOG.log(Level.WARNING, "Ошибка при валидации поля \"" + field.toString() + "\": " + msg);
 		return false;
 	}
 	

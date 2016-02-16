@@ -31,8 +31,6 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumn;
-import javax.xml.crypto.Data;
-
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
@@ -111,8 +109,6 @@ import java.awt.Color;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.BoxLayout;
-import javax.swing.ButtonGroup;
-
 import java.awt.BorderLayout;
 
 public class MainFrame
@@ -490,7 +486,6 @@ extends JFrame implements ChartProgressListener {
 						xAxis = true;
 					} else
 						throw new IllegalStateException("");
-					
 			}
 			return true;
 		}
@@ -545,9 +540,8 @@ extends JFrame implements ChartProgressListener {
 			}
 			
 			if (xField != null)
-				for (Field yField : yFields) {
+				for (Field yField : yFields)
 					plotFactory(yField);
-				}
 			
 	        return chart;
 		}

@@ -75,6 +75,8 @@ implements Serializable {
 	
 	/** Object that converts string to field's {@link #datatype} */
 	private Parser<?> parser;
+	
+	private boolean valid;
 
 	protected EventListenerList listenerList = new EventListenerList();
 	
@@ -88,6 +90,7 @@ implements Serializable {
 		valueList = new ArrayList<FieldValue>(5);
 		parser = DefaultParser.getDefaultParser(datatype, format);
 		role = FieldRole.getDefaultFieldState();
+		setValid(false);
 	}
 	
 	
@@ -297,6 +300,22 @@ implements Serializable {
 	}
 	
 	
+	/* ---=== VALID ===--- */
+	
+	public boolean isValid() {
+		return valid;
+	}
+
+
+	public void setValid(boolean valid) {
+		if (this.valid == valid)
+			return;
+		
+		this.valid = valid;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "valid"));
+	}
+
+
 	/* ---=== FIELD VALUES ===--- */
 	
 	/** @see {@link #valueList} */
