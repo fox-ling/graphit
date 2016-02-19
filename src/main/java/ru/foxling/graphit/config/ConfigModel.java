@@ -412,43 +412,44 @@ implements Serializable {
 					throw new IllegalArgumentException("Не предоставлено значения для опции " + property);
 				switch (property) {
 					case "name":
-						field.setName(value);
+						setFieldName(field, value);
 						break;
 					case "description":
-						field.setDescription(value);
+						setFieldDescription(field, value);
 						break;
 					case "datatype":
 						DataType datatype = DataType.valueOf(value);
 						if (datatype == null)
 							throw new IllegalArgumentException("Неподдерживаемый тип данных");
-						field.setDatatype(datatype);
+						setFieldDatatype(field, datatype);
 						break;
 					case "delimiter":
 						if (value.length() == 0)
 							throw new IllegalArgumentException("Ограничитель не должен быть пустым");
 						
 						FieldDelimiter delimiter = FieldDelimiter.valueOf(value);
-						field.setDelimiter(delimiter);
+						setFieldDelimiter(field, delimiter);
 						break;
 					case "format":
-						field.setFormat(value); break;
+						setFieldFormat(field, value);
+						break;
 					case "optional":
 						boolean optional = parseBoolean(value);
-						field.setOptional(optional);
+						setFieldOptional(field, optional);
 						break;
 					case "bitmask":
 						boolean bitmask = parseBoolean(value);
-						field.setBitmask(bitmask);
+						setFieldBitmask(field, bitmask);
 						break;
 					case "hashsum":
 						boolean hashsum = parseBoolean(value);
-						field.setHashsum(hashsum);
+						setFieldHashsum(field, hashsum);
 						break;
 					case "role":
 						FieldRole role = FieldRole.valueOf(value);
 						if (role == null)
 							throw new IllegalArgumentException("Неподдерживаемое состояние поля");
-						field.setRole(role);
+						setFieldRole(field, role);
 						break;
 					case "color":
 						try {
@@ -463,12 +464,13 @@ implements Serializable {
 							if (l == 8)
 								a = Integer.parseInt(value.substring(0,2), 16);
 							Color color = new Color(r,g,b,a);
-							field.setColor(color);
+							setFieldColor(field, color);
 						} catch (NumberFormatException e) {
+							setFieldColor(field, getNextColor());
 							throw new Exception("Ошибка преобразования hex строки: " + e.getMessage(), e);
 						} catch (Exception e) {
-							field.setColor(getNextColor());
-							throw new Exception(e.getMessage(), e);
+							setFieldColor(field, getNextColor());
+							throw e;
 						}
 						break;
 				}
@@ -499,11 +501,10 @@ implements Serializable {
 		
 		try {
 			validateField(field);
-			field.setValid(true);
 		} catch (Exception e) {
-			field.setValid(false);
+			e.printStackTrace();
+			LOG.log(Level.WARNING, String.format("Поле %s не прошло валидацию: %s", field, e.getMessage()));
 		}
-		
 		return field;
 	}
 	
@@ -875,10 +876,16 @@ implements Serializable {
 	}
 	
 	public void validateField(Field field) throws UniqueFieldException, IllegalStateException {
-		validateFieldName(field, field.getName());
-		validateFieldHashsum(field, field.isHashsum());
-		validateFieldOptional(field, field.isOptional());
-		validateFieldRole(field, field.getRole());
+		try {
+			validateFieldName(field, field.getName());
+			validateFieldHashsum(field, field.isHashsum());
+			validateFieldOptional(field, field.isOptional());
+			validateFieldRole(field, field.getRole());
+			field.setValid(true);
+		} catch(Exception e) {
+			field.setValid(false);
+			throw e;
+		}
 	}
 	
 	public boolean validateFieldList() {

@@ -683,16 +683,24 @@ public class ConfigFrame extends JFrame {
 														int index,               // cell index
 														boolean isSelected,      // is the cell selected
 														boolean cellHasFocus) {  // does the cell have focus
+			Color color;
+			if (field.isValid()) {
+				color = Color.BLACK;
+			} else
+				color = Color.RED;
 			
 			setText(field.toString());
-			if (field.isValid()) {
-				setForeground(Color.BLACK);
-			} else
-				setForeground(Color.RED);
-			
-			//setEnabled(list.isEnabled());
-			//setFont(list.getFont());
-			//setOpaque(true);
+			if (isSelected) {
+				setBackground(color);
+				setForeground(Color.WHITE);
+			} else {
+				setBackground(Color.WHITE);
+				setForeground(color);
+			}
+						
+			setEnabled(list.isEnabled());
+			setFont(list.getFont());
+			setOpaque(true);
 			return this;
 		}
 	}

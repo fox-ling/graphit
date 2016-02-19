@@ -30,6 +30,6 @@
   <parent>
   	<groupId>ru.foxling</groupId>
   	<artifactId>mavenparent</artifactId>
-  	<version>1.0.0</version>
+  	<version>1</version>
   </parent>
 </project>
