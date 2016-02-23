@@ -1,12 +1,12 @@
-/* graphit - log file browser
+/* Graphit - log file browser
  * Copyright© 2015 Shamil Absalikov, foxling@live.com
  *
- * graphit is free software: you can redistribute it and/or modify
+ * Graphit is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * graphit is distributed in the hope that it will be useful,
+ * Graphit is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -21,6 +21,9 @@ import java.awt.EventQueue;
 import java.util.EventObject;
 import java.util.List;
 import java.util.function.BiPredicate;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.UIManager;
@@ -110,11 +113,12 @@ public class ConfigFrame extends JFrame {
 	private JComboBox<FieldRole> iFieldRole;
 	private JButton iColorChooser;
 	private JPanel pnlMisc;
+	private JLabel lblLogMessage;
 	
 	public ConfigFrame() {
 		super("Настройки");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 600, 500);
+		setBounds(100, 100, 700, 500);
 		
 		configModel = Core.getConfigModel();
 		saveConfigState();
@@ -294,29 +298,32 @@ public class ConfigFrame extends JFrame {
 		iBitMask.setToolTipText("Значение поля может содержать несколько значений из данного набора");
 		pnlValues.add(iBitMask, BorderLayout.NORTH);
 		
-		JPanel pnlBottom = new JPanel();
-		contentPane.add(pnlBottom, BorderLayout.SOUTH);
-		pnlBottom.setLayout(new FlowLayout(FlowLayout.RIGHT, 3, 0));
+		JPanel pnlStatusBar = new JPanel();
+		pnlStatusBar.setBorder(new EtchedBorder(EtchedBorder.LOWERED, null, null));
+		contentPane.add(pnlStatusBar, BorderLayout.SOUTH);
 		
-		JButton btnLoad = new JButton("Load");
-		btnLoad.addActionListener(e -> {
-			configModel.loadConfig();
+		pnlStatusBar.setLayout(new MigLayout("insets 2", "[grow][][]", "[]"));
+		
+		lblLogMessage = new JLabel();
+		lblLogMessage.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() == 2 && !e.isConsumed()) {
+				     e.consume();
+				     EventViewer.launch();
+				}
+			}
 		});
-		
-		pnlBottom.add(btnLoad);
-		
-		JButton btnSave = new JButton("Save");
-		btnSave.addActionListener(e -> {
-			configModel.saveConfig();
-		});
-		pnlBottom.add(btnSave);
+		lblLogMessage.setMinimumSize(new Dimension(14, 14));
+		pnlStatusBar.add(lblLogMessage, "growx");
 		
 		btnOkay = new JButton("ОК");
-		pnlBottom.add(btnOkay);
+		pnlStatusBar.add(btnOkay);
 		
 		btnCancel = new JButton("Отмена");
-		pnlBottom.add(btnCancel);
+		pnlStatusBar.add(btnCancel);
 		
+		Logger.getLogger(getClass().getPackage().getName()).addHandler(new LoggerLabelHandler(lblLogMessage, Level.INFO));
 		//TODO
 		configController();
 	}

@@ -110,6 +110,8 @@ import net.miginfocom.swing.MigLayout;
 
 import javax.swing.BoxLayout;
 import java.awt.BorderLayout;
+import javax.swing.JLabel;
+import javax.swing.border.EtchedBorder;
 
 public class MainFrame
 extends JFrame implements ChartProgressListener {
@@ -143,6 +145,8 @@ extends JFrame implements ChartProgressListener {
 	private JMenu mSettings;
 	private JMenu mYAxes;
 	private JMenuItem miPreferences;
+	private JPanel pnlStatusBar;
+	private JLabel lblLogMessage;
 	
 	
 	public MainFrame() {
@@ -273,18 +277,18 @@ extends JFrame implements ChartProgressListener {
 			}
 		});
 		popupMenu.add(miWrongHashOnly);
+		contentPane.setLayout(new BorderLayout(0, 0));
 		
 		
 		JPanel toppanel = new JPanel();
 		toppanel.setPreferredSize(new Dimension(560,367));
 		toppanel.setLayout(new BorderLayout(0, 0));
-		contentPane.setLayout(new BoxLayout(contentPane, BoxLayout.X_AXIS));
 		
 		toppanel.add(chartPanel);
 		
 		splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, toppanel, spTable);
 	    splitPane.setResizeWeight(1);
-	    contentPane.add(splitPane);
+	    contentPane.add(splitPane, BorderLayout.CENTER);
 		
 	    Runtime.getRuntime().addShutdownHook(new Thread(){
 			@Override
@@ -321,6 +325,24 @@ extends JFrame implements ChartProgressListener {
 	    cbTable.setBackground(Color.WHITE);
 	    pTools.add(cbTable, "cell 2 0,alignx right,aligny top");
 	    
+
+	    pnlStatusBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 1, 1));
+	    pnlStatusBar.setBorder(new EtchedBorder(EtchedBorder.LOWERED, null, null));
+	    pnlStatusBar.setBackground(Color.WHITE);
+	    contentPane.add(pnlStatusBar, BorderLayout.SOUTH);
+	    
+	    lblLogMessage = new JLabel();
+	    lblLogMessage.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() == 2 && !e.isConsumed()) {
+				     e.consume();
+				     EventViewer.launch();
+				}
+			}
+		});
+	    pnlStatusBar.add(lblLogMessage);
+	    Logger.getLogger(getClass().getPackage().getName()).addHandler(new LoggerLabelHandler(lblLogMessage, Level.INFO));
 	    configController = new ConfigController(Core.getConfigModel());
 	}
 	

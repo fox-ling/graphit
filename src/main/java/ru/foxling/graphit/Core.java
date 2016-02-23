@@ -1,12 +1,12 @@
-/* graphit - log file browser
+/* Graphit - log file browser
  * Copyright© 2015 Shamil Absalikov, foxling@live.com
  *
- * graphit is free software: you can redistribute it and/or modify
+ * Graphit is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * graphit is distributed in the hope that it will be useful,
+ * Graphit is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -19,6 +19,7 @@ package ru.foxling.graphit;
 
 import java.awt.EventQueue;
 import java.time.format.DateTimeFormatter;
+import java.util.logging.Logger;
 import javax.swing.UIManager;
 
 import ru.foxling.graphit.config.ConfigModel;
@@ -28,7 +29,13 @@ public class Core {
 	public static final DateTimeFormatter F_DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 	public static final DateTimeFormatter F_DATETIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 	
+	private static final Logger LOG = Logger.getLogger(Core.class.getPackage().getName());
+	private static final LoggerMemoryHandler memHandler = new LoggerMemoryHandler(5); 
 	private static ConfigModel configModel = new ConfigModel();
+	
+	static {
+		LOG.addHandler(memHandler);
+	}
 	
 	public static void main(String[] args) {
 		try {
@@ -51,5 +58,9 @@ public class Core {
 	
 	public static ConfigModel getConfigModel(){
 		return Core.configModel;
+	}
+
+	public static LoggerMemoryHandler getMemoryHandler() {
+		return Core.memHandler;
 	}
 }
