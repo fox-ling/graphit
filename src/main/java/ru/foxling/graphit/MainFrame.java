@@ -108,7 +108,6 @@ import java.awt.Font;
 import java.awt.Color;
 import net.miginfocom.swing.MigLayout;
 
-import javax.swing.BoxLayout;
 import java.awt.BorderLayout;
 import javax.swing.JLabel;
 import javax.swing.border.EtchedBorder;
@@ -337,7 +336,7 @@ extends JFrame implements ChartProgressListener {
 			public void mouseClicked(MouseEvent e) {
 				if (e.getClickCount() == 2 && !e.isConsumed()) {
 				     e.consume();
-				     EventViewer.launch();
+				     EventViewerFrame.launch();
 				}
 			}
 		});

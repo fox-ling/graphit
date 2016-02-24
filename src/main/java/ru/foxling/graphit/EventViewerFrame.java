@@ -33,7 +33,7 @@ import java.util.logging.LogRecord;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 
-public class EventViewer extends JFrame {
+public class EventViewerFrame extends JFrame {
 	private static final long serialVersionUID = -5784368020743203402L;
 	private JPanel contentPane;
 	private JTable table;
@@ -42,7 +42,7 @@ public class EventViewer extends JFrame {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					EventViewer frame = new EventViewer();
+					EventViewerFrame frame = new EventViewerFrame();
 					frame.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -51,9 +51,9 @@ public class EventViewer extends JFrame {
 		});
 	}
 
-	public EventViewer() {
+	public EventViewerFrame() {
 		super("Журнал событий");
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		setBounds(100, 100, 886, 300);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
