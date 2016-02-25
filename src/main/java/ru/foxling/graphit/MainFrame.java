@@ -67,6 +67,7 @@ import ru.foxling.graphit.config.DataType;
 import ru.foxling.graphit.config.Field;
 import ru.foxling.graphit.config.FieldRole;
 import ru.foxling.graphit.config.FieldValue;
+import ru.foxling.graphit.config.UniqueFieldException;
 import ru.foxling.graphit.logfile.LogFile;
 import ru.foxling.graphit.logfile.Record;
 import ru.foxling.graphit.logfile.Startup;
@@ -152,7 +153,7 @@ extends JFrame implements ChartProgressListener {
 		super(APPNAME);
 		
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 850, 491);
+		setBounds(100, 100, 850, 600);
 		
 		JMenuBar menuBar = new JMenuBar();
 		setJMenuBar(menuBar);
@@ -489,7 +490,7 @@ extends JFrame implements ChartProgressListener {
 		private static List<Field> yFields = new LinkedList<>();
 		
 		//TODO V
-		private static boolean drawable(LogFile logFile) throws IllegalStateException {
+		private static boolean drawable(LogFile logFile) throws IllegalStateException, UniqueFieldException {
 			if (logFile == null)
 				throw new IllegalStateException("Неизвестная ошибка (LogFile is NULL)");
 			
@@ -498,15 +499,14 @@ extends JFrame implements ChartProgressListener {
 			
 			if (logFile.getRecords().size() == 0)
 				throw new IllegalStateException("В файле нет ни одной нормальной записи");
-			
+			ConfigModel configModel = Core.getConfigModel();
 			boolean xAxis = false;
-			boolean yAxis = false;
-			for (Field field : Core.getConfigModel().getFieldList()) {
+			for (Field field : configModel.getFieldList()) {
+				if (field.getRole() == FieldRole.X_AXIS || field.getRole() == FieldRole.DRAW)
+					configModel.validateField(field);
+				
 				if (field.getRole() == FieldRole.X_AXIS)
-					if (Arrays.asList(DataType.TIME, DataType.DATETIME, DataType.DATE).contains(field.getDatatype())) {
-						xAxis = true;
-					} else
-						throw new IllegalStateException("");
+					xAxis = true;
 			}
 			return true;
 		}

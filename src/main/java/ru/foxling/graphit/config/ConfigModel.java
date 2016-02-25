@@ -594,7 +594,7 @@ implements Serializable {
 	public void validateFieldName(Field field, String name) throws UniqueFieldException {
 		for (Field f : getFieldList())
 			if (!field.equals(f) && f.getName().equals(name)) {
-				if (field.getRole() == FieldRole.DRAW) {
+				if (field.getRole() == FieldRole.DRAW && f.getRole() == FieldRole.DRAW) {
 					throw new UniqueFieldException("Имена рисуемых полей должны быть уникальными.", field, f, name);
 				} else
 					LOG.log(Level.INFO, "Уже есть поле с именем " + name);
