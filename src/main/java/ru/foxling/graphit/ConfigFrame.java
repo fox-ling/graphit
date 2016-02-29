@@ -310,7 +310,7 @@ public class ConfigFrame extends JFrame {
 			public void mouseClicked(MouseEvent e) {
 				if (e.getClickCount() == 2 && !e.isConsumed()) {
 				     e.consume();
-				     EventViewerFrame.launch();
+				     EventJournalFrame.launch();
 				}
 			}
 		});

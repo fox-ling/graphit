@@ -81,7 +81,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
@@ -148,6 +147,7 @@ extends JFrame implements ChartProgressListener {
 	private JMenuItem miPreferences;
 	private JPanel pnlStatusBar;
 	private JLabel lblLogMessage;
+	private JMenuItem miShowEventJournal;
 	
 	
 	public MainFrame() {
@@ -198,6 +198,11 @@ extends JFrame implements ChartProgressListener {
 		JMenuItem mi = new JMenuItem("Очистить список");
 		mi.addActionListener(e -> configController.removeRecentFiles());
 		mRecent.add(mi);
+		
+		miShowEventJournal = new JMenuItem("Журнал событий");
+		miShowEventJournal.addActionListener(e -> EventJournalFrame.launch());
+		miShowEventJournal.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_J, InputEvent.CTRL_MASK));
+		mFile.add(miShowEventJournal);
 		
 		mSettings = new JMenu("Опции");
 		menuBar.add(mSettings);
@@ -338,7 +343,7 @@ extends JFrame implements ChartProgressListener {
 			public void mouseClicked(MouseEvent e) {
 				if (e.getClickCount() == 2 && !e.isConsumed()) {
 				     e.consume();
-				     EventViewerFrame.launch();
+				     EventJournalFrame.launch();
 				}
 			}
 		});

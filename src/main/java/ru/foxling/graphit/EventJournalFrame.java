@@ -40,19 +40,21 @@ import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.ListSelectionModel;
 
-public class EventViewerFrame extends JFrame {
+public class EventJournalFrame extends JFrame {
 	private static final long serialVersionUID = -5784368020743203402L;
+	private static Logger LOG = Logger.getLogger(EventJournalFrame.class.getName());
+	private static final String NEW_LINE = "\n\r";
 	private JPanel contentPane;
 	private JTable table;
 	private JSplitPane splitPane;
-	private JTextArea textArea;
-	private LoggerMemoryHandler handler;
+	private JTextArea txtEventText;
+	private LoggerMemoryHandler handler; 
 
 	public static void launch() {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					EventViewerFrame frame = new EventViewerFrame();
+					EventJournalFrame frame = new EventJournalFrame();
 					frame.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -60,36 +62,8 @@ public class EventViewerFrame extends JFrame {
 			}
 		});
 	}
-	
-	public static void main(String[] args) {
-		EventViewerFrame frame = new EventViewerFrame();
-		frame.setVisible(true);
-		Logger logger = Logger.getLogger(EventViewerFrame.class.getName());
-		for (int j = 0; j < 3; j++)
-		for (int i = 0; i < 3; i++) {
-			Level level = Level.INFO;
-			switch (i) {
-			case 1: level = Level.WARNING; break;
-			case 2: level = Level.SEVERE; break; 
-			}
-			try {
-				thrower(i);
-				logger.log(level, "All is well at i={0} and j={1}", new Object[]{i, j});
-			} catch (Exception e) {
-				logger.log(level, String.format("Some error at i=%d and j=%d", i, j), e);
-			}
-		}
-	}
-	
-	public static void thrower(int i) throws Exception {
-		String msg = String.format("ExceptionGenerator #%d", i);
-		switch (i) {
-		case 1: throw new IllegalArgumentException(msg);
-		case 2: throw new IllegalStateException(msg);
-		}
-	}
 
-	public EventViewerFrame() {
+	public EventJournalFrame() {
 		super("Журнал событий");
 		handler = Core.getMemoryHandler();
 		if (handler == null)
@@ -106,19 +80,54 @@ public class EventViewerFrame extends JFrame {
 		splitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
 		contentPane.add(splitPane, BorderLayout.CENTER);
 		
-		JScrollPane scrollPane = new JScrollPane();
-		splitPane.setLeftComponent(scrollPane);
+		JScrollPane scpTable = new JScrollPane();
+		splitPane.setLeftComponent(scpTable);
 		
 		table = new JTable(new LoggerMemoryHandlerTableModel());
+		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		table.setDefaultRenderer(Level.class, new LogLevelCellRenderer());
 		table.setDefaultRenderer(Throwable.class, new ThrowableCellRenderer());
 		table.getSelectionModel().addListSelectionListener(new LoggerRecSelectionListener());
-		scrollPane.setViewportView(table);
+		scpTable.setViewportView(table);
 		
-		textArea = new JTextArea();
-		splitPane.setRightComponent(textArea);
+		txtEventText = new JTextArea(8,0);
+		JScrollPane scpEventText = new JScrollPane();
+		scpEventText.setViewportView(txtEventText);
+		splitPane.setRightComponent(scpEventText);
+		splitPane.setResizeWeight(.6);
+	}
+	
+	private String datetimeFromEpoch(long millis) {
+		try {
+			Instant instant = Instant.ofEpochMilli(millis);
+			LocalDateTime datetime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+			return datetime.format(Core.F_DATETIME);
+		} catch (Exception e) {
+			LOG.log(Level.CONFIG, "Unable to parse EPOCH to string", e);
+			return Long.toString(millis);
+		}
+	}
+	
+	private LogRecord getRecord(int index) {
+		return handler.getRecord(handler.getSize() - 1 - index);
+	}
+	
+	private String throwableToStr(Throwable thrown) {
+		if (thrown == null)
+			throw new IllegalArgumentException();
 		
-		this.handler = Core.getMemoryHandler();
+		StringBuilder sb = new StringBuilder(250);
+		if (thrown != null) {
+			sb.append(thrown.getClass().getName());
+			if (thrown.getMessage() != null)
+				sb.append(": ").append(thrown.getMessage());
+			sb.append(NEW_LINE);
+			for (StackTraceElement ste : thrown.getStackTrace())
+				sb.append(String.format("\t at %s%n", ste.toString()));
+			if (thrown.getCause() != null)
+				sb.append("Caused by: ").append(throwableToStr(thrown.getCause()));
+		}
+		return sb.toString();
 	}
 	
 	private class LoggerRecSelectionListener
@@ -131,22 +140,22 @@ public class EventViewerFrame extends JFrame {
 			int index = ((ListSelectionModel) e.getSource()).getMinSelectionIndex();
 			LogRecord rec = getRecord(index);
 			
-			
 			StringBuilder sb = new StringBuilder(250);
-			sb.append("Level: ").append(rec.getLevel()).append("\n\r");
-			sb.append("Millis: ").append(rec.getMillis()).append("\n\r");
-			sb.append("Source: ").append(rec.getSourceClassName()).append(":").append(rec.getSourceMethodName()).append("\n\r");
-			
-			Object thrown = table.getModel().getValueAt(index, 4);
-			if (thrown != null && thrown instanceof Throwable) {
-				sb.append(handler.getFormatter().formatMessage(rec));
+			sb.append("Level: ").append(rec.getLevel()).append(NEW_LINE);
+			sb.append("DateTime: ").append(datetimeFromEpoch(rec.getMillis())).append(NEW_LINE);
+			sb.append("Source: ").append(rec.getSourceClassName()).append(":").append(rec.getSourceMethodName()).append(NEW_LINE);
+			if (rec.getMessage() != null) {
+				String msg = handler.getFormatter() == null ? rec.getMessage() : handler.getFormatter().formatMessage(rec);
+				sb.append("Message: ").append(msg).append(NEW_LINE);
 			}
-			textArea.setText(sb.toString());
+			
+			Throwable thrown = rec.getThrown();
+			if (thrown != null) {
+				sb.append("--- Thrown ---------------------------").append(NEW_LINE);
+				sb.append(throwableToStr(thrown));
+			}
+			txtEventText.setText(sb.toString());
 		}
-	}
-	
-	private LogRecord getRecord(int index) {
-		return handler.getRecord(handler.getSize() - 1 - index);
 	}
 	
 	/** AbstractTableModel that eats LogRecord rows */
@@ -181,9 +190,9 @@ public class EventViewerFrame extends JFrame {
 			LogRecord rec = getRecord(row);
 			switch (col) {
 			case 0: return rec.getLevel();
-			case 1: return LocalDateTime.ofInstant(Instant.ofEpochMilli(rec.getMillis()), ZoneId.systemDefault()).format(Core.F_DATETIME);
+			case 1: return datetimeFromEpoch(rec.getMillis());
 			case 2: return rec.getLoggerName();
-			case 3: return handler.getFormattedMessage(rec);
+			case 3: return handler.getFormatter().formatMessage(rec);
 			case 4: return rec.getThrown();
 			}
 			return null;

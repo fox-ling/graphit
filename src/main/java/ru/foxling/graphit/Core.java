@@ -30,7 +30,7 @@ public class Core {
 	public static final DateTimeFormatter F_DATETIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 	
 	private static final Logger LOG = Logger.getLogger(Core.class.getPackage().getName());
-	private static final LoggerMemoryHandler memHandler = new LoggerMemoryHandler(5); 
+	private static final LoggerMemoryHandler memHandler = new LoggerMemoryHandler(512); 
 	private static ConfigModel configModel = new ConfigModel();
 	
 	static {

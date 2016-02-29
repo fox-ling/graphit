@@ -38,7 +38,7 @@ extends Handler {
 	private int position;
 	private Level level;
 	private boolean overwrite;
-	private Formatter formatter;
+	//private Formatter formatter;
 	
 	public LoggerMemoryHandler() {
 		this(DEFAULT_SIZE, Level.ALL);
@@ -58,7 +58,7 @@ extends Handler {
 	
 		buffer = new LogRecord[bufferSize];
 		this.level = level;
-		this.formatter = new SimpleFormatter();
+		setFormatter(new SimpleFormatter());
 	}
 	
 	public void publish(LogRecord record) {
@@ -83,9 +83,9 @@ extends Handler {
 		return this.level;
 	}
 	
-	public String getFormattedMessage(LogRecord rec) {
+	/*public String getFormattedMessage(LogRecord rec) {
 		return formatter.formatMessage(rec);
-	}
+	}*/
 	
 	public void flush() {
 		for (int i = 0; i < getSize() - 1; i++)
