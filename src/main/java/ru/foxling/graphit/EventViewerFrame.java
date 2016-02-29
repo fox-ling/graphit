@@ -18,8 +18,6 @@
 package ru.foxling.graphit;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
 import java.awt.EventQueue;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -32,7 +30,6 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 
-import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -113,8 +110,9 @@ public class EventViewerFrame extends JFrame {
 		splitPane.setLeftComponent(scrollPane);
 		
 		table = new JTable(new LoggerMemoryHandlerTableModel());
-		table.getColumnModel().getColumn(0).setCellRenderer(new LogRecordsCellRenderer());
-		//table.getSelectionModel().addListSelectionListener();
+		table.setDefaultRenderer(Level.class, new LogLevelCellRenderer());
+		table.setDefaultRenderer(Throwable.class, new ThrowableCellRenderer());
+		table.getSelectionModel().addListSelectionListener(new LoggerRecSelectionListener());
 		scrollPane.setViewportView(table);
 		
 		textArea = new JTextArea();
@@ -130,11 +128,25 @@ public class EventViewerFrame extends JFrame {
 		public void valueChanged(ListSelectionEvent e) {
 			if (e.getValueIsAdjusting()) return;
 			
-			ListSelectionModel rowSM = (ListSelectionModel) e.getSource();
-			int selectedIndex = rowSM.getMinSelectionIndex();
+			int index = ((ListSelectionModel) e.getSource()).getMinSelectionIndex();
+			LogRecord rec = getRecord(index);
 			
 			
+			StringBuilder sb = new StringBuilder(250);
+			sb.append("Level: ").append(rec.getLevel()).append("\n\r");
+			sb.append("Millis: ").append(rec.getMillis()).append("\n\r");
+			sb.append("Source: ").append(rec.getSourceClassName()).append(":").append(rec.getSourceMethodName()).append("\n\r");
+			
+			Object thrown = table.getModel().getValueAt(index, 4);
+			if (thrown != null && thrown instanceof Throwable) {
+				sb.append(handler.getFormatter().formatMessage(rec));
+			}
+			textArea.setText(sb.toString());
 		}
+	}
+	
+	private LogRecord getRecord(int index) {
+		return handler.getRecord(handler.getSize() - 1 - index);
 	}
 	
 	/** AbstractTableModel that eats LogRecord rows */
@@ -142,8 +154,8 @@ public class EventViewerFrame extends JFrame {
 	extends AbstractTableModel {
 		private static final long serialVersionUID = 369059275490713848L;
 		//private LoggerMemoryHandler handler;
-		private String[] columnNames = {"Уровень", "Дата/Время", "Источник", "Сообщение"};
-		private Class<?>[] columnClasses = {Level.class, String.class, String.class, String.class};
+		private String[] columnNames = {"Уровень", "Дата/Время", "Источник", "Сообщение", "Исключение"};
+		private Class<?>[] columnClasses = {Level.class, String.class, String.class, String.class, Throwable.class};
 
 		public LoggerMemoryHandlerTableModel() {
 			handler.addChangeListener(e -> fireTableDataChanged());
@@ -166,12 +178,13 @@ public class EventViewerFrame extends JFrame {
 
 		@Override
 		public Object getValueAt(int row, int col) {
-			LogRecord rec = handler.getRecord(getRowCount() - 1 - row);
+			LogRecord rec = getRecord(row);
 			switch (col) {
 			case 0: return rec.getLevel();
 			case 1: return LocalDateTime.ofInstant(Instant.ofEpochMilli(rec.getMillis()), ZoneId.systemDefault()).format(Core.F_DATETIME);
 			case 2: return rec.getLoggerName();
 			case 3: return handler.getFormattedMessage(rec);
+			case 4: return rec.getThrown();
 			}
 			return null;
 		}
@@ -180,50 +193,24 @@ public class EventViewerFrame extends JFrame {
 		public Class<?> getColumnClass(int col) {
 			return columnClasses[col];
 		}
-		
 	}
 	
-	//private class ErrorCellRenderer
-	
 	/** Table cell renderer that adds icons Logger.Level values (SEVERE/WARNING/INFO) */
-	private class LogRecordsCellRenderer
+	private class LogLevelCellRenderer
 	extends DefaultTableCellRenderer {
 	    private static final long serialVersionUID = 4264832765857567868L;
-	    //private final DefaultTableCellRenderer DEFAULT_RENDERER = new DefaultTableCellRenderer();
 
 	    private int height;
 	    
-	    public LogRecordsCellRenderer() {
+	    public LogLevelCellRenderer() {
 			height = getFontMetrics(getFont()).getHeight();
-		}
-	    
-	    public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-			//Component renderer = DEFAULT_RENDERER.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-			/*Color foreground, background;
-			if (isSelected) {
-				foreground = Color.YELLOW;
-				background = Color.GREEN;
-			}  else {
-				if (row % 2 == 0) {
-					foreground = Color.BLUE;
-					background = Color.WHITE;
-				}  else {
-					foreground = Color.WHITE;
-					background = Color.BLUE;
-				}
-			}
-			setForeground(foreground);
-			setBackground(background);*/
-	    	
-			return this;
 		}
 
 	    public void setValue(Object value) {
 	    	if (value == null) {
 	    		setText("");
-	    		return;
-	    	}
-	    	if (value instanceof Level) {
+	    		setIcon(null);
+	    	} else {
 	    		setIcon(Icons.get((Level) value, height));
 	    		if (value == Level.SEVERE) {
 	    			setText("Ошибка");
@@ -233,10 +220,20 @@ public class EventViewerFrame extends JFrame {
 	    			setText("Сведения");
 	    		} else
 	    			setText(value.toString());
-	    	} else {
-	    		setIcon(null);
-	    		setText(value.toString());
 	    	}
+	    }
+	}
+	
+	/** Table cell renderer that adds icons Logger.Level values (SEVERE/WARNING/INFO) */
+	private class ThrowableCellRenderer
+	extends DefaultTableCellRenderer {
+	    private static final long serialVersionUID = 4264832765857567868L;
+
+	    public void setValue(Object value) {
+	    	if (value == null) {
+	    		setText("");
+	    	} else
+	    		setText(((Throwable) value).getClass().getSimpleName());
 	    }
 	}
 
