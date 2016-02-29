@@ -75,11 +75,12 @@ import ru.foxling.graphit.logfile.Startup;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.LinkedList;
@@ -380,7 +381,10 @@ extends JFrame implements ChartProgressListener {
 		
 		configController.refreshAxesList();
 		configController.addRecentFile(aFile.getPath());
-		chartPanel.setChart(Chart.chartFactory(logFile));
+		JFreeChart chart = Chart.chartFactory(logFile);
+		chart.addProgressListener(this);
+		chartPanel.setChart(chart);
+		
 	}
 	
 	private void setTableVisible(boolean visible) {
@@ -469,8 +473,10 @@ extends JFrame implements ChartProgressListener {
 			if (jfreechart != null)	{
 				XYPlot xyplot = (XYPlot)jfreechart.getPlot();
 				double d = xyplot.getDomainCrosshairValue();
-
-				Date time = new Date((long) d);
+				
+				LocalTime time = LocalDateTime.ofInstant(Instant.ofEpochMilli((long) d), ZoneId.systemDefault()).toLocalTime();
+				logFile.getStartups();
+				//TODO
 				/*int i = lf.getId(time);
 				if (i>-1) {
 					Rectangle rect = table.getCellRect(i, 0, true);
@@ -580,8 +586,8 @@ extends JFrame implements ChartProgressListener {
 		public static void setFieldVisible(Field field, boolean visible) {
 			if (field == null)
 				return;
-			int id = yFields.indexOf(field);
-			if (id == -1)
+			int id = yFields.indexOf(field) + 1;
+			if (id == 0)
 				return;
 			
 			NumberAxis axis = (NumberAxis) plot.getRangeAxis(id);
