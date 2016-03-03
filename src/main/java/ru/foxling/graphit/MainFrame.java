@@ -81,6 +81,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
@@ -106,6 +107,7 @@ import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JCheckBox;
 
 import java.awt.Font;
+import java.awt.Rectangle;
 import java.awt.Color;
 import net.miginfocom.swing.MigLayout;
 
@@ -241,30 +243,36 @@ extends JFrame implements ChartProgressListener {
 		table.setCellSelectionEnabled(true);
 		table.setFillsViewportHeight(true);
 		
-		ListSelectionModel rowSM = table.getSelectionModel();
-		rowSM.addListSelectionListener(new ListSelectionListener() {
+		table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 			@Override
 			/** Listener for row-change events (Chart trace) */
 			public void valueChanged(ListSelectionEvent e) {
-				if (!doTableTrack || !table.isFocusOwner() || e.getValueIsAdjusting()) return;
+				if (/*!doTableTrack ||*/ !table.isFocusOwner() || e.getValueIsAdjusting()) return;
+				System.out.printf("%s >> tableSelection%n", LocalTime.now().format(Core.F_TIME));
 				
 				ListSelectionModel rowSM = (ListSelectionModel) e.getSource();
 				int selectedIndex = rowSM.getMinSelectionIndex();
 				
-				if (chartPanel != null) {
-					// TODO
-					/*DefaultTableModel model = (DefaultTableModel) table.getModel();
+				if (Chart.chart != null) {
+					LogFileTableModel model = (LogFileTableModel) table.getModel();
 					try {
-						Date time = fTime.parse((String) (model.getValueAt(selectedIndex, 1)));
-					
-						JFreeChart jfreechart = chartPanel.getChart();
-						if (jfreechart != null)	{
-							XYPlot xyplot = (XYPlot)jfreechart.getPlot();
-							xyplot.setDomainCrosshairValue(time.getTime());
+						Record rec = model.getRecord(selectedIndex);
+						long pos = -1;
+						if (Chart.xField.getDatatype() == DataType.DATETIME) {
+							LocalDateTime datetime = (LocalDateTime) rec.getValue(Chart.xFieldId);
+							pos = datetime.atZone(ZoneId.systemDefault()).toEpochSecond();
+						} else if (Chart.xField.getDatatype() == DataType.TIME) {
+							LocalTime time = (LocalTime) rec.getValue(Chart.xFieldId);
+							pos = time.toNanoOfDay() / 1000;
 						}
-					} catch (ParseException e1) {
+						
+						if (pos > -1) {
+							XYPlot xyplot = (XYPlot)Chart.chart.getPlot();
+							xyplot.setDomainCrosshairValue(pos);
+						}
+					} catch (Exception e1) {
 						e1.printStackTrace();
-					}*/
+					}
 				}
 			}
 		});
@@ -469,26 +477,29 @@ extends JFrame implements ChartProgressListener {
 	}
 
 	@Override
-	public void chartProgress(ChartProgressEvent arg0) {
-		if (arg0.getType() != 2 || !chartMSequence) return;
+	public void chartProgress(ChartProgressEvent e) {
+		if (e.getType() != 2) return;
+		System.out.printf("%s >> chartProgress()%n", LocalTime.now().format(Core.F_TIME));
+		//|| !chartMSequence
 		chartMSequence = false;
 		
-		if (doChartTrack && chartPanel != null) {
-			JFreeChart jfreechart = chartPanel.getChart();
-			if (jfreechart != null)	{
-				XYPlot xyplot = (XYPlot)jfreechart.getPlot();
-				double d = xyplot.getDomainCrosshairValue();
+		if (doChartTrack && Chart.chart != null && Chart.xFieldId > -1) {
+			XYPlot xyplot = (XYPlot)Chart.chart.getPlot();
+			double d = xyplot.getDomainCrosshairValue();
+			
+			LocalTime time = LocalDateTime.ofInstant(Instant.ofEpochMilli((long) d), ZoneId.systemDefault()).toLocalTime();
+			if (time != null) {
+				List<Record> records = logFile.getRecords();
 				
-				LocalTime time = LocalDateTime.ofInstant(Instant.ofEpochMilli((long) d), ZoneId.systemDefault()).toLocalTime();
-				logFile.getStartups();
-				//TODO
-				/*int i = lf.getId(time);
-				if (i>-1) {
-					Rectangle rect = table.getCellRect(i, 0, true);
-					table.scrollRectToVisible(rect);					
-					table.setRowSelectionInterval(i,i);
-					table.setColumnSelectionInterval(1, 1);
-				}*/
+				for (int i = 0; i < records.size(); i++) {
+					Record rec = records.get(i);
+					if (rec != null && time.equals(rec.getValue(Chart.xFieldId))) {
+						Rectangle rect = table.getCellRect(i, 0, true);
+						table.scrollRectToVisible(rect);					
+						table.setRowSelectionInterval(i,i);
+						table.setColumnSelectionInterval(1, 1);
+					}
+				}
 			}
 		}
 	}
@@ -499,6 +510,7 @@ extends JFrame implements ChartProgressListener {
 		private static LogFile logFile;
 		private static Field xField;
 		private static List<Field> yFields = new LinkedList<>();
+		private static int xFieldId;
 		
 		//TODO V
 		private static boolean drawable(LogFile logFile) throws IllegalStateException, UniqueFieldException {
@@ -564,8 +576,12 @@ extends JFrame implements ChartProgressListener {
 	        plot.setRenderer(0, renderer);
 	        
 	        List<Field> yFields = new LinkedList<>();
-			for (Field f : Core.getConfigModel().getFieldList()) {
+			List<Field> fieldList = Core.getConfigModel().getFieldList(); 
+			for (int i = 0; i < fieldList.size(); i++) {
+				Field f = fieldList.get(i);
+				
 				if (f.getRole() == FieldRole.X_AXIS) {
+					xFieldId = i;
 					xField = f;
 				} else if (f.getRole() == FieldRole.DRAW)
 					yFields.add(f);
@@ -1005,11 +1021,7 @@ extends JFrame implements ChartProgressListener {
 		public LogFileTableModel(LogFile logFile, boolean wrongLinesOnly) {
 			super();
 			fieldList = Core.getConfigModel().getFieldList();
-			index = new ArrayList<Record>(25);
-			for (Startup startup : logFile.getStartups())
-				for(Record record: startup.getRecords())
-					if (!record.isDirty())
-						index.add(record);
+			index = logFile.getRecords();
 		}
 		
 		@Override
@@ -1031,10 +1043,14 @@ extends JFrame implements ChartProgressListener {
 		public Class<?> getColumnClass(int columnIndex) {
 			return fieldList.get(columnIndex).getDatatype().get_class();
 		}
+		
+		public Record getRecord(int index) {
+			return this.index.get(index);
+		}
 
 		@Override
 		public Object getValueAt(int rowIndex, int columnIndex) {
-			return index.get(rowIndex).getValue(columnIndex);
+			return getRecord(rowIndex).getValue(columnIndex);
 		}
 		
 		@Override
