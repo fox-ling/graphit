@@ -103,8 +103,12 @@ implements Serializable {
 	public void setName(String name) throws IllegalArgumentException {
 		if (name == null || name.equals(""))
 			throw new IllegalArgumentException("Имя не должно быть пустым");
-	
+		
+		if (name.equals(this.name))
+			return;
+		
 		this.name = name;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "name"));
 	}
 	
 	
@@ -116,9 +120,13 @@ implements Serializable {
 	/** @see {@link #description} */
 	public void setDescription(String description) {
 		if (description == null)
-			this.description = "";
+			setDescription("");
+		
+		if (description.equals(this.description))
+			return;
 		
 		this.description = description;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "description"));
 	}
 	
 	
@@ -135,6 +143,7 @@ implements Serializable {
 			return;
 		
 		this.datatype = datatype;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "datatype"));
 		
 		if (datatype.getFormatList().indexOf(getFormat()) == -1)
 			setFormat(datatype.getDefaultFormat());
@@ -191,6 +200,7 @@ implements Serializable {
 			return;
 		
 		this.format = format;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "format"));
 		setParser(DefaultParser.getDefaultParser(this.datatype, this.format));
 	}
 	
@@ -214,6 +224,7 @@ implements Serializable {
 			throw new IllegalArgumentException("Ограничитель не должен быть пустым");
 		
 		this.delimiter = delimiter;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "delimiter"));
 	}
 	
 	
@@ -224,7 +235,11 @@ implements Serializable {
 	
 	/** @see {@link #optional} */
 	public void setOptional(boolean optional) {
+		if (optional == this.optional)
+			return;
+		
 		this.optional = optional;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "optional"));
 	}
 	
 	
@@ -296,7 +311,11 @@ implements Serializable {
 	
 	/** @see {@link #parser} */
 	public void setParser(Parser<?> parser) {
+		if (parser.equals(this.parser))
+			return;
+		
 		this.parser = parser;
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "parser"));
 	}
 	
 	
@@ -336,7 +355,7 @@ implements Serializable {
 			throw new IndexOutOfBoundsException(String.format("Попытка вставить значение поля в некорректную позицию (%d)", index));
 		
 		valueList.add(index, value);
-		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "valueList"));
+		fireFieldChanged(new FieldEvent(this, FieldEvent.INSERT, "valueList"));
 	}
 	
 	public void removeValues(int[] index) throws IndexOutOfBoundsException, NullPointerException {
@@ -351,7 +370,7 @@ implements Serializable {
 			valueList.remove(index[i]);
 		}
 		
-		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "valueList"));
+		fireFieldChanged(new FieldEvent(this, FieldEvent.DELETE, "valueList"));
 	}
 	
 	

@@ -28,7 +28,7 @@ import java.util.logging.Level;
 import javax.swing.ImageIcon;
 import javax.swing.UIManager;
 
-public class Icons {
+public class LoggerIcons {
 	private static final int ICONS_COUNT = 3;
 	public static final String ICON_ERROR = "OptionPane.errorIcon";
 	public static final String ICON_WARNING = "OptionPane.warningIcon";

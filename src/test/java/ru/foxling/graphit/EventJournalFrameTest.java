@@ -29,6 +29,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import ru.foxling.graphit.ui.EventJournalFrame;
+
 public class EventJournalFrameTest{
 	private EventJournalFrame frame;
 

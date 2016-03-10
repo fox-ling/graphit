@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package ru.foxling.graphit;
+package ru.foxling.graphit.ui;
 
 import java.awt.Dimension;
 import javax.swing.ImageIcon;
@@ -28,8 +28,7 @@ import javax.swing.KeyStroke;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import javax.swing.table.AbstractTableModel;
-import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
@@ -46,32 +45,18 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.JMenuItem;
 
-import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.AxisLocation;
-import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.event.ChartProgressEvent;
 import org.jfree.chart.event.ChartProgressListener;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
-import org.jfree.data.time.Second;
-import org.jfree.data.time.TimeSeries;
-import org.jfree.data.time.TimeSeriesCollection;
-import org.jfree.data.xy.XYDataset;
-import org.jfree.ui.RectangleInsets;
-
-import ru.foxling.graphit.config.ConfigModel;
+import ru.foxling.graphit.Core;
+import ru.foxling.graphit.LoggerLabelHandler;
 import ru.foxling.graphit.config.DataType;
 import ru.foxling.graphit.config.Field;
 import ru.foxling.graphit.config.FieldRole;
-import ru.foxling.graphit.config.FieldValue;
-import ru.foxling.graphit.config.UniqueFieldException;
 import ru.foxling.graphit.logfile.LogFile;
 import ru.foxling.graphit.logfile.Record;
-import ru.foxling.graphit.logfile.Startup;
-
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
@@ -80,8 +65,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
@@ -119,26 +104,19 @@ public class MainFrame
 extends JFrame implements ChartProgressListener {
 	private static final long serialVersionUID = 1L;
 	private static final String APPNAME = "Graphit - ИСУ \"Оптима\" ";
-	private static final Logger LOG = Logger.getLogger(MainFrame.class.getName());
+	//private static final Logger LOG = Logger.getLogger(MainFrame.class.getName());
 	
 	private JPanel contentPane;
 	private JMenu mFile = null;
 	private LogFile logFile = null;
-	//private Chart chart = null;
 	private ChartPanel chartPanel = null;
 	
 	private JMenuItem miDetails;
 	private JSplitPane splitPane;
 	private JScrollPane spTable;
 	private JTable table;
-	/** Protection against Chart~Table onChange cycle.</br>
-	 * *Chart onClick-event goes before Chart Cursor actually moves, so couldn't make it with onClick only */
-	private boolean chartMSequence = false;
-	private boolean doChartTrack = true;
-	private boolean doTableTrack = true;
 	private JTextField tfCurrFile;
 	private JPopupMenu popupMenu;
-	private JCheckBoxMenuItem miWrongHashOnly;
 	private JMenu mRecent;
 	private JCheckBox iLaunch;
 	private JCheckBox cbTable;
@@ -188,8 +166,8 @@ extends JFrame implements ChartProgressListener {
 		miDetails.setEnabled(false);
 		miDetails.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				Details fDetails = new Details(logFile);
-				fDetails.setVisible(true);
+				DetailsFrame fDetailsFrame = new DetailsFrame(logFile);
+				fDetailsFrame.setVisible(true);
 			}
 		});
 		miDetails.setIcon(new ImageIcon(classLoader.getResource("ic_action_storage.png")));
@@ -229,12 +207,6 @@ extends JFrame implements ChartProgressListener {
 		
 	    chartPanel = new ChartPanel(null);//chart.chart
 	    chartPanel.setBackground(Color.WHITE);
-	    chartPanel.addMouseListener(new MouseAdapter() {
-	    	@Override
-	    	public void mouseClicked(MouseEvent e) {
-	    		chartMSequence = true;
-	    	}
-	    });
 		FlowLayout flowLayout = (FlowLayout) chartPanel.getLayout();
 		flowLayout.setAlignment(FlowLayout.LEADING);
 		
@@ -247,28 +219,29 @@ extends JFrame implements ChartProgressListener {
 			@Override
 			/** Listener for row-change events (Chart trace) */
 			public void valueChanged(ListSelectionEvent e) {
-				if (/*!doTableTrack ||*/ !table.isFocusOwner() || e.getValueIsAdjusting()) return;
-				System.out.printf("%s >> tableSelection%n", LocalTime.now().format(Core.F_TIME));
+				//TODO
+				if (!table.isFocusOwner() || e.getValueIsAdjusting()) return;
 				
 				ListSelectionModel rowSM = (ListSelectionModel) e.getSource();
 				int selectedIndex = rowSM.getMinSelectionIndex();
 				
-				if (Chart.chart != null) {
+				if (Chart.getChart() != null) {
 					LogFileTableModel model = (LogFileTableModel) table.getModel();
 					try {
 						Record rec = model.getRecord(selectedIndex);
 						long pos = -1;
-						if (Chart.xField.getDatatype() == DataType.DATETIME) {
-							LocalDateTime datetime = (LocalDateTime) rec.getValue(Chart.xFieldId);
+						if (Chart.getxField().getDatatype() == DataType.DATETIME) {
+							LocalDateTime datetime = (LocalDateTime) rec.getValue(Chart.getxFieldId());
 							pos = datetime.atZone(ZoneId.systemDefault()).toEpochSecond();
-						} else if (Chart.xField.getDatatype() == DataType.TIME) {
-							LocalTime time = (LocalTime) rec.getValue(Chart.xFieldId);
-							pos = time.toNanoOfDay() / 1000;
+						} else if (Chart.getxField().getDatatype() == DataType.TIME) {
+							LocalTime time = (LocalTime) rec.getValue(Chart.getxFieldId());
+							ZonedDateTime zdt = ZonedDateTime.of(LocalDateTime.of(LocalDate.ofEpochDay(0), time), ZoneId.systemDefault());
+							pos = zdt.toEpochSecond() * 1000;
 						}
-						
 						if (pos > -1) {
-							XYPlot xyplot = (XYPlot)Chart.chart.getPlot();
-							xyplot.setDomainCrosshairValue(pos);
+							XYPlot xyplot = (XYPlot)Chart.getChart().getPlot();
+							xyplot.setDomainCrosshairValue(pos, true);
+							
 						}
 					} catch (Exception e1) {
 						e1.printStackTrace();
@@ -283,14 +256,15 @@ extends JFrame implements ChartProgressListener {
 		popupMenu = new JPopupMenu();
 		addPopup(table, popupMenu);
 		
-		miWrongHashOnly = new JCheckBoxMenuItem("Отображать только с неправильным хэшем");
+		/*
+		JCheckBoxMenuItem miWrongHashOnly = new JCheckBoxMenuItem("Отображать только с неправильным хэшем");
 		miWrongHashOnly.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				doChartTrack = !miWrongHashOnly.isSelected();
-				fillTable(miWrongHashOnly.isSelected());
+				//fillTable(miWrongHashOnly.isSelected());
 			}
 		});
-		popupMenu.add(miWrongHashOnly);
+		popupMenu.add(miWrongHashOnly);*/
 		contentPane.setLayout(new BorderLayout(0, 0));
 		
 		
@@ -301,7 +275,7 @@ extends JFrame implements ChartProgressListener {
 		toppanel.add(chartPanel);
 		
 		splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, toppanel, spTable);
-	    splitPane.setResizeWeight(1);
+	    splitPane.setResizeWeight(.7);
 	    contentPane.add(splitPane, BorderLayout.CENTER);
 		
 	    Runtime.getRuntime().addShutdownHook(new Thread(){
@@ -386,7 +360,15 @@ extends JFrame implements ChartProgressListener {
 		if (title.endsWith(", ")) title = title.substring(0, title.length() - 3);
 		this.setTitle(title);
 		
-		fillTable();
+		table.setModel(new LogFileTableModel(logFile, false));
+		List<Field> fieldList = Core.getConfigModel().getFieldList();
+		Enumeration<TableColumn> cols = table.getColumnModel().getColumns();
+		while (cols.hasMoreElements()) {
+			TableColumn col = (TableColumn) cols.nextElement();
+			Field field = fieldList.get(col.getModelIndex());
+			if (!field.getValueList().isEmpty())
+				col.setCellRenderer(new FieldValueRenderer(field));
+		}
 		
 		miDetails.setEnabled(true);
 		iLaunch.setEnabled(true);
@@ -407,24 +389,6 @@ extends JFrame implements ChartProgressListener {
 		} else {
 			splitPane.setDividerLocation(1);
 		}
-	}
-	
-	private void fillTable(){
-		fillTable(false);
-	}
-	
-	private void fillTable(boolean wrongLinesOnly){
-		doTableTrack = false;
-		table.setModel(new LogFileTableModel(logFile, wrongLinesOnly));
-		List<Field> fieldList = Core.getConfigModel().getFieldList();
-		Enumeration<TableColumn> cols = table.getColumnModel().getColumns();
-		while (cols.hasMoreElements()) {
-			TableColumn col = (TableColumn) cols.nextElement();
-			Field field = fieldList.get(col.getModelIndex());
-			if (!field.getValueList().isEmpty())
-				col.setCellRenderer(new FieldValueRenderer(field));
-		}
-		doTableTrack = true;
 	}
 	
 	class CustomDragDropListener
@@ -479,259 +443,39 @@ extends JFrame implements ChartProgressListener {
 	@Override
 	public void chartProgress(ChartProgressEvent e) {
 		if (e.getType() != 2) return;
-		System.out.printf("%s >> chartProgress()%n", LocalTime.now().format(Core.F_TIME));
-		//|| !chartMSequence
-		chartMSequence = false;
 		
-		if (doChartTrack && Chart.chart != null && Chart.xFieldId > -1) {
-			XYPlot xyplot = (XYPlot)Chart.chart.getPlot();
+		if (Chart.getChart() != null && Chart.getxFieldId() > -1) {
+			XYPlot xyplot = (XYPlot)Chart.getChart().getPlot();
 			double d = xyplot.getDomainCrosshairValue();
 			
-			LocalTime time = LocalDateTime.ofInstant(Instant.ofEpochMilli((long) d), ZoneId.systemDefault()).toLocalTime();
-			if (time != null) {
+			Object value;
+			if (Chart.getxField().getDatatype() == DataType.TIME) {
+				value = LocalDateTime.ofInstant(Instant.ofEpochMilli((long) d), ZoneId.systemDefault()).toLocalTime();
+			} else if (Chart.getxField().getDatatype() == DataType.DATETIME) {
+				value = LocalDateTime.ofInstant(Instant.ofEpochMilli((long) d), ZoneId.systemDefault());
+			} else if (Chart.getxField().getDatatype() == DataType.DATE) {
+				value = LocalDateTime.ofInstant(Instant.ofEpochMilli((long) d), ZoneId.systemDefault()).toLocalDate();
+			} else
+				throw new IllegalStateException(String.format("Неподдерщиваемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME", Chart.getxField().getDatatype().getValue()));
+			
+			if (value != null) {
 				List<Record> records = logFile.getRecords();
 				
 				for (int i = 0; i < records.size(); i++) {
 					Record rec = records.get(i);
-					if (rec != null && time.equals(rec.getValue(Chart.xFieldId))) {
+					if (rec != null && value.equals(rec.getValue(Chart.getxFieldId())) && table.getSelectedRow() != i) {
 						Rectangle rect = table.getCellRect(i, 0, true);
 						table.scrollRectToVisible(rect);					
 						table.setRowSelectionInterval(i,i);
-						table.setColumnSelectionInterval(1, 1);
+						int col = table.getSelectedColumn() == -1 ? 0 : table.getSelectedColumn();
+						table.setColumnSelectionInterval(col, col);
 					}
 				}
 			}
 		}
 	}
-	
-	private static class Chart {
-		private static JFreeChart chart;
-		private static XYPlot plot;
-		private static LogFile logFile;
-		private static Field xField;
-		private static List<Field> yFields = new LinkedList<>();
-		private static int xFieldId;
-		
-		//TODO V
-		private static boolean drawable(LogFile logFile) throws IllegalStateException, UniqueFieldException {
-			if (logFile == null)
-				throw new IllegalStateException("Неизвестная ошибка (LogFile is NULL)");
-			
-			if (logFile.getStartups().size() == 0)
-				throw new IllegalStateException("В файле отсутствуют запуски");
-			
-			if (logFile.getRecords().size() == 0)
-				throw new IllegalStateException("В файле нет ни одной нормальной записи");
-			ConfigModel configModel = Core.getConfigModel();
-			boolean xAxis = false;
-			for (Field field : configModel.getFieldList()) {
-				if (field.getRole() == FieldRole.X_AXIS || field.getRole() == FieldRole.DRAW)
-					configModel.validateField(field);
-				
-				if (field.getRole() == FieldRole.X_AXIS)
-					xAxis = true;
-			}
-			return true;
-		}
-		
-		public static JFreeChart chartFactory(LogFile logFile) {
-			yFields.clear();
-			try {
-				drawable(logFile);
-			} catch (Exception e) {
-				LOG.log(Level.SEVERE, "Построение графика невозможно", e);
-			}
-			Chart.logFile = logFile;
-			
-			TimeSeriesCollection dsLaunch = new TimeSeriesCollection();
-			TimeSeries tsLaunch = new TimeSeries("Launch");
-			for (Startup startup : logFile.getStartups()) {
-				LocalDateTime date = startup.getDatetime();
-				tsLaunch.addOrUpdate(new Second(date.getSecond(), date.getMinute(), date.getHour(), date.getDayOfMonth(), date.getMonthValue(), date.getYear()), 0);
-			}
-			dsLaunch.addSeries(tsLaunch);
-			chart = ChartFactory.createTimeSeriesChart("Chart Title", "xAxisLabel", "yAxisLabel", dsLaunch, false, false, false);
-			plot = chart.getXYPlot();
-		    plot.setBackgroundPaint(Color.white);
-	        plot.setDomainGridlinePaint(Color.lightGray);
-	        plot.setRangeGridlinePaint(Color.lightGray);
-	        plot.setAxisOffset(new RectangleInsets(5.0, 5.0, 5.0, 5.0));
-	        plot.setDomainCrosshairVisible(true);
-	        plot.setDomainCrosshairLockedOnData(true);
-	        
-	        ValueAxis axis = plot.getRangeAxis();
-	        axis.setVisible(false);
-	        
-	        // TimeSeries count (Launches count)
-	        int tsCount = dsLaunch.getSeriesCount();
-	        
-	        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
-	        if (tsCount != 0)
-	        	renderer.setSeriesShapesVisible(0, false);
-	        renderer.setSeriesShapesFilled(0, true);
-	    	renderer.setSeriesShapesVisible(0, true);
-	    	renderer.setSeriesLinesVisible(0, false);
-	    	renderer.setSeriesPaint(0, Color.black);
-	    	
-	        plot.setRenderer(0, renderer);
-	        
-	        List<Field> yFields = new LinkedList<>();
-			List<Field> fieldList = Core.getConfigModel().getFieldList(); 
-			for (int i = 0; i < fieldList.size(); i++) {
-				Field f = fieldList.get(i);
-				
-				if (f.getRole() == FieldRole.X_AXIS) {
-					xFieldId = i;
-					xField = f;
-				} else if (f.getRole() == FieldRole.DRAW)
-					yFields.add(f);
-			}
-			
-			if (xField != null)
-				for (Field yField : yFields)
-					plotFactory(yField);
-			
-	        return chart;
-		}
-		
-		public static void drawField(Field field) {
-			if (field == null)
-				return;
-			
-			if (yFields.indexOf(field) == -1) {
-				plotFactory(field);
-			} else
-				setFieldVisible(field, true);
-		}
-		
-		public static void setFieldVisible(Field field, boolean visible) {
-			if (field == null)
-				return;
-			int id = yFields.indexOf(field) + 1;
-			if (id == 0)
-				return;
-			
-			NumberAxis axis = (NumberAxis) plot.getRangeAxis(id);
-			axis.setVisible(visible);
-			
-			XYLineAndShapeRenderer renderer = (XYLineAndShapeRenderer) plot.getRenderer(id);
-			
-			for (int i = 0; i < plot.getDataset(id).getSeriesCount(); i++) {
-				if (id != 0)
-					renderer.setSeriesLinesVisible(i, visible);
-				
-				if (id == 0 && i != 0) {
-					renderer.setSeriesShapesVisible(i, visible);
-				}
-			}
-		}
-		
-		private static boolean plotFactory(Field yField) {
-			if (xField == null) {
-				LOG.log(Level.SEVERE, "Ось X не определена");
-				return false;
-			}
-			if (yField == null) {
-				LOG.log(Level.SEVERE, "Ось Y не определена");
-				return false;
-			}
-			
-			int xFieldId = Core.getConfigModel().getFieldList().indexOf(xField),
-				yFieldId = Core.getConfigModel().getFieldList().indexOf(yField);
-			
-			if (xFieldId == -1 || yFieldId == -1) {
-				LOG.log(Level.SEVERE, "Поля для графика не определились ({0}={1}; {2}={3})", new Object[]{ xField, xFieldId, yField, yFieldId });
-				return false;
-			}
-			
-			TimeSeriesCollection collection = new TimeSeriesCollection();
-			for (Startup startup : logFile.getStartups()) {
-				TimeSeries timeSeries = new TimeSeries(yField.getName());
-				for (Record rec : startup.getRecords()) {
-					if (rec.isDirty()) continue;
-					Object fieldValue = rec.getValue(xFieldId);
-					if (fieldValue == null) continue;
-					
-					LocalDateTime datetime;
-					if (fieldValue instanceof LocalTime) {
-						datetime = LocalDateTime.of(startup.getDate(), (LocalTime) fieldValue);
-					} else if (fieldValue instanceof LocalDate) {
-						datetime = LocalDateTime.of((LocalDate) fieldValue, LocalTime.of(0, 0));
-					} else if (fieldValue instanceof LocalDateTime) {
-						datetime = (LocalDateTime) fieldValue;
-					} else
-						throw new IllegalStateException(String.format("Неподдерщиваемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME", xField.getDatatype().getValue()));
-					
-					fieldValue = rec.getValue(yFieldId);
-					if (fieldValue == null) continue;
-					double value = objectToDouble(fieldValue);
-					if (value != Double.NaN) {
-						timeSeries.addOrUpdate(
-								new Second(datetime.getSecond(), datetime.getMinute(), datetime.getHour(),
-											datetime.getDayOfMonth(), datetime.getMonthValue(), datetime.getYear()),
-								value
-						);
-					}
-				}
-				if (!timeSeries.isEmpty())
-					collection.addSeries(timeSeries);
-			}
-			
-			Color color = yField.getColor() != null ? yField.getColor() : Color.PINK;
-			
-			NumberAxis numberAxis = new NumberAxis(yField.getName());
-	        numberAxis.setAutoRangeIncludesZero(false);
-	        numberAxis.setLabelPaint(color);
-	        numberAxis.setInverted(true);
-	        numberAxis.setAutoRangeStickyZero(false);
-	        numberAxis.setVisible(true);
-	        
-	        yFields.add(yField);
-	        int id = yFields.size();
-	        plot.setRangeAxis(id, numberAxis);
-	        plot.setRangeAxisLocation(id, AxisLocation.BOTTOM_OR_LEFT);
-	        
-	        XYDataset xydsDepth = collection;
-	        plot.setDataset(id, xydsDepth);
-	        plot.mapDatasetToRangeAxis(id, id);
-	        
-	        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
-	        for (int i = 0; i < collection.getSeriesCount(); i++) {
-	        	renderer.setSeriesLinesVisible(i, true);
-	        	renderer.setSeriesPaint(i, color);
-	        	renderer.setSeriesShapesVisible(i, false);
-	        	renderer.setSeriesShapesFilled(i, false);
-			}
-	        plot.setRenderer(id, renderer);
-	        return true;
-		}
-		
-		private static double objectToDouble(Object value) {
-			if (value instanceof Byte)
-				return ((Byte) value).doubleValue();
-			if (value instanceof Short)
-				return ((Short) value).doubleValue();
-			if (value instanceof Integer)
-				return ((Integer) value).doubleValue();
-			if (value instanceof Float)
-				return ((Float) value).doubleValue();
-			if (value instanceof Double)
-				return ((Double) value).doubleValue();
-			return Double.NaN;
-		}
 
-		public static void setLaunchVisible(boolean visible) {
-			XYPlot plot = chart.getXYPlot();
-			XYLineAndShapeRenderer renderer = (XYLineAndShapeRenderer) plot.getRenderer(0);
-			for (int i = 0; i < plot.getDataset(0).getSeriesCount(); i++) {
-				//if (collectionID == 0 && i != 0)
-					renderer.setSeriesShapesVisible(i, visible);
-			}
-		}
-	}
-
-	
-	private class ConfigController {
+	private class ConfigController { //TODO: ConfigController
 		private ConfigModel configModel;
 		private ArrayList<Link> links;
 		
@@ -804,12 +548,19 @@ extends JFrame implements ChartProgressListener {
 				if (field != null) {
 					switch (e.getPropertyName()) {
 					case "role":
+					case "color":
 						if (field.getRole() == FieldRole.DRAW) {
 							Chart.drawField(field);
 						} else
 							Chart.setFieldVisible(field, false);
 						break;
-					case "color":
+					case "datatype":
+					case "parser":
+					case "format":
+						chartPanel.setChart(null);
+						table.setModel(new DefaultTableModel());
+						if (logFile != null)
+							logFile.clear();
 						break;
 					}
 				}
@@ -831,18 +582,6 @@ extends JFrame implements ChartProgressListener {
 			
 			updateRecentMenu();
 		}
-		
-		/*public Link getLink(Field field) {
-			if (field == null)
-				return null;
-			
-			for (Link link : links) {
-				if (link.field.equals(field))
-					return link;
-			}
-			
-			return null;
-		}*/
 		
 		public Link getLink(JCheckBoxMenuItem menuItem) {
 			if (menuItem == null)
@@ -934,128 +673,5 @@ extends JFrame implements ChartProgressListener {
 					return Color.BLACK;
 			}
 		}
-	}
-	
-	static class FieldValueRenderer
-	extends DefaultTableCellRenderer {
-	    private static final long serialVersionUID = 4264832765857567868L;
-	    private Field field;
-	    
-		public FieldValueRenderer(Field field) {
-			super();
-			this.field = field;
-		}
-
-	    public void setValue(Object value) {
-	    	if (value == null) {
-	    		setText("");
-	    		return;
-	    	}
-	    	setText(value.toString());
-	    	
-	    	if (!field.isBitmask()) {
-	    		for (FieldValue fValue : field.getValueList())
-	    			if (fValue.value.equals(value)) {
-	    				if (fValue.caption != null) setText(fValue.caption);
-	    				if (fValue.description != null) setToolTipText(fValue.source + ": " + fValue.description);
-						return;
-					}
-	    	} else {
-				try {
-					StringBuilder result = new StringBuilder();
-					int iVal = objectToInt(value);
-					if (iVal == 0)
-						return;
-					
-					for (FieldValue fValue : field.getValueList()) {
-						if (fValue.value.equals(value)) {
-							if (fValue.caption != null) setText(fValue.caption);
-		    				if (fValue.description != null) setToolTipText(fValue.source + ": " + fValue.description);
-							return;
-						}
-						
-						int ifVal = objectToInt(fValue.value);
-						if ((iVal & ifVal) > 0 && fValue.description != null && !fValue.description.isEmpty())
-							result.append(fValue.source).append(": ").append(fValue.description).append("<br>");
-					}
-
-					if (result.length() != 0) {
-						setToolTipText(result.insert(0, "<html>").append("</html>").toString());
-					}
-				} catch (Exception e) {
-					LOG.log(Level.WARNING, "Ошибка при попытке собрать всплывающую подсказку", e);
-					setText("");
-					return;
-				}
-			}
-	    }
-
-	    /** Converts object representation of a whole number to int.
-		 * @param num the object
-		 * @return <code>intValue()</code> or <code>0</code> */
-		private int objectToInt(Object num) {
-			if (num == null)
-				return 0;
-			
-			if (num instanceof Byte) {
-				return ((Byte) num).intValue();
-			} else if (num instanceof Short) {
-				return ((Short) num).intValue();
-			} else if (num instanceof Integer) {
-				return ((Integer) num).intValue();
-			}
-			
-			return 0;
-		}
-	    
-	}
-	
-	static class LogFileTableModel
-	extends AbstractTableModel {
-		private static final long serialVersionUID = -6341608314922452350L;
-		private List<Field> fieldList;
-		
-		/** Records index */
-		private ArrayList<Record> index;
-		
-		public LogFileTableModel(LogFile logFile, boolean wrongLinesOnly) {
-			super();
-			fieldList = Core.getConfigModel().getFieldList();
-			index = logFile.getRecords();
-		}
-		
-		@Override
-		public int getRowCount() {
-			return index.size();
-		}
-
-		@Override
-		public int getColumnCount() {
-			return fieldList.size();
-		}
-		
-		@Override
-		public String getColumnName(int columnIndex) {
-			return fieldList.get(columnIndex).getName();
-		}
-		
-		@Override
-		public Class<?> getColumnClass(int columnIndex) {
-			return fieldList.get(columnIndex).getDatatype().get_class();
-		}
-		
-		public Record getRecord(int index) {
-			return this.index.get(index);
-		}
-
-		@Override
-		public Object getValueAt(int rowIndex, int columnIndex) {
-			return getRecord(rowIndex).getValue(columnIndex);
-		}
-		
-		@Override
-	    public boolean isCellEditable(int row, int column) {
-	       return false;
-	    }		
 	}
 }

@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package ru.foxling.graphit;
+package ru.foxling.graphit.ui;
 
 import java.awt.EventQueue;
 import java.util.EventObject;
@@ -50,7 +50,8 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.JRadioButton;
 import javax.swing.SwingConstants;
 import net.miginfocom.swing.MigLayout;
-import ru.foxling.graphit.config.ConfigModel;
+import ru.foxling.graphit.Core;
+import ru.foxling.graphit.LoggerLabelHandler;
 import ru.foxling.graphit.config.DataType;
 import ru.foxling.graphit.config.Field;
 import ru.foxling.graphit.config.FieldDelimiter;
@@ -98,7 +99,6 @@ public class ConfigFrame extends JFrame {
 	private JCheckBox iOptional;
 	private JTable tValues;
 	private JScrollPane spValues;
-	private ConfigModel configModel;
 	private FormatListModel mdlFormatlist;
 	private ValueListModel mdlValueList;
 	private byte[] configState;
@@ -120,7 +120,6 @@ public class ConfigFrame extends JFrame {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 700, 500);
 		
-		configModel = Core.getConfigModel();
 		saveConfigState();
 		
 		contentPane = new JPanel();
@@ -333,7 +332,7 @@ public class ConfigFrame extends JFrame {
 		try {
 			ByteArrayOutputStream stream = new ByteArrayOutputStream();
 			out = new ObjectOutputStream(stream);
-			out.writeObject(configModel);
+			out.writeObject(Core.getConfigModel());
 			configState = stream.toByteArray();
 			out.close();
 		} catch(IOException ex) {
@@ -345,7 +344,7 @@ public class ConfigFrame extends JFrame {
 		try {
 			ByteArrayInputStream stream = new ByteArrayInputStream(configState);
 			ObjectInputStream in = new ObjectInputStream(stream);
-			configModel = (ConfigModel) in.readObject();
+			Core.setConfigModel((ConfigModel) in.readObject());
 		} catch(IOException | ClassNotFoundException e) {
 			e.printStackTrace();
 		}
@@ -357,7 +356,17 @@ public class ConfigFrame extends JFrame {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		ConfigFrame.launch();
+		EventQueue.invokeLater(new Runnable() {
+			public void run() {
+				try {
+					ConfigFrame frame = new ConfigFrame();
+					frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
+					frame.setVisible(true);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		});
 	}
 	
 	public static void launch() {
@@ -365,6 +374,7 @@ public class ConfigFrame extends JFrame {
 			public void run() {
 				try {
 					ConfigFrame frame = new ConfigFrame();
+					frame.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 					frame.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -400,7 +410,7 @@ public class ConfigFrame extends JFrame {
 		
 		// Field List - Context Menu > Add field
 		miAddField.addActionListener((ActionEvent arg0) -> {
-			configModel.addFieldAfter(getSelectedField());
+			Core.getConfigModel().addFieldAfter(getSelectedField());
 		});
 		
 		// Field List - Context Menu > Remove field(-s)
@@ -411,14 +421,14 @@ public class ConfigFrame extends JFrame {
 				iFieldList.setSelectedIndex(id - 1);
 			} else
 				iFieldList.clearSelection();
-			configModel.removeFields(list);
+			Core.getConfigModel().removeFields(list);
 		});
 		
 		
-		iFieldDelimiter.setModel(new DelimiterListModel(configModel));
+		iFieldDelimiter.setModel(new DelimiterListModel(Core.getConfigModel()));
 		
 		// ComboBox "Datatype" model
-		iDataType.setModel(new DataTypeListModel(configModel));
+		iDataType.setModel(new DataTypeListModel(Core.getConfigModel()));
 		
 		// ComboBox "Format" model
 		mdlFormatlist = new FormatListModel();
@@ -429,12 +439,12 @@ public class ConfigFrame extends JFrame {
 		tValues.setModel(mdlValueList);
 		
 		// Config model >> Field List >> onChange 
-		configModel.addFieldListener((evt) -> {
+		Core.getConfigModel().addFieldListener((evt) -> {
 			Field field = (Field) evt.getSource();
 			
 			if (field != null)
 				try {
-					configModel.validateField(field);
+					Core.getConfigModel().validateField(field);
 					field.setValid(true);
 				} catch (Exception e1) {
 					field.setValid(false);
@@ -459,7 +469,7 @@ public class ConfigFrame extends JFrame {
 					return;
 				
 				if (!iFieldDelimiter.getSelectedItem().equals(field.getDelimiter()))
-					configModel.setFieldDelimiter(field, (FieldDelimiter) iFieldDelimiter.getSelectedItem());
+					Core.getConfigModel().setFieldDelimiter(field, (FieldDelimiter) iFieldDelimiter.getSelectedItem());
 		});
 		
 		iFieldRole.addActionListener(e -> {
@@ -468,7 +478,7 @@ public class ConfigFrame extends JFrame {
 				return;
 			
 			if (!iFieldRole.getSelectedItem().equals(field.getRole()))
-				if (!configModel.setFieldRole(field, (FieldRole) iFieldRole.getSelectedItem()))
+				if (!Core.getConfigModel().setFieldRole(field, (FieldRole) iFieldRole.getSelectedItem()))
 					iFieldRole.setSelectedItem(field.getRole());
 		});
 		
@@ -479,12 +489,12 @@ public class ConfigFrame extends JFrame {
 			
 			Color color = JColorChooser.showDialog(this, "Выберите цвет для графика", field.getColor());
 			if (color != null)
-				configModel.setFieldColor(getSelectedField(), color);
+				Core.getConfigModel().setFieldColor(getSelectedField(), color);
 		});
 
 		// FieldName Change
 		MyVerifier nameVerifier = new MyVerifier((c, a) -> {
-			configModel.setFieldName(getSelectedField(), iFieldName.getText());
+			Core.getConfigModel().setFieldName(getSelectedField(), iFieldName.getText());
 			return true;
 		});
 		iFieldName.setInputVerifier(nameVerifier);
@@ -492,7 +502,7 @@ public class ConfigFrame extends JFrame {
 		
 		// Format edit Change
 		MyVerifier formatVerifier = new MyVerifier((c, a) -> {
-			configModel.setFieldFormat(getSelectedField(), edtFormat.getText());
+			Core.getConfigModel().setFieldFormat(getSelectedField(), edtFormat.getText());
 			return true;
 		});
 		edtFormat.setInputVerifier(formatVerifier);
@@ -505,18 +515,18 @@ public class ConfigFrame extends JFrame {
 			int index = tValues.getSelectedRow();
 			FieldValue value = new FieldValue("");
 			if (index == -1) {
-				configModel.addFieldValueAt(field, null, value);
+				Core.getConfigModel().addFieldValueAt(field, null, value);
 			} else {
-				configModel.addFieldValueAt(field, index + 1, value);
+				Core.getConfigModel().addFieldValueAt(field, index + 1, value);
 			}
 		});
 		
 		miRemoveValue.addActionListener((e) -> {
-			configModel.removeFieldValue(getSelectedField(), tValues.getSelectedRows());
+			Core.getConfigModel().removeFieldValue(getSelectedField(), tValues.getSelectedRows());
 		});
 		
 		btnOkay.addActionListener(e -> {
-			configModel.saveConfig();
+			Core.getConfigModel().saveConfig();
 			super.dispose();
 		});
 		
@@ -525,7 +535,7 @@ public class ConfigFrame extends JFrame {
 			super.dispose();
 		});
 
-		configModel.addPropertyListener(e -> {
+		Core.getConfigModel().addPropertyListener(e -> {
 			switch (e.getPropertyName()) {
 			case "field-delimiter":
 				iDefaultFieldDelimiter.setSelectedItem(FieldDelimiter.valueOf(e.getValue()));
@@ -538,40 +548,40 @@ public class ConfigFrame extends JFrame {
 			}
 		});
 		
-		iDefaultFieldDelimiter.setSelectedItem(configModel.getDefaultFieldDelimiter());
+		iDefaultFieldDelimiter.setSelectedItem(Core.getConfigModel().getDefaultFieldDelimiter());
 		iDefaultFieldDelimiter.addActionListener(e -> {
 			FieldDelimiter d = (FieldDelimiter) iDefaultFieldDelimiter.getSelectedItem();
-			configModel.setProperty("field-delimiter", d.name());
+			Core.getConfigModel().setProperty("field-delimiter", d.name());
 		});
 		
-		iDefaultLineDelimiter.setSelectedItem(configModel.getDefaultLineDelimiter());
+		iDefaultLineDelimiter.setSelectedItem(Core.getConfigModel().getDefaultLineDelimiter());
 		iDefaultLineDelimiter.addActionListener(e -> {
 			FieldDelimiter d = (FieldDelimiter) iDefaultLineDelimiter.getSelectedItem();
-			configModel.setProperty("line-delimiter", d.name());
+			Core.getConfigModel().setProperty("line-delimiter", d.name());
 		});
 		
-		refreshConfigFileLocation(configModel.getConfigFileLocation());
+		refreshConfigFileLocation(Core.getConfigModel().getConfigFileLocation());
 		iWorkDir.addActionListener(e -> {
-			if (!configModel.moveConfigFile(ConfigModel.WORKDIR_PATH))
-				refreshConfigFileLocation(configModel.getConfigFileLocation());
+			if (!Core.getConfigModel().moveConfigFile(ConfigModel.WORKDIR_PATH))
+				refreshConfigFileLocation(Core.getConfigModel().getConfigFileLocation());
 		});
 		iCurrUser.addActionListener(e -> {
-			if (!configModel.moveConfigFile(ConfigModel.APPDATA_PATH))
-				refreshConfigFileLocation(configModel.getConfigFileLocation());
+			if (!Core.getConfigModel().moveConfigFile(ConfigModel.APPDATA_PATH))
+				refreshConfigFileLocation(Core.getConfigModel().getConfigFileLocation());
 		});
 		
 		iOptional.addActionListener(e -> {
-			if (!configModel.setFieldOptional(getSelectedField(), iOptional.isSelected()))
+			if (!Core.getConfigModel().setFieldOptional(getSelectedField(), iOptional.isSelected()))
 				iOptional.setSelected(getSelectedField().isOptional());			
 		});
 		
 		iHashsum.addActionListener(e -> {
-			if (!configModel.setFieldHashsum(getSelectedField(), iHashsum.isSelected()))
+			if (!Core.getConfigModel().setFieldHashsum(getSelectedField(), iHashsum.isSelected()))
 				iHashsum.setSelected(getSelectedField().isHashsum());			
 		});
 		
 		iBitMask.addActionListener(e -> {
-			configModel.setFieldBitmask(getSelectedField(), iBitMask.isSelected());
+			Core.getConfigModel().setFieldBitmask(getSelectedField(), iBitMask.isSelected());
 		});
 		
 		// TODO
@@ -660,12 +670,12 @@ public class ConfigFrame extends JFrame {
 
 		@Override
 		public Field getElementAt(int index) {
-			return configModel.getFieldList().get(index);
+			return Core.getConfigModel().getFieldList().get(index);
 		}
 
 		@Override
 		public int getSize() {
-			return configModel.getFieldList().size();
+			return Core.getConfigModel().getFieldList().size();
 		}
 		
 		/** Refreshes whole list */
@@ -862,12 +872,12 @@ public class ConfigFrame extends JFrame {
 		@Override
 		public void setSelectedItem(Object object) {
 			Format selectedItem = (Format) getSelectedItem();
-		if (selectedItem == null && object == null ||
-				selectedItem != null && selectedItem.equals(object) ||
-				object != null && getIndexOf(object) == -1)
-					return;
+			if (selectedItem == null && object == null ||
+					selectedItem != null && selectedItem.equals(object) ||
+					object != null && getIndexOf(object) == -1)
+						return;
 			
-			configModel.setFieldFormat(getSelectedField(), (Format) object);
+			Core.getConfigModel().setFieldFormat(getSelectedField(), (Format) object);
 			refresh();
 		}
 		

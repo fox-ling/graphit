@@ -44,9 +44,8 @@ public class LogFile {
 	private String intFilename;
 	private String serialNo;
 	private String frimware;
-	private int counter;	
-	private int linesCount;
-	private ArrayList<Startup> startups = new ArrayList<Startup>();
+	private int counter;
+	private ArrayList<Startup> startups;
 
 	private int wStartupCount = 0;
 	private Path filePath;
@@ -60,8 +59,9 @@ public class LogFile {
 	public LogFile(String filename) {
 		this.filename = filename;
 		this.filePath = Paths.get(filename);
+		this.startups = new ArrayList<Startup>(3);
+		this.records = new ArrayList<Record>(25);
 		List<Field> fieldList = Core.getConfigModel().getFieldList();
-		records = new ArrayList<Record>(25);
 		for (int i = 0; i < fieldList.size(); i++) {
 			Field field = fieldList.get(i);
 			if (field.isOptional()) optionalFieldId = i;
@@ -98,10 +98,6 @@ public class LogFile {
 
 	public int getWorkingStartupCount(){
 		return wStartupCount;
-	}
-	
-	public int getLinesCount() {
-		return linesCount;
 	}
 	
 	public ArrayList<Record> getRecords(){
@@ -147,6 +143,7 @@ public class LogFile {
 	public void readFile() throws IOException {
 		int fieldsCount = Core.getConfigModel().getFieldList().size();
 		records.clear();
+		
 		try (BufferedReader reader = Files.newBufferedReader(filePath, encoding)){
 			String line;
 			
@@ -208,7 +205,6 @@ public class LogFile {
 						}
 				}
 			}
-			linesCount = lineNo;
 			
 			//Working startups count:
 			for (i = 0; i < startups.size(); i++)
@@ -298,6 +294,11 @@ public class LogFile {
 		// Calculating hash sum of the string
 		if (hashsumFieldId > -1)
 			rec.setAuthentic(parts.get(hashsumFieldId).equals(getCRC(valueableStr)));
+	}
+	
+	public void clear() {
+		startups.clear();
+		records.clear();
 	}
 	
 	// ===== CRC Section ===========================================================================

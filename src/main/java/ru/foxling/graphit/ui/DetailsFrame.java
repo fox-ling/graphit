@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package ru.foxling.graphit;
+package ru.foxling.graphit.ui;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -29,6 +29,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
+import ru.foxling.graphit.Core;
 import ru.foxling.graphit.logfile.LogFile;
 import ru.foxling.graphit.logfile.ParseExceptionEx;
 import ru.foxling.graphit.logfile.Record;
@@ -52,7 +53,7 @@ import java.util.LinkedList;
 import net.miginfocom.swing.MigLayout;
 import javax.swing.BoxLayout;
 
-public class Details extends JFrame {
+public class DetailsFrame extends JFrame {
 	private static final long serialVersionUID = 1L;
 	private static final String LINE_SEPARATOR = System.getProperty("line.separator");
 	
@@ -79,12 +80,12 @@ public class Details extends JFrame {
 			System.out.println("IOException has gone down");
 			e.printStackTrace();
 		}
-		Details fDetails = new Details(f);
-		fDetails.setDefaultCloseOperation(EXIT_ON_CLOSE);
-		fDetails.setVisible(true);
+		DetailsFrame fDetailsFrame = new DetailsFrame(f);
+		fDetailsFrame.setDefaultCloseOperation(EXIT_ON_CLOSE);
+		fDetailsFrame.setVisible(true);
 	}
 	
-	public Details(final LogFile logFile){
+	public DetailsFrame(final LogFile logFile){
 		super("Details" + logFile.getFileName());
 		setBounds(100, 100, 600, 500);
 		JPanel contentPane = new JPanel();

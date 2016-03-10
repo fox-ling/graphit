@@ -50,7 +50,7 @@ extends Handler {
 		if (lvl.intValue() < level.intValue())
 		    return;
 
-		label.setIcon(Icons.get(lvl,height));
+		label.setIcon(LoggerIcons.get(lvl,height));
 		label.setText(record.getMessage());
 	}
 	

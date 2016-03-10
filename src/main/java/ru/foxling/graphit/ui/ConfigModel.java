@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package ru.foxling.graphit.config;
+package ru.foxling.graphit.ui;
 
 import java.awt.Color;
 import java.io.File;
@@ -45,6 +45,17 @@ import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 import ru.foxling.graphit.Core;
+import ru.foxling.graphit.config.DataType;
+import ru.foxling.graphit.config.DefaultParser;
+import ru.foxling.graphit.config.Field;
+import ru.foxling.graphit.config.FieldDelimiter;
+import ru.foxling.graphit.config.FieldEvent;
+import ru.foxling.graphit.config.FieldListener;
+import ru.foxling.graphit.config.FieldRole;
+import ru.foxling.graphit.config.FieldValue;
+import ru.foxling.graphit.config.PropertyEvent;
+import ru.foxling.graphit.config.PropertyListener;
+import ru.foxling.graphit.config.UniqueFieldException;
 
 public class ConfigModel
 implements Serializable {

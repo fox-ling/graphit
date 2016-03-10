@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package ru.foxling.graphit;
+package ru.foxling.graphit.ui;
 
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
@@ -29,6 +29,10 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
+
+import ru.foxling.graphit.Core;
+import ru.foxling.graphit.LoggerIcons;
+import ru.foxling.graphit.LoggerMemoryHandler;
 
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -220,7 +224,7 @@ public class EventJournalFrame extends JFrame {
 	    		setText("");
 	    		setIcon(null);
 	    	} else {
-	    		setIcon(Icons.get((Level) value, height));
+	    		setIcon(LoggerIcons.get((Level) value, height));
 	    		if (value == Level.SEVERE) {
 	    			setText("Ошибка");
 	    		} else if (value == Level.WARNING) {
