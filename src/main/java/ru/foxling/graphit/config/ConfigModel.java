@@ -19,8 +19,10 @@ package ru.foxling.graphit.config;
 
 import java.awt.Color;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -332,10 +334,8 @@ implements Serializable {
 	        	 eRoot.addContent(eField);
 	         });
 	         
-	         XMLOutputter xmlOutput = new XMLOutputter();
-	         xmlOutput.setFormat(Format.getPrettyFormat());
-	         //xmlOutput.output(doc, System.out);
-	         xmlOutput.output(doc, new FileWriter(file)); 
+	         XMLOutputter xmlOutput = new XMLOutputter(Format.getPrettyFormat().setEncoding("UTF-8"));
+	         xmlOutput.output(doc, new OutputStreamWriter(new FileOutputStream(file), "UTF-8"));
 	      }catch(IOException e){
 	         e.printStackTrace();
 	      }
