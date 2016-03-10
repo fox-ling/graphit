@@ -52,6 +52,7 @@ import javax.swing.SwingConstants;
 import net.miginfocom.swing.MigLayout;
 import ru.foxling.graphit.Core;
 import ru.foxling.graphit.LoggerLabelHandler;
+import ru.foxling.graphit.config.ConfigModel;
 import ru.foxling.graphit.config.DataType;
 import ru.foxling.graphit.config.Field;
 import ru.foxling.graphit.config.FieldDelimiter;

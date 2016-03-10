@@ -52,6 +52,7 @@ import org.jfree.chart.event.ChartProgressListener;
 import org.jfree.chart.plot.XYPlot;
 import ru.foxling.graphit.Core;
 import ru.foxling.graphit.LoggerLabelHandler;
+import ru.foxling.graphit.config.ConfigModel;
 import ru.foxling.graphit.config.DataType;
 import ru.foxling.graphit.config.Field;
 import ru.foxling.graphit.config.FieldRole;
@@ -151,8 +152,7 @@ extends JFrame implements ChartProgressListener {
 				}
 			}
 		});
-		ClassLoader classLoader = getClass().getClassLoader();
-		miOpen.setIcon(new ImageIcon(classLoader.getResource("ic_action_collection.png")));
+		//miOpen.setIcon(getResourceIcon("/resources/ic_action_collection.png"));
 		miOpen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_MASK));
 		mFile.add(miOpen);
 		
@@ -170,7 +170,7 @@ extends JFrame implements ChartProgressListener {
 				fDetailsFrame.setVisible(true);
 			}
 		});
-		miDetails.setIcon(new ImageIcon(classLoader.getResource("ic_action_storage.png")));
+		//miDetails.setIcon(getResourceIcon("ic_action_storage.png"));
 		miDetails.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_D, InputEvent.CTRL_MASK));
 		mFile.add(miDetails);
 		
@@ -333,6 +333,17 @@ extends JFrame implements ChartProgressListener {
 	    Logger.getLogger(getClass().getPackage().getName()).addHandler(new LoggerLabelHandler(lblLogMessage, Level.INFO));
 	    configController = new ConfigController(Core.getConfigModel());
 	}
+	
+	/*private ImageIcon getResourceIcon(String name) {
+		try {
+			byte[] data = Core.getResource(name);
+			if (data.length > 0)
+				return new ImageIcon(data);
+		} catch (IOException e) {
+			LOG.log(Level.INFO, "Не удалось загрузить картинку " + name, e);
+		}
+		return null;
+	}*/
 	
 	private void openLogFile(File aFile){
 		logFile = new LogFile(aFile.getPath());

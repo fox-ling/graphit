@@ -18,11 +18,14 @@
 package ru.foxling.graphit;
 
 import java.awt.EventQueue;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
 import java.util.logging.Logger;
 import javax.swing.UIManager;
 
-import ru.foxling.graphit.ui.ConfigModel;
+import ru.foxling.graphit.config.ConfigModel;
 import ru.foxling.graphit.ui.MainFrame;
 
 public class Core {
@@ -55,6 +58,16 @@ public class Core {
 				}
 			}
 		});
+	}
+	
+	public static byte[] getResource(String name) throws IOException {
+		InputStream iStream = Core.class.getClassLoader().getResourceAsStream(name);
+		ByteArrayOutputStream oStream = new ByteArrayOutputStream();
+		int l = 0;
+		byte[] buffer = new byte[1024];
+		while (-1 != (l = iStream.read(buffer)))
+			oStream.write(buffer, 0, l);
+		return oStream.toByteArray(); 
 	}
 	
 	public static ConfigModel getConfigModel(){

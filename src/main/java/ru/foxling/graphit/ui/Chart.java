@@ -39,6 +39,7 @@ import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.ui.RectangleInsets;
 import ru.foxling.graphit.Core;
+import ru.foxling.graphit.config.ConfigModel;
 import ru.foxling.graphit.config.DataType;
 import ru.foxling.graphit.config.Field;
 import ru.foxling.graphit.config.FieldRole;
