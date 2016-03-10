@@ -228,16 +228,25 @@ extends JFrame implements ChartProgressListener {
 				if (Chart.getChart() != null) {
 					LogFileTableModel model = (LogFileTableModel) table.getModel();
 					try {
+						System.out.printf("%s >> tableSelection%n", LocalTime.now());
 						Record rec = model.getRecord(selectedIndex);
 						long pos = -1;
-						if (Chart.getxField().getDatatype() == DataType.DATETIME) {
-							LocalDateTime datetime = (LocalDateTime) rec.getValue(Chart.getxFieldId());
-							pos = datetime.atZone(ZoneId.systemDefault()).toEpochSecond();
-						} else if (Chart.getxField().getDatatype() == DataType.TIME) {
+						if (Chart.getxField().getDatatype() == DataType.TIME) {
 							LocalTime time = (LocalTime) rec.getValue(Chart.getxFieldId());
 							ZonedDateTime zdt = ZonedDateTime.of(LocalDateTime.of(LocalDate.ofEpochDay(0), time), ZoneId.systemDefault());
 							pos = zdt.toEpochSecond() * 1000;
+						} else if (Chart.getxField().getDatatype() == DataType.DATETIME) {
+							LocalDateTime datetime = (LocalDateTime) rec.getValue(Chart.getxFieldId());
+							ZonedDateTime zdt = ZonedDateTime.of(datetime, ZoneId.systemDefault());
+							pos = zdt.toEpochSecond() * 1000; //datetime.atZone(ZoneId.systemDefault()).toEpochSecond();
+						} else if (Chart.getxField().getDatatype() == DataType.DATE) {
+							LocalDate date = (LocalDate) rec.getValue(Chart.getxFieldId());
+							ZonedDateTime zdt = ZonedDateTime.of(LocalDateTime.of(date, LocalTime.MIN), ZoneId.systemDefault());
+							pos = zdt.toEpochSecond() * 1000;
 						}
+						
+						System.out.printf("%s = %d%n", rec.getValue(Chart.getxFieldId()).toString(), pos);
+						
 						if (pos > -1) {
 							XYPlot xyplot = (XYPlot)Chart.getChart().getPlot();
 							xyplot.setDomainCrosshairValue(pos, true);
@@ -456,6 +465,7 @@ extends JFrame implements ChartProgressListener {
 		if (e.getType() != 2) return;
 		
 		if (Chart.getChart() != null && Chart.getxFieldId() > -1) {
+			System.out.printf("%s >> chartProgress%n", LocalTime.now());
 			XYPlot xyplot = (XYPlot)Chart.getChart().getPlot();
 			double d = xyplot.getDomainCrosshairValue();
 			
@@ -468,6 +478,8 @@ extends JFrame implements ChartProgressListener {
 				value = LocalDateTime.ofInstant(Instant.ofEpochMilli((long) d), ZoneId.systemDefault()).toLocalDate();
 			} else
 				throw new IllegalStateException(String.format("Неподдерщиваемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME", Chart.getxField().getDatatype().getValue()));
+			
+			System.out.printf("%.2f = %s%n", d, value.toString());
 			
 			if (value != null) {
 				List<Record> records = logFile.getRecords();

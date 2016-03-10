@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <field-delimiter>SEMICOLON_SPACE</field-delimiter>
+  <time-format>HH:mm:ss</time-format>
+  <line-delimiter>CRLF</line-delimiter>
+  <date-format>dd.MM.YYYY</date-format>
+  <table-visible>1</table-visible>
+  <launch-visible>0</launch-visible>
+  <datetime-format>dd.MM.YYYY HH:mm:ss</datetime-format>
+  <recent>
+    <item>C:\Users\Fox\Desktop\Graphit\test.txt</item>
+    <item>E:\_dev\Java\Workspace\graphit\misc\00012699.txt</item>
+    <item>E:\_dev\Java\Workspace\graphit\misc\test.txt</item>
+  </recent>
+  <field>
+    <name>время</name>
+    <description>Текущее время</description>
+    <delimiter>SEMICOLON_SPACE</delimiter>
+    <datatype>DATE</datatype>
+    <format>dd.MM.yyyy</format>
+    <role>X_AXIS</role>
+  </field>
+  <field>
+    <name>глуб.</name>
+    <description>Глубина в м.</description>
+    <delimiter>SEMICOLON_SPACE</delimiter>
+    <datatype>INTEGER</datatype>
+    <format>10</format>
+    <role>DRAW</role>
+    <color>ffff0000</color>
+  </field>
+  <field>
+    <name>натяж.</name>
+    <description>Натяжение проволки в кгс</description>
+    <delimiter>SEMICOLON_SPACE</delimiter>
+    <datatype>FLOAT</datatype>
+    <format />
+    <role>DRAW</role>
+    <color>ff00ff00</color>
+  </field>
+</config>
