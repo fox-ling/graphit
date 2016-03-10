@@ -225,10 +225,10 @@ extends JFrame implements ChartProgressListener {
 				ListSelectionModel rowSM = (ListSelectionModel) e.getSource();
 				int selectedIndex = rowSM.getMinSelectionIndex();
 				
-				if (Chart.getChart() != null) {
+				if (Chart.getInstance() != null) {
 					LogFileTableModel model = (LogFileTableModel) table.getModel();
 					try {
-						System.out.printf("%s >> tableSelection%n", LocalTime.now());
+						//System.out.printf("%s >> tableSelection%n", LocalTime.now());
 						Record rec = model.getRecord(selectedIndex);
 						long pos = -1;
 						if (Chart.getxField().getDatatype() == DataType.TIME) {
@@ -245,10 +245,10 @@ extends JFrame implements ChartProgressListener {
 							pos = zdt.toEpochSecond() * 1000;
 						}
 						
-						System.out.printf("%s = %d%n", rec.getValue(Chart.getxFieldId()).toString(), pos);
+						//System.out.printf("%s = %d%n", rec.getValue(Chart.getxFieldId()).toString(), pos);
 						
 						if (pos > -1) {
-							XYPlot xyplot = (XYPlot)Chart.getChart().getPlot();
+							XYPlot xyplot = (XYPlot)Chart.getInstance().getPlot();
 							xyplot.setDomainCrosshairValue(pos, true);
 							
 						}
@@ -399,7 +399,6 @@ extends JFrame implements ChartProgressListener {
 		JFreeChart chart = Chart.chartFactory(logFile);
 		chart.addProgressListener(this);
 		chartPanel.setChart(chart);
-		
 	}
 	
 	private void setTableVisible(boolean visible) {
@@ -464,9 +463,9 @@ extends JFrame implements ChartProgressListener {
 	public void chartProgress(ChartProgressEvent e) {
 		if (e.getType() != 2) return;
 		
-		if (Chart.getChart() != null && Chart.getxFieldId() > -1) {
-			System.out.printf("%s >> chartProgress%n", LocalTime.now());
-			XYPlot xyplot = (XYPlot)Chart.getChart().getPlot();
+		if (Chart.getInstance() != null && Chart.getxFieldId() > -1) {
+			//System.out.printf("%s >> chartProgress%n", LocalTime.now());
+			XYPlot xyplot = (XYPlot)Chart.getInstance().getPlot();
 			double d = xyplot.getDomainCrosshairValue();
 			
 			Object value;
@@ -479,7 +478,7 @@ extends JFrame implements ChartProgressListener {
 			} else
 				throw new IllegalStateException(String.format("Неподдерщиваемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME", Chart.getxField().getDatatype().getValue()));
 			
-			System.out.printf("%.2f = %s%n", d, value.toString());
+			//System.out.printf("%.2f = %s%n", d, value.toString());
 			
 			if (value != null) {
 				List<Record> records = logFile.getRecords();

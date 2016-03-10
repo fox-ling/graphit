@@ -30,9 +30,12 @@ import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.AxisLocation;
 import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.axis.ValueAxis;
+import org.jfree.chart.plot.Plot;
+import org.jfree.chart.plot.ValueAxisPlot;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
+import org.jfree.data.Range;
+import org.jfree.data.RangeType;
 import org.jfree.data.time.Second;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
@@ -51,7 +54,7 @@ import ru.foxling.graphit.logfile.Startup;
 public class Chart {
 	private static final Logger LOG = Logger.getLogger(Chart.class.getName());
 	private static final LocalDate EPOCH_DATE = LocalDate.ofEpochDay(0);
-	private static JFreeChart chart;
+	private static JFreeChart instance;
 	private static XYPlot plot;
 	private static LogFile logFile;
 	private static Field xField;
@@ -59,7 +62,7 @@ public class Chart {
 	private static int xFieldId;
 	
 	public static JFreeChart chartFactory(LogFile logFile) {
-		Chart.yFields.clear();
+		yFields.clear();
 		List<Field> yFields = new LinkedList<>();
 		List<Field> fieldList = Core.getConfigModel().getFieldList(); 
 		for (int i = 0; i < fieldList.size(); i++) {
@@ -92,11 +95,11 @@ public class Chart {
 			} else
 				throw new IllegalStateException(String.format("Неподдерщиваемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME", xField.getDatatype().getValue()));
 			
-			tsLaunch.addOrUpdate(new Second(date.getSecond(), date.getMinute(), date.getHour(), date.getDayOfMonth(), date.getMonthValue(), date.getYear()), 0);
+			tsLaunch.addOrUpdate(new Second(date.getSecond(), date.getMinute(), date.getHour(), date.getDayOfMonth(), date.getMonthValue(), date.getYear()), -1);
 		}
 		dsLaunch.addSeries(tsLaunch);
-		chart = ChartFactory.createTimeSeriesChart(null, null, null, dsLaunch, false, false, false);
-		plot = chart.getXYPlot();
+		instance = ChartFactory.createTimeSeriesChart(null, null, null, dsLaunch, false, false, false);
+		plot = instance.getXYPlot();
 	    plot.setBackgroundPaint(Color.white);
         plot.setDomainGridlinePaint(Color.lightGray);
         plot.setRangeGridlinePaint(Color.lightGray);
@@ -104,8 +107,9 @@ public class Chart {
         plot.setDomainCrosshairVisible(true);
         plot.setDomainCrosshairLockedOnData(true);
         
-        ValueAxis axis = plot.getRangeAxis();
+        NumberAxis axis = (NumberAxis) plot.getRangeAxis();
         axis.setVisible(false);
+        axis.setAutoRangeIncludesZero(true);
         
         // TimeSeries count (Launches count)
         int tsCount = dsLaunch.getSeriesCount();
@@ -120,11 +124,17 @@ public class Chart {
     	
         plot.setRenderer(0, renderer);
         
+        if (!Core.getConfigModel().getLaunchVisible())
+        	setLaunchVisible(false);
+        
         if (xField != null)
 			for (Field yField : yFields)
 				plotFactory(yField);
 		
-        return chart;
+        /*for (int i = 1; i < plot.getRangeAxisCount(); i++) {
+			plot.getRangeAxis(i).setAutoRange(true);
+		}*/
+        return instance;
 	}
 	
 	public static void drawField(Field field) {
@@ -182,7 +192,7 @@ public class Chart {
 			LOG.log(Level.SEVERE, "Поля для графика не определились ({0}={1}; {2}={3})", new Object[]{ xField, xFieldId, yField, yFieldId });
 			return false;
 		}
-		
+		double low = Double.POSITIVE_INFINITY, high = Double.NEGATIVE_INFINITY;
 		TimeSeriesCollection collection = new TimeSeriesCollection();
 		for (Startup startup : logFile.getStartups()) {
 			TimeSeries timeSeries = new TimeSeries(yField.getName());
@@ -204,6 +214,8 @@ public class Chart {
 				fieldValue = rec.getValue(yFieldId);
 				if (fieldValue == null) continue;
 				double value = objectToDouble(fieldValue);
+				if (value > high) high = value;
+				if (value < low) low = value;
 				if (value != Double.NaN) {
 					timeSeries.addOrUpdate(
 							new Second(datetime.getSecond(), datetime.getMinute(), datetime.getHour(),
@@ -218,11 +230,9 @@ public class Chart {
 		
 		Color color = yField.getColor() != null ? yField.getColor() : Color.PINK;
 		
-		NumberAxis numberAxis = new NumberAxis(yField.getName());
-        numberAxis.setAutoRangeIncludesZero(false);
+		NumberAxis numberAxis = new MyNumberAxis(yField.getName(), new Range(low, high));
         numberAxis.setLabelPaint(color);
         numberAxis.setInverted(true);
-        numberAxis.setAutoRangeStickyZero(false);
         numberAxis.setVisible(true);
         
         yFields.add(yField);
@@ -260,7 +270,7 @@ public class Chart {
 	}
 
 	public static void setLaunchVisible(boolean visible) {
-		XYPlot plot = chart.getXYPlot();
+		XYPlot plot = instance.getXYPlot();
 		XYLineAndShapeRenderer renderer = (XYLineAndShapeRenderer) plot.getRenderer(0);
 		for (int i = 0; i < plot.getDataset(0).getSeriesCount(); i++)
 			renderer.setSeriesShapesVisible(i, visible);
@@ -289,7 +299,114 @@ public class Chart {
 		return true;
 	}
 
-	public static JFreeChart getChart() { return chart; }
+	public static JFreeChart getInstance() { return instance; }
 	public static Field getxField() { return xField; }
 	public static int getxFieldId() { return xFieldId; }
+	
+	static class MyNumberAxis
+	extends NumberAxis {
+		private Range dataRange;
+
+		private static final long serialVersionUID = 1550712004602125049L;
+		
+		public MyNumberAxis(String label, Range dataRange) {
+			super(label);
+			this.dataRange = dataRange;
+		}
+
+		@Override
+		protected void autoAdjustRange() {
+			if (dataRange == null) {
+				super.autoAdjustRange();
+			} else
+				autoAdjustRange2();
+		}
+		
+		protected void autoAdjustRange2() {
+			Plot plot = getPlot();
+			if (plot == null) {
+				return;  // no plot, no data
+			}
+
+			if (plot instanceof ValueAxisPlot) {
+				ValueAxisPlot vap = (ValueAxisPlot) plot;
+
+				Range r = dataRange;
+				if (r == null) {
+					r = getDefaultAutoRange();
+				}
+
+				double upper = r.getUpperBound();
+				double lower = r.getLowerBound();
+				if (this.getRangeType() == RangeType.POSITIVE) {
+					lower = Math.max(0.0, lower);
+					upper = Math.max(0.0, upper);
+				}
+				else if (this.getRangeType() == RangeType.NEGATIVE) {
+					lower = Math.min(0.0, lower);
+					upper = Math.min(0.0, upper);
+				}
+
+				if (getAutoRangeIncludesZero()) {
+					lower = Math.min(lower, 0.0);
+					upper = Math.max(upper, 0.0);
+				}
+				double range = upper - lower;
+
+				// if fixed auto range, then derive lower bound...
+				double fixedAutoRange = getFixedAutoRange();
+				if (fixedAutoRange > 0.0) {
+					lower = upper - fixedAutoRange;
+				}
+				else {
+					// ensure the autorange is at least <minRange> in size...
+					double minRange = getAutoRangeMinimumSize();
+					if (range < minRange) {
+						double expand = (minRange - range) / 2;
+						upper = upper + expand;
+						lower = lower - expand;
+						if (lower == upper) { // see bug report 1549218
+							double adjust = Math.abs(lower) / 10.0;
+							lower = lower - adjust;
+							upper = upper + adjust;
+						}
+						if (this.getRangeType() == RangeType.POSITIVE) {
+							if (lower < 0.0) {
+								upper = upper - lower;
+								lower = 0.0;
+							}
+						}
+						else if (this.getRangeType() == RangeType.NEGATIVE) {
+							if (upper > 0.0) {
+								lower = lower - upper;
+								upper = 0.0;
+							}
+						}
+					}
+
+					if (getAutoRangeStickyZero()) {
+						if (upper <= 0.0) {
+							upper = Math.min(0.0, upper + getUpperMargin() * range);
+						}
+						else {
+							upper = upper + getUpperMargin() * range;
+						}
+						if (lower >= 0.0) {
+							lower = Math.max(0.0, lower - getLowerMargin() * range);
+						}
+						else {
+							lower = lower - getLowerMargin() * range;
+						}
+					}
+					else {
+						upper = upper + getUpperMargin() * range;
+						lower = lower - getLowerMargin() * range;
+					}
+				}
+
+				setRange(new Range(lower, upper), false, false);
+			}
+
+		}
+	}
 }
