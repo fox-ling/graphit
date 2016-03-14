@@ -18,7 +18,6 @@
 package ru.foxling.graphit.ui;
 
 import java.awt.Dimension;
-import javax.swing.ImageIcon;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;

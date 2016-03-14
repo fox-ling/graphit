@@ -329,7 +329,7 @@ public class Chart {
 			}
 
 			if (plot instanceof ValueAxisPlot) {
-				ValueAxisPlot vap = (ValueAxisPlot) plot;
+				//ValueAxisPlot vap = (ValueAxisPlot) plot;
 
 				Range r = dataRange;
 				if (r == null) {

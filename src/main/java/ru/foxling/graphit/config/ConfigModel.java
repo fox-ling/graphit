@@ -20,7 +20,6 @@ package ru.foxling.graphit.config;
 import java.awt.Color;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Serializable;
