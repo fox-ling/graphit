@@ -21,6 +21,7 @@ import java.awt.Color;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
@@ -192,9 +193,11 @@ public class Chart {
 			LOG.log(Level.SEVERE, "Поля для графика не определились ({0}={1}; {2}={3})", new Object[]{ xField, xFieldId, yField, yFieldId });
 			return false;
 		}
+		
 		double low = Double.POSITIVE_INFINITY, high = Double.NEGATIVE_INFINITY;
 		TimeSeriesCollection collection = new TimeSeriesCollection();
 		for (Startup startup : logFile.getStartups()) {
+			LocalDateTime xDatetime = null;
 			TimeSeries timeSeries = new TimeSeries(yField.getName());
 			for (Record rec : startup.getRecords()) {
 				if (rec.isDirty()) continue;
@@ -204,10 +207,16 @@ public class Chart {
 				LocalDateTime datetime;
 				if (xField.getDatatype() == DataType.TIME) {
 					datetime = LocalDateTime.of(EPOCH_DATE, (LocalTime) fieldValue);
+					if (xDatetime != null && ChronoUnit.SECONDS.between(xDatetime, datetime) > 1)
+						timeSeries.addOrUpdate(second(xDatetime.plus(1, ChronoUnit.SECONDS)), null);
 				} else if (xField.getDatatype() == DataType.DATE) {
 					datetime = LocalDateTime.of((LocalDate) fieldValue, LocalTime.MIN);
+					if (xDatetime != null && ChronoUnit.DAYS.between(xDatetime, datetime) > 1)
+						timeSeries.addOrUpdate(second(xDatetime.plus(1, ChronoUnit.SECONDS)), null);
 				} else if (xField.getDatatype() == DataType.DATETIME) {
 					datetime = (LocalDateTime) fieldValue;
+					if (xDatetime != null && ChronoUnit.SECONDS.between(xDatetime, datetime) > 1)
+						timeSeries.addOrUpdate(second(xDatetime.plus(1, ChronoUnit.SECONDS)), null);
 				} else
 					throw new IllegalStateException(String.format("Неподдерщиваемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME", xField.getDatatype().getValue()));
 				
@@ -217,11 +226,8 @@ public class Chart {
 				if (value > high) high = value;
 				if (value < low) low = value;
 				if (value != Double.NaN) {
-					timeSeries.addOrUpdate(
-							new Second(datetime.getSecond(), datetime.getMinute(), datetime.getHour(),
-										datetime.getDayOfMonth(), datetime.getMonthValue(), datetime.getYear()),
-							value
-					);
+					timeSeries.addOrUpdate(second(datetime), value);
+					xDatetime = datetime;
 				}
 			}
 			if (!timeSeries.isEmpty())
@@ -253,6 +259,14 @@ public class Chart {
 		}
         plot.setRenderer(id, renderer);
         return true;
+	}
+	
+	private static Second second(LocalDateTime datetime) {
+		if (datetime == null)
+			throw new IllegalArgumentException();
+		
+		return new Second(datetime.getSecond(), datetime.getMinute(), datetime.getHour(),
+				datetime.getDayOfMonth(), datetime.getMonthValue(), datetime.getYear());
 	}
 	
 	private static double objectToDouble(Object value) {
@@ -403,8 +417,9 @@ public class Chart {
 						lower = lower - getLowerMargin() * range;
 					}
 				}
-
-				setRange(new Range(lower, upper), false, false);
+				
+				double margin = (upper - lower) * .05d; 
+				setRange(new Range(lower - margin, upper + margin), false, false);
 			}
 
 		}
