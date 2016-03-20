@@ -195,7 +195,7 @@ public class LogFile {
 						if (startup != null) {
 							Record rec = new Record(lineNo, line, fieldsCount);
 							try {
-								parse(rec);
+								parseRec(rec);
 								records.add(rec);
 							} catch (ParseExceptionEx e) {
 								rec.setParseError(e);
@@ -212,7 +212,7 @@ public class LogFile {
 		}
 	}
 	
-	private void parse(Record rec) throws ParseExceptionEx {
+	private void parseRec(Record rec) throws ParseExceptionEx {
 		/** Source string without hash sum */
 		String	valueableStr = "";
 		

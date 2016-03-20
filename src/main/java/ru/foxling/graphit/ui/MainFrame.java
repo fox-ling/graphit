@@ -27,6 +27,7 @@ import javax.swing.KeyStroke;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
 import java.awt.datatransfer.DataFlavor;
@@ -128,6 +129,7 @@ extends JFrame implements ChartProgressListener {
 	private JPanel pnlStatusBar;
 	private JLabel lblLogMessage;
 	private JMenuItem miShowEventJournal;
+	private LoggerLabelHandler loggerLabelHandler;
 	
 	
 	public MainFrame() {
@@ -338,7 +340,10 @@ extends JFrame implements ChartProgressListener {
 			}
 		});
 	    pnlStatusBar.add(lblLogMessage);
-	    Logger.getLogger(getClass().getPackage().getName()).addHandler(new LoggerLabelHandler(lblLogMessage, Level.INFO));
+
+	    this.loggerLabelHandler = new LoggerLabelHandler(lblLogMessage, Level.INFO);
+	    
+	    Logger.getLogger(Core.class.getPackage().getName()).addHandler(loggerLabelHandler);
 	    configController = new ConfigController(Core.getConfigModel());
 	}
 	
@@ -381,6 +386,29 @@ extends JFrame implements ChartProgressListener {
 		
 		table.setModel(new LogFileTableModel(logFile, false));
 		List<Field> fieldList = Core.getConfigModel().getFieldList();
+		table.setDefaultRenderer(LocalDate.class, new DefaultTableCellRenderer() {
+			private static final long serialVersionUID = 9123910403864393934L;
+
+			@Override
+			protected void setValue(Object value) {
+				if (value == null) {
+					setText("");
+				} else
+					setText(((LocalDate) value).format(Core.F_DATE));
+			}
+		});
+		table.setDefaultRenderer(LocalDateTime.class, new DefaultTableCellRenderer() {
+			private static final long serialVersionUID = 1710199589203664465L;
+
+			@Override
+			protected void setValue(Object value) {
+				if (value == null) {
+					setText("");
+				} else
+					setText(((LocalDateTime) value).format(Core.F_DATETIME));
+			}
+		});
+		
 		Enumeration<TableColumn> cols = table.getColumnModel().getColumns();
 		while (cols.hasMoreElements()) {
 			TableColumn col = (TableColumn) cols.nextElement();

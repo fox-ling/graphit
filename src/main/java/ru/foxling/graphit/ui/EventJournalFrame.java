@@ -159,6 +159,7 @@ public class EventJournalFrame extends JFrame {
 				sb.append(throwableToStr(thrown));
 			}
 			txtEventText.setText(sb.toString());
+			txtEventText.setCaretPosition(0);
 		}
 	}
 	
