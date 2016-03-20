@@ -199,7 +199,7 @@ public class LogFile {
 								records.add(rec);
 							} catch (ParseExceptionEx e) {
 								rec.setParseError(e);
-								LOG.log(Level.WARNING, e.getMessage(), e);
+								LOG.log(Level.WARNING, e.getMessage() + String.format("[Строка=%d; Столбец=%d]", lineNo, e.getErrorOffset()), e);
 							}
 							startup.addLine(rec);
 						}
@@ -238,18 +238,23 @@ public class LogFile {
 			FieldDelimiter delimiter = field.getDelimiter();
 			if (fid != fieldsCount - 1) {
 				int pos = str.indexOf(delimiter.getValue());
-				if (pos == -1)
+				if (pos == -1) {
 					if (field.isOptional()) {
 						continue;
 					} else
 						throw new ParseExceptionEx(String.format("Ошибка при попытке разделить строку лог файла на отдельные поля: поле %s отсутствует (не найден разделитель \"%s\")", field, delimiter.getValue()), offset, rec.getSourceStr().length() - offset, fid);
+				}
 				String part = str.substring(0, pos);
 				parts.add(part);
 				pos += delimiter.getLength();
 				offset += pos;
 				str = str.substring(pos);
 			} else
-				parts.add(str);
+				if (!str.isEmpty()) {
+					parts.add(str);
+				} else
+					if (!field.isOptional())
+						throw new ParseExceptionEx(String.format("Ошибка при попытке разделить строку лог файла на отдельные поля: поле %s отсутствует", field, delimiter.getValue()), offset, rec.getSourceStr().length() - offset, fid);
 			
 			offsets.add(offset);
 			
