@@ -199,7 +199,7 @@ public class LogFile {
 								records.add(rec);
 							} catch (ParseExceptionEx e) {
 								rec.setParseError(e);
-								LOG.log(Level.WARNING, e.getMessage() + String.format("[Строка=%d; Столбец=%d]", lineNo, e.getErrorOffset()), e);
+								LOG.log(Level.WARNING, e.getMessage() + String.format(" [Строка=%d; Столбец=%d]", lineNo, e.getErrorOffset()), e);
 							}
 							startup.addLine(rec);
 						}

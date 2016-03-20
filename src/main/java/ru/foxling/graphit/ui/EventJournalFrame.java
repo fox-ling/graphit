@@ -19,14 +19,27 @@ package ru.foxling.graphit.ui;
 
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.Writer;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.filechooser.FileFilter;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
 
@@ -43,9 +56,12 @@ import javax.swing.JTable;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.ListSelectionModel;
+import javax.swing.JPopupMenu;
 
 public class EventJournalFrame extends JFrame {
 	private static final long serialVersionUID = -5784368020743203402L;
+	private static JFileChooser fileChooser;
+	
 	private static Logger LOG = Logger.getLogger(EventJournalFrame.class.getName());
 	private static final String NEW_LINE = "\n\r";
 	private JPanel contentPane;
@@ -53,6 +69,7 @@ public class EventJournalFrame extends JFrame {
 	private JSplitPane splitPane;
 	private JTextArea txtEventText;
 	private LoggerMemoryHandler handler; 
+	private JPopupMenu pmTable;
 
 	public static void launch() {
 		EventQueue.invokeLater(new Runnable() {
@@ -99,6 +116,53 @@ public class EventJournalFrame extends JFrame {
 		scpEventText.setViewportView(txtEventText);
 		splitPane.setRightComponent(scpEventText);
 		splitPane.setResizeWeight(.6);
+		
+		pmTable = new JPopupMenu();
+		
+		JMenuItem miClear = new JMenuItem("Очистить");
+		miClear.addActionListener(e -> Core.getMemoryHandler().flush());
+		pmTable.add(miClear);
+		
+		JMenuItem miSaveLog = new JMenuItem("Сохранить в файл");
+		miSaveLog.addActionListener(e -> {
+			if (fileChooser == null) {
+				fileChooser = new JFileChooser(".");
+				fileChooser.setFileFilter(new EndsWithFilter("Текстовый файл", ".txt"));
+			}
+			fileChooser.setSelectedFile(new File(fileChooser.getCurrentDirectory(), LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH-mm-ss"))+ " event log.txt"));
+			if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+				File file = fileChooser.getSelectedFile();
+				if (file.exists()) {
+					if (JOptionPane.YES_OPTION != JOptionPane.showOptionDialog(this,
+							"Файл " + file.getName() + " уже существует, перезаписать?",
+							"Внимание",
+						    JOptionPane.YES_NO_OPTION,
+						    JOptionPane.WARNING_MESSAGE, null, null, null)) {
+						LOG.log(Level.INFO, "Операция сохранения отменена");
+						return;
+					}
+				}
+				
+				try {
+					OutputStream outStream = new FileOutputStream(file);
+					try(Writer writer = new OutputStreamWriter(outStream, "UTF-8")){
+						LoggerMemoryHandler h = Core.getMemoryHandler();
+						for (int i = 0; i < h.getSize(); i++) {
+							writer.write(formatLogRecord(h.getRecord(i)));
+							writer.write(NEW_LINE);
+							writer.write("========================================================");
+							writer.write(NEW_LINE);
+						}
+					}
+				//} catch (FileNotFoundException e1) {
+				} catch (Exception e2) {
+					LOG.log(Level.WARNING, "Не удалось записать лог в файл " + file.getAbsolutePath(), e2);
+				}
+			}
+		});
+		pmTable.add(miSaveLog);
+
+		MainFrame.addPopup(table, pmTable);
 	}
 	
 	private String datetimeFromEpoch(long millis) {
@@ -134,6 +198,24 @@ public class EventJournalFrame extends JFrame {
 		return sb.toString();
 	}
 	
+	private String formatLogRecord(LogRecord rec){
+		StringBuilder sb = new StringBuilder(250);
+		sb.append("DateTime: ").append(datetimeFromEpoch(rec.getMillis())).append(NEW_LINE);
+		sb.append("Level: ").append(rec.getLevel()).append(NEW_LINE);
+		sb.append("Source: ").append(rec.getSourceClassName()).append(":").append(rec.getSourceMethodName()).append(NEW_LINE);
+		if (rec.getMessage() != null) {
+			String msg = handler.getFormatter() == null ? rec.getMessage() : handler.getFormatter().formatMessage(rec);
+			sb.append("Message: ").append(msg).append(NEW_LINE);
+		}
+		
+		Throwable thrown = rec.getThrown();
+		if (thrown != null) {
+			sb.append("--- Thrown ---------------------------").append(NEW_LINE);
+			sb.append(throwableToStr(thrown));
+		}
+		return sb.toString();
+	}
+	
 	private class LoggerRecSelectionListener
 	implements ListSelectionListener {
 		@Override
@@ -142,23 +224,7 @@ public class EventJournalFrame extends JFrame {
 			if (e.getValueIsAdjusting()) return;
 			
 			int index = ((ListSelectionModel) e.getSource()).getMinSelectionIndex();
-			LogRecord rec = getRecord(index);
-			
-			StringBuilder sb = new StringBuilder(250);
-			sb.append("Level: ").append(rec.getLevel()).append(NEW_LINE);
-			sb.append("DateTime: ").append(datetimeFromEpoch(rec.getMillis())).append(NEW_LINE);
-			sb.append("Source: ").append(rec.getSourceClassName()).append(":").append(rec.getSourceMethodName()).append(NEW_LINE);
-			if (rec.getMessage() != null) {
-				String msg = handler.getFormatter() == null ? rec.getMessage() : handler.getFormatter().formatMessage(rec);
-				sb.append("Message: ").append(msg).append(NEW_LINE);
-			}
-			
-			Throwable thrown = rec.getThrown();
-			if (thrown != null) {
-				sb.append("--- Thrown ---------------------------").append(NEW_LINE);
-				sb.append(throwableToStr(thrown));
-			}
-			txtEventText.setText(sb.toString());
+			txtEventText.setText(formatLogRecord(getRecord(index)));
 			txtEventText.setCaretPosition(0);
 		}
 	}
@@ -250,5 +316,29 @@ public class EventJournalFrame extends JFrame {
 	    		setText(((Throwable) value).getClass().getSimpleName());
 	    }
 	}
+	
+	class EndsWithFilter extends FileFilter {
+		private String ending;
 
+		private String description;
+
+		public EndsWithFilter(String description, String ending) {
+			this.description = description;
+			this.ending = ending;
+		}
+
+		public boolean accept(File file) {
+			if (file.isDirectory()) {
+				return true;
+			}
+			String path = file.getAbsolutePath();
+			if (path.endsWith(ending))
+				return true;
+			return false;
+		}
+
+		public String getDescription() {
+			return (description == null ? ending : description);
+		}
+	}
 }

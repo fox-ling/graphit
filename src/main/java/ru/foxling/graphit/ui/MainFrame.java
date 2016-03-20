@@ -468,7 +468,7 @@ extends JFrame implements ChartProgressListener {
 		@Override public void dragExit(DropTargetEvent dte) {}
 	}
 	
-	private static void addPopup(Component component, final JPopupMenu popup) {
+	static void addPopup(Component component, final JPopupMenu popup) {
 		component.addMouseListener(new MouseAdapter() {
 			public void mousePressed(MouseEvent e) {
 				if (e.isPopupTrigger()) {

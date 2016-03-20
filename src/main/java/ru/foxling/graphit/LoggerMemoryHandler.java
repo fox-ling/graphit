@@ -87,11 +87,15 @@ extends Handler {
 	}*/
 	
 	public void flush() {
+		if (getSize() == 0)
+			return;
+		
 		for (int i = 0; i < getSize() - 1; i++)
 			buffer[i] = null;
 		
 		overwrite = false;
 		position = 0;
+		fireBufferChanged(new ChangeEvent(this));
 	}
 	
 	public void close() {
