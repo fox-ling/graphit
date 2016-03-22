@@ -18,6 +18,8 @@
 package ru.foxling.graphit.ui;
 
 import java.awt.Dimension;
+import java.awt.EventQueue;
+
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -100,6 +102,7 @@ import net.miginfocom.swing.MigLayout;
 import java.awt.BorderLayout;
 import javax.swing.JLabel;
 import javax.swing.border.EtchedBorder;
+import javax.swing.JButton;
 
 public class MainFrame
 extends JFrame implements ChartProgressListener {
@@ -130,6 +133,7 @@ extends JFrame implements ChartProgressListener {
 	private JLabel lblLogMessage;
 	private JMenuItem miShowEventJournal;
 	private LoggerLabelHandler loggerLabelHandler;
+	private JButton btnNewButton;
 	
 	
 	public MainFrame() {
@@ -317,6 +321,22 @@ extends JFrame implements ChartProgressListener {
 	    flowLayout_1.setAlignment(FlowLayout.LEFT);
 	    flowLayout_1.setVgap(0);
 	    pTools.add(pAxes, "cell 1 0,grow");
+	    
+	    btnNewButton = new JButton("New button");
+	    btnNewButton.addActionListener(e -> {
+	    	EventQueue.invokeLater(new Runnable() {
+	    		public void run() {
+	    			try {
+	    				ChartSettings frame = new ChartSettings();
+	    				frame.setVisible(true);
+	    				frame.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+	    			} catch (Exception e) {
+	    				e.printStackTrace();
+	    			}
+	    		}
+	    	});
+	    });
+	    pAxes.add(btnNewButton);
 	    
 	    cbTable = new JCheckBox("Таблица");
 	    cbTable.setEnabled(false);

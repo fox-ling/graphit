@@ -34,6 +34,7 @@ import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.Plot;
 import org.jfree.chart.plot.ValueAxisPlot;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.xy.XYDotRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.Range;
 import org.jfree.data.RangeType;
@@ -250,12 +251,14 @@ public class Chart {
         plot.setDataset(id, xydsDepth);
         plot.mapDatasetToRangeAxis(id, id);
         
-        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+        XYDotRenderer renderer = new XYDotRenderer();
+        //renderer.
+        //XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
         for (int i = 0; i < collection.getSeriesCount(); i++) {
-        	renderer.setSeriesLinesVisible(i, true);
+        	//renderer.setSeriesLinesVisible(i, true);
         	renderer.setSeriesPaint(i, color);
-        	renderer.setSeriesShapesVisible(i, false);
-        	renderer.setSeriesShapesFilled(i, false);
+        	//renderer.setSeriesShapesVisible(i, false);
+        	//renderer.setSeriesShapesFilled(i, false);
 		}
         plot.setRenderer(id, renderer);
         return true;
