@@ -33,17 +33,17 @@ extends AbstractTableModel {
 	private List<Field> fieldList;
 	
 	/** Records index */
-	private ArrayList<Record> index;
+	private ArrayList<Record> data;
 	
 	public LogFileTableModel(LogFile logFile, boolean wrongLinesOnly) {
 		super();
 		fieldList = Core.getConfigModel().getFieldList();
-		index = logFile.getRecords();
+		data = logFile.getGoodRecords();
 	}
 	
 	@Override
 	public int getRowCount() {
-		return index.size();
+		return data.size();
 	}
 
 	@Override
@@ -62,7 +62,7 @@ extends AbstractTableModel {
 	}
 	
 	public Record getRecord(int index) {
-		return this.index.get(index);
+		return this.data.get(index);
 	}
 
 	@Override

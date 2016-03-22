@@ -80,6 +80,7 @@ public class Chart {
 			drawable(logFile);
 		} catch (Exception e) {
 			LOG.log(Level.SEVERE, "Построение графика невозможно", e);
+			return null;
 		}
 		Chart.logFile = logFile;
 		
@@ -196,10 +197,10 @@ public class Chart {
 		
 		double low = Double.POSITIVE_INFINITY, high = Double.NEGATIVE_INFINITY;
 		TimeSeriesCollection collection = new TimeSeriesCollection();
-		for (Startup startup : logFile.getStartups()) {
+		//for (Startup startup : logFile.getStartups()) {
 			LocalDateTime xDatetime = null;
 			TimeSeries timeSeries = new TimeSeries(yField.getName());
-			for (Record rec : startup.getRecords()) {
+			for (Record rec : logFile.getGoodRecords()) { //startup.getRecords()
 				if (rec.isDirty()) continue;
 				Object fieldValue = rec.getValue(xFieldId);
 				if (fieldValue == null) continue;
@@ -232,7 +233,7 @@ public class Chart {
 			}
 			if (!timeSeries.isEmpty())
 				collection.addSeries(timeSeries);
-		}
+		//}
 		
 		Color color = yField.getColor() != null ? yField.getColor() : Color.PINK;
 		
@@ -294,10 +295,7 @@ public class Chart {
 		if (logFile == null)
 			throw new IllegalStateException("Неизвестная ошибка (LogFile is NULL)");
 		
-		if (logFile.getStartups().size() == 0)
-			throw new IllegalStateException("В файле отсутствуют запуски");
-		
-		if (logFile.getRecords().size() == 0)
+		if (logFile.getGoodRecords().size() == 0)
 			throw new IllegalStateException("В файле нет ни одной нормальной записи");
 		ConfigModel configModel = Core.getConfigModel();
 		boolean xAxis = false;

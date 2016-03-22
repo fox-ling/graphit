@@ -185,8 +185,8 @@ public class DetailsFrame extends JFrame {
 			summarytext.append("--------------------").append(LINE_SEPARATOR)
 				.append("STARTUP #").append(startupNode.getId()).append("::").append(LINE_SEPARATOR)
 				.append("- datetime: ").append(startup.getDatetime().format(Core.F_DATETIME)).append(LINE_SEPARATOR)
-				.append("- line no.: ").append(startup.getLineNo()).append(LINE_SEPARATOR)
-				.append("- lines count: ").append(startup.getRecords().size()).append(LINE_SEPARATOR);
+				.append("- line no.: ").append(startup.getLineNo()).append(LINE_SEPARATOR);
+				//.append("- lines count: ").append(startup.getRecords().size()).append(LINE_SEPARATOR)
 
 			startups.add(startup);
 		} else
@@ -206,35 +206,34 @@ public class DetailsFrame extends JFrame {
 		StyleConstants.setAlignment(sAlignRight, StyleConstants.ALIGN_RIGHT);
 		StyleConstants.setForeground(sError, Color.red);
 		StyleConstants.setForeground(sComment, Color.lightGray);
-		for (Startup startup : startups) {
-			if (iWrongHash.isSelected() || iUnparsable.isSelected()) {
-				for (Record rec : startup.getRecords()) {
-					int l, offset, length;
-					String errorMsg;
-					if (iUnparsable.isSelected() && rec.isDirty()) {
-						ParseExceptionEx error = rec.getParseError();
-						offset = error.getErrorOffset();
-						length = error.getErrorLength();
-						errorMsg = error.getMessage();
+		
+		if (iWrongHash.isSelected() || iUnparsable.isSelected()) {
+			for (Record rec : logFile.getRecords()) {
+				int l, offset, length;
+				String errorMsg;
+				if (iUnparsable.isSelected() && rec.isDirty()) {
+					ParseExceptionEx error = rec.getParseError();
+					offset = error.getErrorOffset();
+					length = error.getErrorLength();
+					errorMsg = error.getMessage();
+				} else
+					if (iWrongHash.isSelected() && !rec.isAuthentic() ) {
+						offset = -1;
+						length = -1;
+						errorMsg = "Некоррекная хэш сумма строки";
 					} else
-						if (iWrongHash.isSelected() && !rec.isAuthentic() ) {
-							offset = -1;
-							length = -1;
-							errorMsg = "Некоррекная хэш сумма строки";
-						} else
-							continue;
-					
-					l = dLine.getLength();
-					try {
-						dLine.insertString(l, rec.getSourceStr() + "  " + errorMsg + LINE_SEPARATOR, null);
-						dLineNo.insertString(dLineNo.getLength(), Integer.toString(rec.getLineno()) + LINE_SEPARATOR, sAlignRight);
-					} catch (BadLocationException e) {
-						e.printStackTrace();
-					}
-					
-					if (offset != -1) dLine.setCharacterAttributes(l + offset, length, sError, false);
-					dLine.setCharacterAttributes(l + rec.getSourceStr().length() + 2, errorMsg.length(), sComment, false);
+						continue;
+				
+				l = dLine.getLength();
+				try {
+					dLine.insertString(l, rec.getSourceStr() + "  " + errorMsg + LINE_SEPARATOR, null);
+					dLineNo.insertString(dLineNo.getLength(), Integer.toString(rec.getLineno()) + LINE_SEPARATOR, sAlignRight);
+				} catch (BadLocationException e) {
+					e.printStackTrace();
 				}
+				
+				if (offset != -1) dLine.setCharacterAttributes(l + offset, length, sError, false);
+				dLine.setCharacterAttributes(l + rec.getSourceStr().length() + 2, errorMsg.length(), sComment, false);
 			}
 		}
 		iLineNo.setStyledDocument(dLineNo);

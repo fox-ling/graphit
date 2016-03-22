@@ -508,7 +508,7 @@ extends JFrame implements ChartProgressListener {
 			//System.out.printf("%.2f = %s%n", d, value.toString());
 			
 			if (value != null) {
-				List<Record> records = logFile.getRecords();
+				List<Record> records = logFile.getGoodRecords();
 				
 				for (int i = 0; i < records.size(); i++) {
 					Record rec = records.get(i);

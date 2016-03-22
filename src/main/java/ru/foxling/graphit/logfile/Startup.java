@@ -19,7 +19,6 @@ package ru.foxling.graphit.logfile;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
 
 /** Class that stores data of one of the startups (launches)*/
 public class Startup {
@@ -36,24 +35,14 @@ public class Startup {
 	 *  Дата/время запуска */
 	private LocalDateTime datetime = null;
 	
-	private ArrayList<Record> records = new ArrayList<Record>();
-	
 	public Startup(int lineno){
 		this.lineno = lineno;
-	}
-	
-	public void addLine(Record rec) {
-		if (rec == null)
-			throw new IllegalArgumentException();
-		
-		records.add(rec);
 	}
 
 	public int getLineNo() { return lineno; }
 	public LocalDate getDate() { return date; }
 	public LocalTime getTime() { return time; }
 	public LocalDateTime getDatetime() { return datetime; }
-	public ArrayList<Record> getRecords() { return records; }
 
 	public void setDate(LocalDate date) {
 		this.date = date;

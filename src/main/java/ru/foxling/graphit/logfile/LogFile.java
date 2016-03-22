@@ -47,19 +47,22 @@ public class LogFile {
 	private int counter;
 	private ArrayList<Startup> startups;
 
-	private int wStartupCount = 0;
 	private Path filePath;
 	private final Charset encoding = Charset.forName("Cp1251");
 	private int optionalFieldId = -1;
 	private int hashsumFieldId = -1;
 	
-	/** Records index */
+	/** All records from the log file */
 	private ArrayList<Record> records;
+	
+	/** Good records only */
+	private ArrayList<Record> goodRecords;
 	
 	public LogFile(String filename) {
 		this.filename = filename;
 		this.filePath = Paths.get(filename);
 		this.startups = new ArrayList<Startup>(3);
+		this.goodRecords = new ArrayList<Record>(25);
 		this.records = new ArrayList<Record>(25);
 		List<Field> fieldList = Core.getConfigModel().getFieldList();
 		for (int i = 0; i < fieldList.size(); i++) {
@@ -91,15 +94,17 @@ public class LogFile {
 	public String getSerialNo() {
 		return serialNo;
 	}
-
+	
 	public ArrayList<Startup> getStartups() {
 		return startups;
 	}
-
-	public int getWorkingStartupCount(){
-		return wStartupCount;
+	
+	/** Returns only good records */
+	public ArrayList<Record> getGoodRecords(){
+		return goodRecords;
 	}
 	
+	/** Returns all records */
 	public ArrayList<Record> getRecords(){
 		return records;
 	}
@@ -142,6 +147,7 @@ public class LogFile {
 	/** Parses log-file's startups and their lines */
 	public void readFile() throws IOException {
 		int fieldsCount = Core.getConfigModel().getFieldList().size();
+		goodRecords.clear();
 		records.clear();
 		
 		try (BufferedReader reader = Files.newBufferedReader(filePath, encoding)){
@@ -190,25 +196,20 @@ public class LogFile {
 										}
 									}
 							}
-					} else
+					} else {
 						//Parsing data line
-						if (startup != null) {
-							Record rec = new Record(lineNo, line, fieldsCount);
-							try {
-								parseRec(rec);
-								records.add(rec);
-							} catch (ParseExceptionEx e) {
-								rec.setParseError(e);
-								LOG.log(Level.WARNING, e.getMessage() + String.format(" [Строка=%d; Столбец=%d]", lineNo, e.getErrorOffset()), e);
-							}
-							startup.addLine(rec);
+						Record rec = new Record(lineNo, line, fieldsCount);
+						try {
+							parseRec(rec);
+							goodRecords.add(rec);
+						} catch (ParseExceptionEx e) {
+							rec.setParseError(e);
+							LOG.log(Level.WARNING, e.getMessage() + String.format(" [Строка=%d; Столбец=%d]", lineNo, e.getErrorOffset()), e);
 						}
+						records.add(rec);
+					}
 				}
 			}
-			
-			//Working startups count:
-			for (i = 0; i < startups.size(); i++)
-				if (startups.get(i).getRecords().size() > 0) wStartupCount++;
 		}
 	}
 	
@@ -303,7 +304,7 @@ public class LogFile {
 	
 	public void clear() {
 		startups.clear();
-		records.clear();
+		goodRecords.clear();
 	}
 	
 	// ===== CRC Section ===========================================================================
