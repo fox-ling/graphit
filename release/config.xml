@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <field-delimiter>SEMICOLON_SPACE</field-delimiter>
+  <time-format>HH:mm:ss</time-format>
+  <line-delimiter>CRLF</line-delimiter>
+  <date-format>dd.MM.YYYY</date-format>
+  <table-visible>1</table-visible>
+  <launch-visible>1</launch-visible>
+  <datetime-format>dd.MM.YYYY HH:mm:ss</datetime-format>
+  <recent>
+    <item>E:\_dev\Java\Workspace\graphit\bin\00012699.log</item>
+    <item>E:\_dev\Java\Workspace\graphit\bin\test.log</item>
+    <item>C:\Users\Fox\Desktop\00012699.txt</item>
+    <item>C:\Users\Fox\Desktop\00012687.LOG</item>
+    <item>E:\_dev\Java\Workspace\graphit\misc\00012699.txt</item>
+    <item>E:\_dev\Java\Workspace\graphit\misc\test.txt</item>
+  </recent>
+  <field>
+    <name>время</name>
+    <description>Текущее время</description>
+    <delimiter>SEMICOLON_SPACE</delimiter>
+    <datatype>TIME</datatype>
+    <format>HH:mm:ss</format>
+    <role>X_AXIS</role>
+  </field>
+  <field>
+    <name>глуб.</name>
+    <description>Глубина в м.</description>
+    <delimiter>SEMICOLON_SPACE</delimiter>
+    <datatype>INTEGER</datatype>
+    <format>10</format>
+    <role>DRAW</role>
+    <color>ffff0000</color>
+  </field>
+  <field>
+    <name>натяж.</name>
+    <description>Натяжение проволки в кгс</description>
+    <delimiter>SEMICOLON_SPACE</delimiter>
+    <datatype>FLOAT</datatype>
+    <format />
+    <role>DRAW</role>
+    <color>ff00ff00</color>
+  </field>
+  <field>
+    <name>ДВП</name>
+    <description>Датчик верхнего положения</description>
+    <delimiter>SEMICOLON_SPACE</delimiter>
+    <datatype>BYTE</datatype>
+    <format>10</format>
+    <role>NONE</role>
+    <values>
+      <item value="-1" caption="Обрыв" />
+      <item value="0" caption="не ВП" />
+      <item value="+1" caption="ВП" />
+    </values>
+  </field>
+  <field>
+    <name>Uтек</name>
+    <description>Напряжение в сети в Вольтах (на фазе L1)</description>
+    <delimiter>SEMICOLON_SPACE</delimiter>
+    <datatype>SHORT</datatype>
+    <format>10</format>
+    <role>NONE</role>
+  </field>
+  <field>
+    <name>клав</name>
+    <description>Шестнадцатиричное значение (Карта адресов ModBus RTU, значение мнемоники knob_state)</description>
+    <delimiter>SEMICOLON_SPACE</delimiter>
+    <datatype>STRING</datatype>
+    <format />
+    <role>NONE</role>
+  </field>
+  <field>
+    <name>F</name>
+    <description>Текущая скорость</description>
+    <delimiter>SEMICOLON_SPACE</delimiter>
+    <datatype>BYTE</datatype>
+    <format>10</format>
+    <role>NONE</role>
+  </field>
+  <field>
+    <name>режим</name>
+    <description>Режим работы СУ</description>
+    <delimiter>SEMICOLON_SPACE</delimiter>
+    <datatype>BYTE</datatype>
+    <format>10</format>
+    <role>NONE</role>
+    <values>
+      <item value="0" caption="Ручной" />
+      <item value="1" caption="Полуавтомат" />
+      <item value="2" caption="Автомат" />
+    </values>
+  </field>
+  <field>
+    <name>ход</name>
+    <description>Направление хода скребка</description>
+    <delimiter>SEMICOLON_SPACE</delimiter>
+    <datatype>STRING</datatype>
+    <format />
+    <role>NONE</role>
+    <values>
+      <item value="S" caption="Останов" />
+      <item value="U" caption="Вверх" />
+      <item value="D" caption="Вниз" />
+    </values>
+  </field>
+  <field>
+    <name>(Ошиб)</name>
+    <description>Код ошибки (Карта адресов ModBus RTU, мнемоника - global_err_register)</description>
+    <delimiter>SEMICOLON_SPACE</delimiter>
+    <datatype>SHORT</datatype>
+    <format>16</format>
+    <role>NONE</role>
+    <optional>1</optional>
+    <bitmask>1</bitmask>
+    <values>
+      <item value="0x0001" description="Восстановление после автоматического сброса по &quot;зависанию&quot;" />
+      <item value="0x0002" description="Недостаточно места на карте памяти" />
+      <item value="0x0004" description="Ошибка карты памяти SD" />
+      <item value="0x0008" description="Ошибка файловой системы на карте памяти SD" />
+      <item value="0x0010" description="Ошибка тензоизмерительного модуля (датчик натяжения)" />
+      <item value="0x0020" description="Обрыв внешней цепи датчика натяжения" />
+      <item value="0x0100" description="Обнаружены много кратные нажатия одной клавиши" />
+      <item value="0x0200" description="Обнаружено длительное удержание одной клавиши, возможно &quot;залипание&quot;" />
+      <item value="0x0400" description="Коэффициенты подстройки датчика натяжения повреждены, использованы значения по умолчанию" />
+      <item value="0x0800" description="Обрыв внешней цепи датчика натяжения" />
+    </values>
+  </field>
+  <field>
+    <name>хеш</name>
+    <description>Слово-ключ для защиты от изменения строк</description>
+    <delimiter>CRLF</delimiter>
+    <datatype>STRING</datatype>
+    <format />
+    <role>NONE</role>
+    <hashsum>1</hashsum>
+  </field>
+</config>

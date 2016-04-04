@@ -119,7 +119,7 @@ public class ConfigFrame extends JFrame {
 	public ConfigFrame() {
 		super("Настройки");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 700, 500);
+		setBounds(100, 100, 620, 500);
 		
 		saveConfigState();
 		
@@ -175,7 +175,7 @@ public class ConfigFrame extends JFrame {
 		
 		JPanel pnlFields = new JPanel();
 		tabbedPane.addTab("Настройка полей", null, pnlFields, null);
-		pnlFields.setLayout(new MigLayout("", "[][]", "[]"));
+		pnlFields.setLayout(new MigLayout("", "[][grow]", "[]"));
 		
 		JPanel pnlFieldList = new JPanel();
 		pnlFieldList.setPreferredSize(new Dimension(100, 100));
@@ -222,7 +222,7 @@ public class ConfigFrame extends JFrame {
 		pnlFormat.add(iFormat);
 		pnlFormat.add(edtFormat);
 		
-		pnlMisc.setLayout(new MigLayout("", "[grow][grow]", "[][][][][][][][][grow]"));
+		pnlMisc.setLayout(new MigLayout("", "[]20[grow]", "[][][][][][][][][grow]"));
 		pnlMisc.add(lblFieldName, "cell 0 0");
 		pnlMisc.add(iFieldName, "cell 1 0,growx");
 		pnlMisc.add(lblFieldDelimiter, "cell 0 1");
