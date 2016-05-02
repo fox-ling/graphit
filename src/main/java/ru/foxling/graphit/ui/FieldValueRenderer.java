@@ -37,6 +37,7 @@ extends DefaultTableCellRenderer {
 	}
 
     public void setValue(Object value) {
+    	setToolTipText(null);
     	if (value == null) {
     		setText("");
     		return;

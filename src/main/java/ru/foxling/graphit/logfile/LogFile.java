@@ -289,6 +289,7 @@ public class LogFile {
 				continue;
 			Field field = fieldList.get(fid);
 			try {
+				part = part.trim();
 				Object value = field.getParser().parse(part);
 				rec.setValue(fid, value);
 			} catch (Exception e) {

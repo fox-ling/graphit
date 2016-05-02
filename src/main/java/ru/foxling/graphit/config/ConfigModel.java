@@ -377,6 +377,19 @@ implements Serializable {
 		if (recentFiles.remove(path))
 			firePropertyChanged(new PropertyEvent(this, "recent-file", path, PropertyEvent.DELETE));
 	}
+	
+	/** Remove bad links from the recent files list */
+	public void removeMissingRecents() {
+		boolean listChanged = false;
+		for (int i = recentFiles.size() - 1; i >=0 ; i--) {
+			String recent = recentFiles.get(i);
+			if (!new File(recent).exists() && recentFiles.remove(recent))
+				listChanged = true;
+		}
+		
+		if (listChanged)
+			firePropertyChanged(new PropertyEvent(this, "recent-file", null, PropertyEvent.DELETE));
+	}
 
 	public void removeRecentFiles() {
 		boolean fire = !recentFiles.isEmpty();

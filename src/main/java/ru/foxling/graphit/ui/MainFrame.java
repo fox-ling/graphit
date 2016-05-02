@@ -80,6 +80,7 @@ import java.awt.FlowLayout;
 
 import javax.swing.JSplitPane;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 
@@ -386,6 +387,7 @@ extends JFrame implements ChartProgressListener {
 		
 		table.setModel(new LogFileTableModel(logFile, false));
 		List<Field> fieldList = Core.getConfigModel().getFieldList();
+		
 		table.setDefaultRenderer(LocalDate.class, new DefaultTableCellRenderer() {
 			private static final long serialVersionUID = 9123910403864393934L;
 
@@ -415,7 +417,16 @@ extends JFrame implements ChartProgressListener {
 			Field field = fieldList.get(col.getModelIndex());
 			if (!field.getValueList().isEmpty())
 				col.setCellRenderer(new FieldValueRenderer(field));
+			
+			DefaultTableCellRenderer cr = ((DefaultTableCellRenderer)col.getCellRenderer());
+			if (cr == null) {
+				cr = new DefaultTableCellRenderer();
+				col.setCellRenderer(cr);
+			}
+			cr.setHorizontalAlignment(SwingConstants.CENTER);
 		}
+		
+		//TODO: setHorizontalAlignment
 		
 		miDetails.setEnabled(true);
 		iLaunch.setEnabled(true);
@@ -553,12 +564,10 @@ extends JFrame implements ChartProgressListener {
 				    options[0]);
 				
 				if (n == 0) {
-					removeRecentFile(file.getPath());
+					configModel.removeRecentFile(file.getPath());
 				} else 
 					if (n == 1)
-						for (String recent : configModel.getRecentFiles())
-							if (!new File(recent).exists())
-								configModel.removeRecentFile(recent);
+						configModel.removeMissingRecents();
 			}
 		};
 		
@@ -663,10 +672,6 @@ extends JFrame implements ChartProgressListener {
 		
 		public void addRecentFile(String path) {
 			configModel.addRecentFile(path);
-		}
-		
-		public void removeRecentFile(String path) {
-			configModel.removeRecentFile(path);
 		}
 		
 		public void removeRecentFiles() {
