@@ -49,16 +49,13 @@ import ru.foxling.graphit.Core;
 
 public class ConfigModel
 implements Serializable {
-	public static void main(String[] args) {
-		Core.getConfigModel().saveConfig();
-	}
-	
 	private static final long serialVersionUID = 838784836109476476L;
 	private static Logger LOG = Logger.getLogger(ConfigModel.class.getName()); 
 	private static final String FILENAME = "config.xml";
 	private static final String FILE_SEPARATOR = System.getProperty("file.separator");
 	public static final String WORKDIR_PATH = getWorkDirPath() + FILENAME;
 	public static final String APPDATA_PATH = getAppDataPath() + FILENAME; 
+	public static ConfigModel instance;
 	
 	/** Good colors */
 	private static final List<Color> COLORS = Arrays.asList( Color.RED, Color.GREEN, Color.BLUE, Color.BLACK, Color.CYAN, Color.PINK, Color.MAGENTA);
@@ -72,7 +69,7 @@ implements Serializable {
 	private List<Field> fieldList;
 	protected EventListenerList listenerList = new EventListenerList();
 	
-	public ConfigModel() {
+	private ConfigModel() {
 		properties = new HashMap<String,String>();
 		recentFiles = new LinkedList<String>();
 		fieldList = new ArrayList<Field>();
@@ -103,6 +100,17 @@ implements Serializable {
 		properties.put("datetime-format", "dd.MM.YYYY HH:mm:ss");
 	}
 	
+	public static ConfigModel getInstance() {
+		if (instance == null) {
+			instance = new ConfigModel();
+		}
+		return instance;
+	}
+
+	public static void setInstance(ConfigModel instance) {
+		ConfigModel.instance = instance;
+	}
+
 	public String getProperty(String name) {
 		return properties.get(name);
 	}
@@ -855,8 +863,8 @@ implements Serializable {
 			throw new IllegalStateException("Строковые данные нельзя поместить на график");
 		
 		if (role == FieldRole.X_AXIS) {
-			if (!Arrays.asList(DataType.DATE, DataType.TIME, DataType.DATETIME).contains(field.getDatatype()))
-				throw new IllegalStateException("В качестве данных для оси X поддерживаются только временнЫе типы (date/time/datetime)");
+			if (!Arrays.asList(DataType.DATE, DataType.TIME, DataType.DATETIME, DataType.OVERFLOWING_TIME_SEQUENCE).contains(field.getDatatype()))
+				throw new IllegalStateException("В качестве данных для оси X поддерживаются только временнЫе типы (date/time/datetime/overflowing_time)");
 		
 			for (Field f : fieldList)
 				if (!f.equals(field) && f.getRole() == FieldRole.X_AXIS)

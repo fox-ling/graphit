@@ -25,12 +25,7 @@ public class Startup {
 	/** File's line no <br>
 	 * Номер строки в файле */
 	private int lineno;
-	/** Launch date <br>
-	 * Дата запуска */
-	private LocalDate date = null;
-	/** Launch time <br>
-	 * Время запуска */
-	private LocalTime time = null;
+	
 	/** Launch datetime <br>
 	 *  Дата/время запуска */
 	private LocalDateTime datetime = null;
@@ -40,16 +35,24 @@ public class Startup {
 	}
 
 	public int getLineNo() { return lineno; }
-	public LocalDate getDate() { return date; }
-	public LocalTime getTime() { return time; }
+	public LocalDate getDate() { return datetime.toLocalDate(); }
+	public LocalTime getTime() { return datetime.toLocalTime(); }
 	public LocalDateTime getDatetime() { return datetime; }
 
 	public void setDate(LocalDate date) {
-		this.date = date;
+		if (datetime == null) {
+			datetime = LocalDateTime.of(date, LocalTime.MIN);
+		} else {
+			datetime = LocalDateTime.of(date, datetime.toLocalTime());
+		}
 	}
 
 	public void setTime(LocalTime time) {
-		this.time = time;
+		if (datetime == null) {
+			datetime = LocalDateTime.of(LocalDate.ofEpochDay(0), time);
+		} else {
+			datetime = LocalDateTime.of(datetime.toLocalDate(), time);
+		}
 	}
 
 	public void setDatetime(LocalDateTime datetime) {

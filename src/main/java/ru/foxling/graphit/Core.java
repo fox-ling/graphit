@@ -25,7 +25,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.logging.Logger;
 import javax.swing.UIManager;
 
-import ru.foxling.graphit.config.ConfigModel;
 import ru.foxling.graphit.ui.MainFrame;
 
 public class Core {
@@ -34,8 +33,7 @@ public class Core {
 	public static final DateTimeFormatter F_DATETIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 	
 	private static final Logger LOG = Logger.getLogger(Core.class.getPackage().getName());
-	private static final LoggerMemoryHandler memHandler = new LoggerMemoryHandler(512); 
-	private static ConfigModel configModel = new ConfigModel();
+	private static final LoggerMemoryHandler memHandler = new LoggerMemoryHandler(512);
 
 	static {
 		LOG.addHandler(memHandler);
@@ -70,14 +68,6 @@ public class Core {
 		return oStream.toByteArray(); 
 	}
 	
-	public static ConfigModel getConfigModel(){
-		return Core.configModel;
-	}
-	
-	public static void setConfigModel(ConfigModel configModel) {
-		Core.configModel = configModel;
-	}
-
 	public static LoggerMemoryHandler getMemoryHandler() {
 		return Core.memHandler;
 	}

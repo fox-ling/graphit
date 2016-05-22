@@ -154,6 +154,7 @@ implements Serializable {
 				}
 			};
 		case TIME:
+		case OVERFLOWING_TIME_SEQUENCE:
 			return new Parser<LocalTime>() {
 				private static final long serialVersionUID = 8700299087095366406L;
 				transient private final DateTimeFormatter F = _formatter;
@@ -199,6 +200,7 @@ implements Serializable {
 			case DATE:
 			case TIME:
 			case DATETIME:
+			case OVERFLOWING_TIME_SEQUENCE:
 				if (format.value == "")
 					throw new IllegalArgumentException("Формат даты не предоставлен");
 				return DefaultParser.datetimeFactory(datatype, format);

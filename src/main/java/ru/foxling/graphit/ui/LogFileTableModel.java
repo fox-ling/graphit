@@ -17,15 +17,12 @@
 
 package ru.foxling.graphit.ui;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.table.AbstractTableModel;
 
-import ru.foxling.graphit.Core;
 import ru.foxling.graphit.config.Field;
-import ru.foxling.graphit.logfile.LogFile;
-import ru.foxling.graphit.logfile.Record;
+import ru.foxling.graphit.logfile.ParsedData;
 
 public class LogFileTableModel
 extends AbstractTableModel {
@@ -33,12 +30,12 @@ extends AbstractTableModel {
 	private List<Field> fieldList;
 	
 	/** Records index */
-	private ArrayList<Record> data;
+	private ParsedData data;
 	
-	public LogFileTableModel(LogFile logFile, boolean wrongLinesOnly) {
+	public LogFileTableModel(List<Field> fieldList, ParsedData data) {
 		super();
-		fieldList = Core.getConfigModel().getFieldList();
-		data = logFile.getGoodRecords();
+		this.fieldList = fieldList;
+		this.data = data;
 	}
 	
 	@Override
@@ -61,13 +58,9 @@ extends AbstractTableModel {
 		return fieldList.get(columnIndex).getDatatype().get_class();
 	}
 	
-	public Record getRecord(int index) {
-		return this.data.get(index);
-	}
-
 	@Override
 	public Object getValueAt(int rowIndex, int columnIndex) {
-		return getRecord(rowIndex).getValue(columnIndex);
+		return data.getValue(rowIndex, columnIndex);
 	}
 	
 	@Override

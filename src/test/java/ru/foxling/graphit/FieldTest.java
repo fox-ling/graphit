@@ -75,6 +75,12 @@ public class FieldTest {
 					src = t.format(DateTimeFormatter.ofPattern(format.value));
 					assertEquals(t, (LocalTime) field.getParser().parse(src));
 				} break;
+				case OVERFLOWING_TIME_SEQUENCE: {
+					LocalTime t = LocalTime.now();
+					t = t.minusNanos(t.getNano());
+					src = t.format(DateTimeFormatter.ofPattern(format.value));
+					assertEquals(t, (LocalTime) field.getParser().parse(src));
+				} break;
 				case DATE: {
 					LocalDate d = LocalDate.now();
 					src = d.format(DateTimeFormatter.ofPattern(format.value));

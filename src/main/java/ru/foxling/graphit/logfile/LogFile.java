@@ -31,7 +31,9 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import gnu.trove.map.hash.TIntIntHashMap;
 import ru.foxling.graphit.Core;
+import ru.foxling.graphit.config.ConfigModel;
 import ru.foxling.graphit.config.Field;
 import ru.foxling.graphit.config.FieldDelimiter;
 
@@ -48,23 +50,38 @@ public class LogFile {
 	private ArrayList<Startup> startups;
 
 	private Path filePath;
-	private final Charset encoding = Charset.forName("Cp1251");
+	private final Charset charset;
 	private int optionalFieldId = -1;
 	private int hashsumFieldId = -1;
 	
-	/** All records from the log file */
-	private ArrayList<Record> records;
+	/** Good records */
+	private ParsedData parsedData;
 	
-	/** Good records only */
-	private ArrayList<Record> goodRecords;
+	/** Source strings */
+	private TStringList sourceData;
 	
-	public LogFile(String filename) {
+	/** Bad records */
+	private ArrayList<BadRecord> badRecords;
+	
+	/** {@link #sourceData} [key] ~ {@link #parsedData}/{@link #badRecords} [value] index <br>
+	 * <code>key</code> -- normal zero-based index <br>
+	 * <code>value</code> -- <u>1-based index</u>*, where values > 0 are {@link #parsedData} indexes and values < 0 are {@link #badRecords} indexes <br><br>
+	 * <i>*Note that collections themselves have zero-bases indexing. I've made <code>[value]</code> 1-based just to fit two indexes in one space</i> 
+	 */
+	private TIntIntHashMap index;
+	
+	public LogFile(ConfigModel config, String filename) {
 		this.filename = filename;
-		this.filePath = Paths.get(filename);
-		this.startups = new ArrayList<Startup>(3);
-		this.goodRecords = new ArrayList<Record>(25);
-		this.records = new ArrayList<Record>(25);
-		List<Field> fieldList = Core.getConfigModel().getFieldList();
+		charset = Charset.forName("Cp1251");
+		filePath = Paths.get(filename);
+		startups = new ArrayList<Startup>(3);
+		badRecords = new ArrayList<BadRecord>(25);
+		parsedData = new ParsedData(config, charset);
+		sourceData = new TStringList(charset);
+		index = new TIntIntHashMap();
+		
+		
+		List<Field> fieldList = config.getFieldList();
 		for (int i = 0; i < fieldList.size(); i++) {
 			Field field = fieldList.get(i);
 			if (field.isOptional()) optionalFieldId = i;
@@ -99,19 +116,14 @@ public class LogFile {
 		return startups;
 	}
 	
-	/** Returns only good records */
-	public ArrayList<Record> getGoodRecords(){
-		return goodRecords;
-	}
-	
 	/** Returns all records */
-	public ArrayList<Record> getRecords(){
-		return records;
+	public ArrayList<BadRecord> getBadRecords(){
+		return badRecords;
 	}
 
 	/** Parses log-file header */
 	public void readHeader() {
-		try (BufferedReader reader = Files.newBufferedReader(filePath, encoding)){			
+		try (BufferedReader reader = Files.newBufferedReader(filePath, charset)){			
 			String str;
 			while ((str = reader.readLine()) != null) {
 				if (str.isEmpty()) break;
@@ -146,11 +158,9 @@ public class LogFile {
 
 	/** Parses log-file's startups and their lines */
 	public void readFile() throws IOException {
-		int fieldsCount = Core.getConfigModel().getFieldList().size();
-		goodRecords.clear();
-		records.clear();
-		
-		try (BufferedReader reader = Files.newBufferedReader(filePath, encoding)){
+		badRecords.clear();
+		try (BufferedReader reader = Files.newBufferedReader(filePath, charset)){
+			boolean startupJustParsed = false;
 			String line;
 			
 			int lineNo = 0;
@@ -168,6 +178,7 @@ public class LogFile {
 						if (line.equals("@ startup")) {
 							startup = new Startup(lineNo); 
 							startups.add(startup);
+							startupJustParsed = true;
 						} else
 							// Parsing startup DateTime
 							if (startup != null) {
@@ -178,7 +189,7 @@ public class LogFile {
 											date = line.substring(i + 1);
 											startup.setDate(LocalDate.parse(date, Core.F_DATE));
 										} catch (Exception e) {
-											e.printStackTrace();
+											LOG.log(Level.WARNING, "Не удалось определить дату запуска в строке #" + Integer.toString(lineNo), e);
 										}
 									}
 								} else
@@ -191,33 +202,35 @@ public class LogFile {
 												if (startup.getDate() != null)
 													startup.setDatetime(LocalDateTime.of(startup.getDate(), startup.getTime()));
 											} catch (Exception e) {
-												e.printStackTrace();
+												LOG.log(Level.WARNING, "Не удалось определить время запуска в строке #" + Integer.toString(lineNo), e);
 											}
 										}
 									}
 							}
-					} else {
-						//Parsing data line
-						Record rec = new Record(lineNo, line, fieldsCount);
+					} else { //Parsing data line
+						if (startupJustParsed && startup != null && startup.getDatetime() != null) {
+							parsedData.setCurrentDatetime(startup.getDatetime());
+						}
+						startupJustParsed = false;
 						try {
-							parseRec(rec);
-							goodRecords.add(rec);
+							parseRec(lineNo, line);
 						} catch (ParseExceptionEx e) {
-							rec.setParseError(e);
+							badRecords.add(new BadRecord(lineNo, line, e.getMessage(), e.getErrorOffset(), e.getErrorLength(), e.getFieldId()));
+							sourceData.add(line);
+							index.put(sourceData.size() - 1, -1 * badRecords.size());
 							LOG.log(Level.WARNING, e.getMessage() + String.format(" [Строка=%d; Столбец=%d]", lineNo, e.getErrorOffset()), e);
 						}
-						records.add(rec);
 					}
 				}
 			}
 		}
 	}
 	
-	private void parseRec(Record rec) throws ParseExceptionEx {
+	private void parseRec(int lineNo, String rec) throws ParseExceptionEx {
 		/** Source string without hash sum */
 		String	valueableStr = "";
 		
-		List<Field> fieldList = Core.getConfigModel().getFieldList();
+		List<Field> fieldList = ConfigModel.getInstance().getFieldList();
 		int fieldsCount = fieldList.size();
 		
 		/** The line's fields (string parts) */
@@ -233,38 +246,38 @@ public class LogFile {
 		int fid = -1;
 		int offset = 0;
 		
-		String str = rec.getSourceStr();
+		
+		StringBuilder sb = new StringBuilder(rec);
 		for (fid = 0; fid < fieldsCount; fid++) {
 			Field field = fieldList.get(fid);
 			FieldDelimiter delimiter = field.getDelimiter();
 			if (fid != fieldsCount - 1) {
-				int pos = str.indexOf(delimiter.getValue());
+				int pos = sb.indexOf(delimiter.getValue());
 				if (pos == -1) {
 					if (field.isOptional()) {
 						continue;
 					} else
-						throw new ParseExceptionEx(String.format("Ошибка при попытке разделить строку лог файла на отдельные поля: поле %s отсутствует (не найден разделитель \"%s\")", field, delimiter.getValue()), offset, rec.getSourceStr().length() - offset, fid);
+						throw new ParseExceptionEx(String.format("Ошибка при попытке разделить строку лог файла на отдельные поля: поле %s отсутствует (не найден разделитель \"%s\")", field, delimiter.getValue()), offset, rec.length() - offset, fid);
 				}
-				String part = str.substring(0, pos);
-				parts.add(part);
+				parts.add(sb.substring(0, pos));
 				pos += delimiter.getLength();
 				offset += pos;
-				str = str.substring(pos);
+				sb.delete(0, pos);
 			} else
-				if (!str.isEmpty()) {
-					parts.add(str);
+				if (sb.length() != 0) {
+					parts.add(sb.toString());
 				} else
 					if (!field.isOptional())
-						throw new ParseExceptionEx(String.format("Ошибка при попытке разделить строку лог файла на отдельные поля: поле %s отсутствует", field, delimiter.getValue()), offset, rec.getSourceStr().length() - offset, fid);
+						throw new ParseExceptionEx(String.format("Ошибка при попытке разделить строку лог файла на отдельные поля: поле %s отсутствует", field, delimiter.getValue()), offset, rec.length() - offset, fid);
 			
 			offsets.add(offset);
 			
 			// save string without the hash sum field for later verification 
 			if (hashsumFieldId == fid) {
 				if (fid != 0)
-					valueableStr = rec.getSourceStr().substring(0, offset);
+					valueableStr = rec.substring(0, offset);
 				if (fid != fieldsCount - 1)
-					valueableStr += rec.getSourceStr().substring(offset);
+					valueableStr += rec.substring(offset);
 			}
 			field = null;
 		}
@@ -272,16 +285,17 @@ public class LogFile {
 		// Check if actual parts count equals expected fields count
 		if (parts.size() != fieldsCount) {
 			if (optionalFieldId == -1) {
-				throw new ParseExceptionEx(String.format("Несоответствие количеств ожидаемого (%d) и фактического полей (%d)", fieldsCount, parts.size()), 0, rec.getSourceStr().length());
+				throw new ParseExceptionEx(String.format("Несоответствие количеств ожидаемого (%d) и фактического полей (%d)", fieldsCount, parts.size()), 0, rec.length());
 			} else
 				if (parts.size() == fieldsCount - 1) {
 					parts.add(optionalFieldId, null); // If we missing only optional field value, then insert NULL at its position
 					offsets.add(optionalFieldId, -1); // ... don't forget about offsets
 				} else
-					throw new ParseExceptionEx(String.format("Несоответствие количеств ожидаемого (%d-%d) и фактического полей (%d)", fieldsCount - 1, fieldsCount, parts.size()), 0, rec.getSourceStr().length());
+					throw new ParseExceptionEx(String.format("Несоответствие количеств ожидаемого (%d-%d) и фактического полей (%d)", fieldsCount - 1, fieldsCount, parts.size()), 0, rec.length());
 		}
 			
 		// Parsing string parts --> fields' values
+		Object[] values = new Object[fieldsCount];
 		offset = 0;
 		for (fid = 0; fid < fieldsCount; fid++) {
 			String part = parts.get(fid);
@@ -290,8 +304,7 @@ public class LogFile {
 			Field field = fieldList.get(fid);
 			try {
 				part = part.trim();
-				Object value = field.getParser().parse(part);
-				rec.setValue(fid, value);
+				values[fid] = field.getParser().parse(part);
 			} catch (Exception e) {
 				throw new ParseExceptionEx(String.format("Ошибка преобразования строки \"%s\" в тип %s", part, field.getDatatype().getValue()), offset, part.length(), fid);
 			}
@@ -299,15 +312,30 @@ public class LogFile {
 		}
 		
 		// Calculating hash sum of the string
-		if (hashsumFieldId > -1)
-			rec.setAuthentic(parts.get(hashsumFieldId).equals(getCRC(valueableStr)));
+		boolean authentic = hashsumFieldId == -1 || parts.get(hashsumFieldId).equals(getCRC(valueableStr));
+		try {
+			parsedData.addRecord(values, authentic);
+			if (!authentic) {
+				sourceData.add(rec);
+				index.put(sourceData.size() - 1, parsedData.size());
+			}
+		} catch (Exception e) {
+			LOG.log(Level.SEVERE, "Ошибка при сохранении записи в модель", e);
+		}
 	}
 	
-	public void clear() {
-		startups.clear();
-		goodRecords.clear();
+	public ParsedData getParsedData() {
+		return parsedData;
 	}
 	
+	public String getSourceLine(int index) {
+		return sourceData.get(index);
+	}
+
+	public TIntIntHashMap getIndex() {
+		return index;
+	}
+
 	// ===== CRC Section ===========================================================================
 	private final static short[] auchCRCHi = {
 		0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 

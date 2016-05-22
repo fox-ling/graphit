@@ -51,6 +51,9 @@ public enum DataType {
 	)),
 	DATETIME("Дата/Время", "DATETIME", LocalDateTime.class, false, Arrays.asList(
 			new Format("dd.MM.yyyy HH:mm:ss", "dd.MM.yyyy HH:mm:ss")
+	)),
+	OVERFLOWING_TIME_SEQUENCE("Переполняемая временная последовательность", "OVERFLOWING_TIME_SEQUENCE", LocalDateTime.class, false, Arrays.asList(
+			new Format("HH:mm:ss", "HH:mm:ss")
 	));
 	
 	private final String caption;

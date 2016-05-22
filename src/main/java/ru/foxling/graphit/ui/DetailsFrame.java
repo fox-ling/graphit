@@ -29,10 +29,11 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
+import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.procedure.TIntIntProcedure;
 import ru.foxling.graphit.Core;
 import ru.foxling.graphit.logfile.LogFile;
-import ru.foxling.graphit.logfile.ParseExceptionEx;
-import ru.foxling.graphit.logfile.Record;
+import ru.foxling.graphit.logfile.BadRecord;
 import ru.foxling.graphit.logfile.Startup;
 
 import javax.swing.JTree;
@@ -45,11 +46,8 @@ import javax.swing.text.StyledDocument;
 import javax.swing.JCheckBox;
 import javax.swing.JTextPane;
 
-import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.LinkedList;
-
 import net.miginfocom.swing.MigLayout;
 import javax.swing.BoxLayout;
 
@@ -65,25 +63,6 @@ public class DetailsFrame extends JFrame {
 	private LogFile logFile;
 	private JTextPane iLine;
 	private JTextPane iLineNo;
-	
-	public static void main(String[] args) {
-		LinkedList<String> recent = Core.getConfigModel().getRecentFiles();
-		if (recent.size() == 0) {
-			System.out.println("No Recent");
-			return;
-		}
-		LogFile f = new LogFile(recent.get(0));
-		try {
-			f.readFile();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			System.out.println("IOException has gone down");
-			e.printStackTrace();
-		}
-		DetailsFrame fDetailsFrame = new DetailsFrame(f);
-		fDetailsFrame.setDefaultCloseOperation(EXIT_ON_CLOSE);
-		fDetailsFrame.setVisible(true);
-	}
 	
 	public DetailsFrame(final LogFile logFile){
 		super("Details" + logFile.getFileName());
@@ -208,33 +187,40 @@ public class DetailsFrame extends JFrame {
 		StyleConstants.setForeground(sComment, Color.lightGray);
 		
 		if (iWrongHash.isSelected() || iUnparsable.isSelected()) {
-			for (Record rec : logFile.getRecords()) {
-				int l, offset, length;
-				String errorMsg;
-				if (iUnparsable.isSelected() && rec.isDirty()) {
-					ParseExceptionEx error = rec.getParseError();
-					offset = error.getErrorOffset();
-					length = error.getErrorLength();
-					errorMsg = error.getMessage();
-				} else
-					if (iWrongHash.isSelected() && !rec.isAuthentic() ) {
+			TIntIntHashMap index = logFile.getIndex();
+			TIntIntProcedure p = new TIntIntProcedure() {
+				@Override
+				public boolean execute(int key, int value) {
+					int l, offset, length;
+					String errorMsg;
+					if (iWrongHash.isSelected() && value > 0) {
 						offset = -1;
 						length = -1;
 						errorMsg = "Некоррекная хэш сумма строки";
 					} else
-						continue;
-				
-				l = dLine.getLength();
-				try {
-					dLine.insertString(l, rec.getSourceStr() + "  " + errorMsg + LINE_SEPARATOR, null);
-					dLineNo.insertString(dLineNo.getLength(), Integer.toString(rec.getLineno()) + LINE_SEPARATOR, sAlignRight);
-				} catch (BadLocationException e) {
-					e.printStackTrace();
+						if (iUnparsable.isSelected() && value < 0) {
+							BadRecord rec = logFile.getBadRecords().get(-1 * value - 1);
+							offset = rec.getErrorOffset();
+							length = rec.getErrorLength();
+							errorMsg = rec.getErrorMsg();
+						} else
+							return true;
+					
+					String srcLine = logFile.getSourceLine(key);
+					l = dLine.getLength();
+					try {
+						dLine.insertString(l, srcLine + "  " + errorMsg + LINE_SEPARATOR, null);
+						dLineNo.insertString(dLineNo.getLength(), Integer.toString(0/*rec.getLineno()*/) + LINE_SEPARATOR, sAlignRight);
+					} catch (BadLocationException e) {
+						e.printStackTrace();
+					}
+					
+					if (offset != -1) dLine.setCharacterAttributes(l + offset, length, sError, false);
+					dLine.setCharacterAttributes(l + srcLine.length() + 2, errorMsg.length(), sComment, false);
+					return true;
 				}
-				
-				if (offset != -1) dLine.setCharacterAttributes(l + offset, length, sError, false);
-				dLine.setCharacterAttributes(l + rec.getSourceStr().length() + 2, errorMsg.length(), sComment, false);
-			}
+			};
+			index.forEachEntry(p);
 		}
 		iLineNo.setStyledDocument(dLineNo);
 		iLine.setStyledDocument(dLine);

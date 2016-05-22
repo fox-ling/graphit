@@ -42,14 +42,12 @@ import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.ui.RectangleInsets;
-import ru.foxling.graphit.Core;
 import ru.foxling.graphit.config.ConfigModel;
-import ru.foxling.graphit.config.DataType;
 import ru.foxling.graphit.config.Field;
 import ru.foxling.graphit.config.FieldRole;
 import ru.foxling.graphit.config.UniqueFieldException;
 import ru.foxling.graphit.logfile.LogFile;
-import ru.foxling.graphit.logfile.Record;
+import ru.foxling.graphit.logfile.ParsedData;
 import ru.foxling.graphit.logfile.Startup;
 
 public class Chart {
@@ -65,7 +63,7 @@ public class Chart {
 	public static JFreeChart chartFactory(LogFile logFile) {
 		yFields.clear();
 		List<Field> yFields = new LinkedList<>();
-		List<Field> fieldList = Core.getConfigModel().getFieldList(); 
+		List<Field> fieldList = ConfigModel.getInstance().getFieldList(); 
 		for (int i = 0; i < fieldList.size(); i++) {
 			Field f = fieldList.get(i);
 			
@@ -87,17 +85,23 @@ public class Chart {
 		TimeSeriesCollection dsLaunch = new TimeSeriesCollection();
 		TimeSeries tsLaunch = new TimeSeries("Launch");
 		for (Startup startup : logFile.getStartups()) {
-			LocalDateTime date;
-			if (xField.getDatatype() == DataType.TIME) {
-				date = LocalDateTime.of(EPOCH_DATE, startup.getTime());
-			} else if (xField.getDatatype() == DataType.DATETIME) {
-				date = startup.getDatetime();
-			} else if (xField.getDatatype() == DataType.DATE) {
-				date = LocalDateTime.of(startup.getDate(), LocalTime.MIN);
-			} else
-				throw new IllegalStateException(String.format("Неподдерщиваемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME", xField.getDatatype().getValue()));
+			LocalDateTime datetime;
+			switch (xField.getDatatype()) {
+			case OVERFLOWING_TIME_SEQUENCE:
+			case DATETIME:
+				datetime = startup.getDatetime();
+				break;
+			case TIME:
+				datetime = LocalDateTime.of(EPOCH_DATE, startup.getTime());
+				break;
+			case DATE:
+				datetime = LocalDateTime.of(startup.getDate(), LocalTime.MIN);
+				break;
+			default:
+				throw new IllegalStateException(String.format("Неподдерщиваемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME/TIME_SEQUENCE", xField.getDatatype().getValue()));
+			}
 			
-			tsLaunch.addOrUpdate(new Second(date.getSecond(), date.getMinute(), date.getHour(), date.getDayOfMonth(), date.getMonthValue(), date.getYear()), -1);
+			tsLaunch.addOrUpdate(new Second(datetime.getSecond(), datetime.getMinute(), datetime.getHour(), datetime.getDayOfMonth(), datetime.getMonthValue(), datetime.getYear()), -1);
 		}
 		dsLaunch.addSeries(tsLaunch);
 		instance = ChartFactory.createTimeSeriesChart(null, null, null, dsLaunch, false, false, false);
@@ -126,7 +130,7 @@ public class Chart {
     	
         plot.setRenderer(0, renderer);
         
-        if (!Core.getConfigModel().getLaunchVisible())
+        if (!ConfigModel.getInstance().getLaunchVisible())
         	setLaunchVisible(false);
         
         if (xField != null)
@@ -136,6 +140,9 @@ public class Chart {
         /*for (int i = 1; i < plot.getRangeAxisCount(); i++) {
 			plot.getRangeAxis(i).setAutoRange(true);
 		}*/
+        System.out.println("Running Garbage Collector...");
+		Runtime.getRuntime().gc();
+		System.out.println("Completed.");
         return instance;
 	}
 	
@@ -187,9 +194,8 @@ public class Chart {
 			return false;
 		}
 		
-		int xFieldId = Core.getConfigModel().getFieldList().indexOf(xField),
-			yFieldId = Core.getConfigModel().getFieldList().indexOf(yField);
-		
+		int xFieldId = ConfigModel.getInstance().getFieldList().indexOf(xField),
+			yFieldId = ConfigModel.getInstance().getFieldList().indexOf(yField);
 		if (xFieldId == -1 || yFieldId == -1) {
 			LOG.log(Level.SEVERE, "Поля для графика не определились ({0}={1}; {2}={3})", new Object[]{ xField, xFieldId, yField, yFieldId });
 			return false;
@@ -197,43 +203,48 @@ public class Chart {
 		
 		double low = Double.POSITIVE_INFINITY, high = Double.NEGATIVE_INFINITY;
 		TimeSeriesCollection collection = new TimeSeriesCollection();
-		//for (Startup startup : logFile.getStartups()) {
-			LocalDateTime xDatetime = null;
-			TimeSeries timeSeries = new TimeSeries(yField.getName());
-			for (Record rec : logFile.getGoodRecords()) { //startup.getRecords()
-				if (rec.isDirty()) continue;
-				Object fieldValue = rec.getValue(xFieldId);
-				if (fieldValue == null) continue;
-				
-				LocalDateTime datetime;
-				if (xField.getDatatype() == DataType.TIME) {
-					datetime = LocalDateTime.of(EPOCH_DATE, (LocalTime) fieldValue);
-					if (xDatetime != null && ChronoUnit.SECONDS.between(xDatetime, datetime) > 1)
-						timeSeries.addOrUpdate(second(xDatetime.plus(1, ChronoUnit.SECONDS)), null);
-				} else if (xField.getDatatype() == DataType.DATE) {
-					datetime = LocalDateTime.of((LocalDate) fieldValue, LocalTime.MIN);
-					if (xDatetime != null && ChronoUnit.DAYS.between(xDatetime, datetime) > 1)
-						timeSeries.addOrUpdate(second(xDatetime.plus(1, ChronoUnit.SECONDS)), null);
-				} else if (xField.getDatatype() == DataType.DATETIME) {
-					datetime = (LocalDateTime) fieldValue;
-					if (xDatetime != null && ChronoUnit.SECONDS.between(xDatetime, datetime) > 1)
-						timeSeries.addOrUpdate(second(xDatetime.plus(1, ChronoUnit.SECONDS)), null);
-				} else
-					throw new IllegalStateException(String.format("Неподдерщиваемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME", xField.getDatatype().getValue()));
-				
-				fieldValue = rec.getValue(yFieldId);
-				if (fieldValue == null) continue;
-				double value = objectToDouble(fieldValue);
-				if (value > high) high = value;
-				if (value < low) low = value;
-				if (value != Double.NaN) {
-					timeSeries.addOrUpdate(second(datetime), value);
-					xDatetime = datetime;
-				}
+		
+		LocalDateTime xDatetime = null;
+		TimeSeries timeSeries = new TimeSeries(yField.getName());
+		ParsedData data = logFile.getParsedData();
+		for (int row = 0; row < data.size(); row++) {
+			Object fieldValue = data.getValue(row, xFieldId);
+			if (fieldValue == null) continue;
+			
+			LocalDateTime datetime;
+			switch (xField.getDatatype()) {
+			case TIME:
+				datetime = LocalDateTime.of(EPOCH_DATE, (LocalTime) fieldValue);
+				if (xDatetime != null && ChronoUnit.SECONDS.between(xDatetime, datetime) > 1)
+					timeSeries.addOrUpdate(second(xDatetime.plus(1, ChronoUnit.SECONDS)), null);
+				break;
+			case DATE:
+				datetime = LocalDateTime.of((LocalDate) fieldValue, LocalTime.MIN);
+				if (xDatetime != null && ChronoUnit.DAYS.between(xDatetime, datetime) > 1)
+					timeSeries.addOrUpdate(second(xDatetime.plus(1, ChronoUnit.SECONDS)), null);
+				break;
+			case DATETIME:
+			case OVERFLOWING_TIME_SEQUENCE:
+				datetime = (LocalDateTime) fieldValue;
+				if (xDatetime != null && ChronoUnit.SECONDS.between(xDatetime, datetime) > 1)
+					timeSeries.addOrUpdate(second(xDatetime.plus(1, ChronoUnit.SECONDS)), null);
+				break;
+			default:
+				throw new IllegalStateException(String.format("Неподдерщиваемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME/OVERFLOWING_TIME_SEQUENCE", xField.getDatatype().getValue()));
 			}
-			if (!timeSeries.isEmpty())
-				collection.addSeries(timeSeries);
-		//}
+			
+			fieldValue = data.getValue(row, yFieldId);
+			if (fieldValue == null) continue;
+			double value = objectToDouble(fieldValue);
+			if (value > high) high = value;
+			if (value < low) low = value;
+			if (value != Double.NaN) {
+				timeSeries.addOrUpdate(second(datetime), value);
+				xDatetime = datetime;
+			}
+		}
+		if (!timeSeries.isEmpty())
+			collection.addSeries(timeSeries);
 		
 		Color color = yField.getColor() != null ? yField.getColor() : Color.PINK;
 		
@@ -295,9 +306,9 @@ public class Chart {
 		if (logFile == null)
 			throw new IllegalStateException("Неизвестная ошибка (LogFile is NULL)");
 		
-		if (logFile.getGoodRecords().size() == 0)
+		if (logFile.getParsedData().size() == 0)
 			throw new IllegalStateException("В файле нет ни одной нормальной записи");
-		ConfigModel configModel = Core.getConfigModel();
+		ConfigModel configModel = ConfigModel.getInstance();
 		boolean xAxis = false;
 		for (Field field : configModel.getFieldList()) {
 			if (field.getRole() == FieldRole.X_AXIS || field.getRole() == FieldRole.DRAW)

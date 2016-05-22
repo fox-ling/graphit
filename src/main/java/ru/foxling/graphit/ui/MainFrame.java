@@ -27,7 +27,6 @@ import javax.swing.KeyStroke;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
 import java.awt.datatransfer.DataFlavor;
@@ -57,7 +56,6 @@ import ru.foxling.graphit.config.DataType;
 import ru.foxling.graphit.config.Field;
 import ru.foxling.graphit.config.FieldRole;
 import ru.foxling.graphit.logfile.LogFile;
-import ru.foxling.graphit.logfile.Record;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
@@ -80,7 +78,6 @@ import java.awt.FlowLayout;
 
 import javax.swing.JSplitPane;
 import javax.swing.ListSelectionModel;
-import javax.swing.SwingConstants;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 
@@ -154,7 +151,6 @@ extends JFrame implements ChartProgressListener {
 				}
 			}
 		});
-		//miOpen.setIcon(getResourceIcon("/resources/ic_action_collection.png"));
 		miOpen.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_MASK));
 		mFile.add(miOpen);
 		
@@ -168,8 +164,10 @@ extends JFrame implements ChartProgressListener {
 		miDetails.setEnabled(false);
 		miDetails.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				DetailsFrame fDetailsFrame = new DetailsFrame(logFile);
-				fDetailsFrame.setVisible(true);
+				if (logFile != null) {
+					DetailsFrame fDetailsFrame = new DetailsFrame(logFile);
+					fDetailsFrame.setVisible(true);
+				}
 			}
 		});
 		//miDetails.setIcon(getResourceIcon("ic_action_storage.png"));
@@ -221,7 +219,6 @@ extends JFrame implements ChartProgressListener {
 			@Override
 			/** Listener for row-change events (Chart trace) */
 			public void valueChanged(ListSelectionEvent e) {
-				//TODO
 				if (!table.isFocusOwner() || e.getValueIsAdjusting()) return;
 				
 				ListSelectionModel rowSM = (ListSelectionModel) e.getSource();
@@ -230,24 +227,31 @@ extends JFrame implements ChartProgressListener {
 				if (Chart.getInstance() != null) {
 					LogFileTableModel model = (LogFileTableModel) table.getModel();
 					try {
-						//System.out.printf("%s >> tableSelection%n", LocalTime.now());
-						Record rec = model.getRecord(selectedIndex);
 						long pos = -1;
-						if (Chart.getxField().getDatatype() == DataType.TIME) {
-							LocalTime time = (LocalTime) rec.getValue(Chart.getxFieldId());
+						switch (Chart.getxField().getDatatype()) {
+						case TIME: {
+							LocalTime time = (LocalTime) model.getValueAt(selectedIndex, Chart.getxFieldId());
 							ZonedDateTime zdt = ZonedDateTime.of(LocalDateTime.of(LocalDate.ofEpochDay(0), time), ZoneId.systemDefault());
 							pos = zdt.toEpochSecond() * 1000;
-						} else if (Chart.getxField().getDatatype() == DataType.DATETIME) {
-							LocalDateTime datetime = (LocalDateTime) rec.getValue(Chart.getxFieldId());
+							break;
+						}
+						case OVERFLOWING_TIME_SEQUENCE:
+						case DATETIME: {
+							//TODO
+							LocalDateTime datetime = (LocalDateTime) model.getValueAt(selectedIndex, Chart.getxFieldId());
 							ZonedDateTime zdt = ZonedDateTime.of(datetime, ZoneId.systemDefault());
-							pos = zdt.toEpochSecond() * 1000; //datetime.atZone(ZoneId.systemDefault()).toEpochSecond();
-						} else if (Chart.getxField().getDatatype() == DataType.DATE) {
-							LocalDate date = (LocalDate) rec.getValue(Chart.getxFieldId());
+							pos = zdt.toEpochSecond() * 1000;
+							break;
+						}
+						case DATE: {
+							LocalDate date = (LocalDate) model.getValueAt(selectedIndex, Chart.getxFieldId());
 							ZonedDateTime zdt = ZonedDateTime.of(LocalDateTime.of(date, LocalTime.MIN), ZoneId.systemDefault());
 							pos = zdt.toEpochSecond() * 1000;
+							break;
 						}
-						
-						//System.out.printf("%s = %d%n", rec.getValue(Chart.getxFieldId()).toString(), pos);
+						default:
+							break;
+						}
 						
 						if (pos > -1) {
 							XYPlot xyplot = (XYPlot)Chart.getInstance().getPlot();
@@ -267,15 +271,6 @@ extends JFrame implements ChartProgressListener {
 		popupMenu = new JPopupMenu();
 		addPopup(table, popupMenu);
 		
-		/*
-		JCheckBoxMenuItem miWrongHashOnly = new JCheckBoxMenuItem("Отображать только с неправильным хэшем");
-		miWrongHashOnly.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				doChartTrack = !miWrongHashOnly.isSelected();
-				//fillTable(miWrongHashOnly.isSelected());
-			}
-		});
-		popupMenu.add(miWrongHashOnly);*/
 		contentPane.setLayout(new BorderLayout(0, 0));
 		
 		
@@ -293,7 +288,7 @@ extends JFrame implements ChartProgressListener {
 			@Override
 			public void run()
 			{
-				Core.getConfigModel().saveConfig();
+				ConfigModel.getInstance().saveConfig();
 			}
 	    });
 
@@ -345,22 +340,11 @@ extends JFrame implements ChartProgressListener {
 	    this.loggerLabelHandler = new LoggerLabelHandler(lblLogMessage, Level.INFO);
 	    
 	    Logger.getLogger(Core.class.getPackage().getName()).addHandler(loggerLabelHandler);
-	    configController = new ConfigController(Core.getConfigModel());
+	    configController = new ConfigController(ConfigModel.getInstance());
 	}
 	
-	/*private ImageIcon getResourceIcon(String name) {
-		try {
-			byte[] data = Core.getResource(name);
-			if (data.length > 0)
-				return new ImageIcon(data);
-		} catch (IOException e) {
-			LOG.log(Level.INFO, "Не удалось загрузить картинку " + name, e);
-		}
-		return null;
-	}*/
-	
 	private void openLogFile(File aFile){
-		logFile = new LogFile(aFile.getPath());
+		logFile = new LogFile(ConfigModel.getInstance(), aFile.getPath());
 		try {
 			logFile.readFile();
 		} catch (IOException e) {
@@ -385,48 +369,19 @@ extends JFrame implements ChartProgressListener {
 		if (title.endsWith(", ")) title = title.substring(0, title.length() - 3);
 		this.setTitle(title);
 		
-		table.setModel(new LogFileTableModel(logFile, false));
-		List<Field> fieldList = Core.getConfigModel().getFieldList();
-		
-		table.setDefaultRenderer(LocalDate.class, new DefaultTableCellRenderer() {
-			private static final long serialVersionUID = 9123910403864393934L;
-
-			@Override
-			protected void setValue(Object value) {
-				if (value == null) {
-					setText("");
-				} else
-					setText(((LocalDate) value).format(Core.F_DATE));
-			}
-		});
-		table.setDefaultRenderer(LocalDateTime.class, new DefaultTableCellRenderer() {
-			private static final long serialVersionUID = 1710199589203664465L;
-
-			@Override
-			protected void setValue(Object value) {
-				if (value == null) {
-					setText("");
-				} else
-					setText(((LocalDateTime) value).format(Core.F_DATETIME));
-			}
-		});
+		table.setModel(new LogFileTableModel(ConfigModel.getInstance().getFieldList(), logFile.getParsedData()));
+		List<Field> fieldList = ConfigModel.getInstance().getFieldList();
 		
 		Enumeration<TableColumn> cols = table.getColumnModel().getColumns();
 		while (cols.hasMoreElements()) {
 			TableColumn col = (TableColumn) cols.nextElement();
 			Field field = fieldList.get(col.getModelIndex());
-			if (!field.getValueList().isEmpty())
+			if (field.getValueList().isEmpty()) {
+				col.setCellRenderer(DefaultTableCellRenderers.forDataType(fieldList.get(col.getModelIndex()).getDatatype()));
+			} else {
 				col.setCellRenderer(new FieldValueRenderer(field));
-			
-			DefaultTableCellRenderer cr = ((DefaultTableCellRenderer)col.getCellRenderer());
-			if (cr == null) {
-				cr = new DefaultTableCellRenderer();
-				col.setCellRenderer(cr);
 			}
-			cr.setHorizontalAlignment(SwingConstants.CENTER);
 		}
-		
-		//TODO: setHorizontalAlignment
 		
 		miDetails.setEnabled(true);
 		iLaunch.setEnabled(true);
@@ -434,9 +389,12 @@ extends JFrame implements ChartProgressListener {
 		
 		configController.refreshAxesList();
 		configController.addRecentFile(aFile.getPath());
+		System.out.println("Gonna make chart");
 		JFreeChart chart = Chart.chartFactory(logFile);
+		System.out.println("Chart's been completed");
 		chart.addProgressListener(this);
 		chartPanel.setChart(chart);
+		System.out.println("Work's done");
 	}
 	
 	private void setTableVisible(boolean visible) {
@@ -499,43 +457,24 @@ extends JFrame implements ChartProgressListener {
 
 	@Override
 	public void chartProgress(ChartProgressEvent e) {
+		//TODO
 		if (e.getType() != 2) return;
 		
 		if (Chart.getInstance() != null && Chart.getxFieldId() > -1) {
-			//System.out.printf("%s >> chartProgress%n", LocalTime.now());
 			XYPlot xyplot = (XYPlot)Chart.getInstance().getPlot();
-			double d = xyplot.getDomainCrosshairValue();
-			
-			Object value;
-			if (Chart.getxField().getDatatype() == DataType.TIME) {
-				value = LocalDateTime.ofInstant(Instant.ofEpochMilli((long) d), ZoneId.systemDefault()).toLocalTime();
-			} else if (Chart.getxField().getDatatype() == DataType.DATETIME) {
-				value = LocalDateTime.ofInstant(Instant.ofEpochMilli((long) d), ZoneId.systemDefault());
-			} else if (Chart.getxField().getDatatype() == DataType.DATE) {
-				value = LocalDateTime.ofInstant(Instant.ofEpochMilli((long) d), ZoneId.systemDefault()).toLocalDate();
-			} else
-				throw new IllegalStateException(String.format("Неподдерщиваемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME", Chart.getxField().getDatatype().getValue()));
-			
-			//System.out.printf("%.2f = %s%n", d, value.toString());
-			
-			if (value != null) {
-				List<Record> records = logFile.getGoodRecords();
-				
-				for (int i = 0; i < records.size(); i++) {
-					Record rec = records.get(i);
-					if (rec != null && value.equals(rec.getValue(Chart.getxFieldId())) && table.getSelectedRow() != i) {
-						Rectangle rect = table.getCellRect(i, 0, true);
-						table.scrollRectToVisible(rect);					
-						table.setRowSelectionInterval(i,i);
-						int col = table.getSelectedColumn() == -1 ? 0 : table.getSelectedColumn();
-						table.setColumnSelectionInterval(col, col);
-					}
-				}
+			long value = (long) xyplot.getDomainCrosshairValue();
+			int index = logFile.getParsedData().getRowId(Chart.getxFieldId(), LocalDateTime.ofInstant(Instant.ofEpochMilli(value), ZoneId.systemDefault()));
+			if (index != -1 && table.getSelectedRow() != index) {
+				Rectangle rect = table.getCellRect(index, 0, true);
+				table.scrollRectToVisible(rect);					
+				table.setRowSelectionInterval(index, index);
+				int col = table.getSelectedColumn() == -1 ? 0 : table.getSelectedColumn();
+				table.setColumnSelectionInterval(col, col);
 			}
 		}
 	}
 
-	private class ConfigController { //TODO: ConfigController
+	private class ConfigController {
 		private ConfigModel configModel;
 		private ArrayList<Link> links;
 		
@@ -617,8 +556,7 @@ extends JFrame implements ChartProgressListener {
 					case "format":
 						chartPanel.setChart(null);
 						table.setModel(new DefaultTableModel());
-						if (logFile != null)
-							logFile.clear();
+						logFile = null;
 						break;
 					}
 				}
@@ -658,7 +596,7 @@ extends JFrame implements ChartProgressListener {
 			mYAxes.removeAll();
 			links.clear();
 			
-			List<Field> fields = Core.getConfigModel().getFieldList(); 
+			List<Field> fields = ConfigModel.getInstance().getFieldList(); 
 			for (Field field : fields) {
 				if (field.getDatatype() == DataType.STRING ||
 						field.getRole() == FieldRole.X_AXIS)
