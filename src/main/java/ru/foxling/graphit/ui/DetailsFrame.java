@@ -29,10 +29,9 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
-import gnu.trove.map.hash.TIntIntHashMap;
-import gnu.trove.procedure.TIntIntProcedure;
 import ru.foxling.graphit.Core;
 import ru.foxling.graphit.logfile.LogFile;
+import ru.foxling.graphit.logfile.BadDataIndex;
 import ru.foxling.graphit.logfile.BadRecord;
 import ru.foxling.graphit.logfile.Startup;
 
@@ -47,7 +46,6 @@ import javax.swing.JCheckBox;
 import javax.swing.JTextPane;
 
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import net.miginfocom.swing.MigLayout;
 import javax.swing.BoxLayout;
 
@@ -119,6 +117,7 @@ public class DetailsFrame extends JFrame {
 	    
 		tree = new JTree(makeTree(logFile));
 	    tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+	    tree.getSelectionModel().addTreeSelectionListener(e -> refreshSummary());
 	    JScrollPane spTree = new JScrollPane(tree);
 	    pnlTopLeft.add(spTree, "cell 0 0,grow");
 		
@@ -131,13 +130,11 @@ public class DetailsFrame extends JFrame {
 		final JSplitPane spltTop = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, pnlTopLeft, spSummary);
 		spltTop.setResizeWeight(.5);
 		
-		JSplitPane spltVertical = new JSplitPane(JSplitPane.VERTICAL_SPLIT, spltTop,
-				spLog);
-				//spRecords);
+		JSplitPane spltVertical = new JSplitPane(JSplitPane.VERTICAL_SPLIT, spltTop, spLog);
 		spltVertical.setResizeWeight(.5);
 		contentPane.add(spltVertical);
 		
-		tree.getSelectionModel().addTreeSelectionListener(e -> refreshDetails());
+		refreshDetails();
 	}
 	
 	private String getSummaryHeader() {
@@ -148,15 +145,13 @@ public class DetailsFrame extends JFrame {
 			.append("counter: ").append(logFile.getCounter()).append(LINE_SEPARATOR);
 		return text.toString();
 	}
-
-	protected void refreshDetails() {
+	
+	protected void refreshSummary() {
 		TreePath path = tree.getSelectionModel().getSelectionPath();
-		if (path.getPathCount() == 0) return;
+		if (path == null || path.getPathCount() == 0) return;
 		
-		ArrayList<Startup> startups;
-		StringBuilder summarytext = new StringBuilder(getSummaryHeader());
 		if (path.getPathCount() > 1) {
-			startups = new ArrayList<>(1);
+			StringBuilder summarytext = new StringBuilder(getSummaryHeader());
 			DefaultMutableTreeNode tnStartup = (DefaultMutableTreeNode) path.getPathComponent(1);
 			StartupNode startupNode = (StartupNode) tnStartup.getUserObject();
 			
@@ -165,14 +160,12 @@ public class DetailsFrame extends JFrame {
 				.append("STARTUP #").append(startupNode.getId()).append("::").append(LINE_SEPARATOR)
 				.append("- datetime: ").append(startup.getDatetime().format(Core.F_DATETIME)).append(LINE_SEPARATOR)
 				.append("- line no.: ").append(startup.getLineNo()).append(LINE_SEPARATOR);
-				//.append("- lines count: ").append(startup.getRecords().size()).append(LINE_SEPARATOR)
-
-			startups.add(startup);
+			iSummary.setText(summarytext.toString());
 		} else
-			startups = logFile.getStartups();
-		
-		iSummary.setText(summarytext.toString());
-		
+			iSummary.setText(getSummaryHeader());
+	}
+
+	protected void refreshDetails() {
 		StyleContext
 				scLineNo = new StyleContext(),
 				scLine = new StyleContext();
@@ -187,40 +180,36 @@ public class DetailsFrame extends JFrame {
 		StyleConstants.setForeground(sComment, Color.lightGray);
 		
 		if (iWrongHash.isSelected() || iUnparsable.isSelected()) {
-			TIntIntHashMap index = logFile.getIndex();
-			TIntIntProcedure p = new TIntIntProcedure() {
-				@Override
-				public boolean execute(int key, int value) {
-					int l, offset, length;
-					String errorMsg;
-					if (iWrongHash.isSelected() && value > 0) {
-						offset = -1;
-						length = -1;
-						errorMsg = "Некоррекная хэш сумма строки";
+			BadDataIndex ixBadData = logFile.getBadDataIndex();
+			int[][] index = ixBadData.getIndex();
+			for (int i = 0; i < index.length; i++) {
+				int l, offset, length;
+				String errorMsg;
+				if (iWrongHash.isSelected() && index[i][1] == 1) {
+					offset = -1;
+					length = -1;
+					errorMsg = "Некоррекная хэш сумма строки";
+				} else
+					if (iUnparsable.isSelected() && index[i][1] == 2) {
+						BadRecord rec = logFile.getBadRecords().get(index[i][2]);
+						offset = rec.getErrorOffset();
+						length = rec.getErrorLength();
+						errorMsg = rec.getErrorMsg();
 					} else
-						if (iUnparsable.isSelected() && value < 0) {
-							BadRecord rec = logFile.getBadRecords().get(-1 * value - 1);
-							offset = rec.getErrorOffset();
-							length = rec.getErrorLength();
-							errorMsg = rec.getErrorMsg();
-						} else
-							return true;
-					
-					String srcLine = logFile.getSourceLine(key);
-					l = dLine.getLength();
-					try {
-						dLine.insertString(l, srcLine + "  " + errorMsg + LINE_SEPARATOR, null);
-						dLineNo.insertString(dLineNo.getLength(), Integer.toString(0/*rec.getLineno()*/) + LINE_SEPARATOR, sAlignRight);
-					} catch (BadLocationException e) {
-						e.printStackTrace();
-					}
-					
-					if (offset != -1) dLine.setCharacterAttributes(l + offset, length, sError, false);
-					dLine.setCharacterAttributes(l + srcLine.length() + 2, errorMsg.length(), sComment, false);
-					return true;
+						continue;
+				
+				String srcLine = ixBadData.getSourceLine(i);
+				l = dLine.getLength();
+				try {
+					dLine.insertString(l, srcLine + "  " + errorMsg + LINE_SEPARATOR, null);
+					dLineNo.insertString(dLineNo.getLength(), Integer.toString(index[i][0]) + LINE_SEPARATOR, sAlignRight);
+				} catch (BadLocationException e) {
+					e.printStackTrace();
 				}
-			};
-			index.forEachEntry(p);
+				
+				if (offset != -1) dLine.setCharacterAttributes(l + offset, length, sError, false);
+				dLine.setCharacterAttributes(l + srcLine.length() + 2, errorMsg.length(), sComment, false);
+			}
 		}
 		iLineNo.setStyledDocument(dLineNo);
 		iLine.setStyledDocument(dLine);

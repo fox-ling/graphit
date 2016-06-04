@@ -28,6 +28,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
@@ -78,6 +79,7 @@ import java.awt.FlowLayout;
 
 import javax.swing.JSplitPane;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 
@@ -214,6 +216,15 @@ extends JFrame implements ChartProgressListener {
 		table.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
 		table.setCellSelectionEnabled(true);
 		table.setFillsViewportHeight(true);
+		TableCellRenderer dtcr = table.getTableHeader().getDefaultRenderer();
+		table.getTableHeader().setDefaultRenderer(new TableCellRenderer() {
+			@Override
+			public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+				JLabel label = (JLabel) dtcr.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+				label.setHorizontalAlignment(SwingConstants.CENTER);
+				return label;
+			}
+		});
 		
 		table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 			@Override
@@ -235,7 +246,7 @@ extends JFrame implements ChartProgressListener {
 							pos = zdt.toEpochSecond() * 1000;
 							break;
 						}
-						case OVERFLOWING_TIME_SEQUENCE:
+						case TIME_SEQUENCE:
 						case DATETIME: {
 							//TODO
 							LocalDateTime datetime = (LocalDateTime) model.getValueAt(selectedIndex, Chart.getxFieldId());

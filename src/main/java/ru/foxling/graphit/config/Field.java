@@ -406,7 +406,7 @@ implements Serializable {
 		DataType type = getDatatype(); 
 		/* DateTimeFormatter - isn't serializable.. gotta recreate parsers */
 		
-		if (Arrays.asList(DataType.DATE, DataType.TIME, DataType.DATETIME, DataType.OVERFLOWING_TIME_SEQUENCE).contains(type))
+		if (Arrays.asList(DataType.DATE, DataType.TIME, DataType.DATETIME, DataType.TIME_SEQUENCE).contains(type))
 			setParser(DefaultParser.datetimeFactory(type, getFormat()));
 	}
 	

@@ -20,6 +20,7 @@ package ru.foxling.graphit.ui;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableCellRenderer;
 
 import ru.foxling.graphit.config.Field;
@@ -34,6 +35,7 @@ extends DefaultTableCellRenderer {
 	public FieldValueRenderer(Field field) {
 		super();
 		this.field = field;
+		setHorizontalAlignment(SwingConstants.CENTER);
 	}
 
     public void setValue(Object value) {

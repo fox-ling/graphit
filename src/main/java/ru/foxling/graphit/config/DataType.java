@@ -27,7 +27,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 public enum DataType {
-	BOOLEAN("Логический", "BOOLEAN", Boolean.class, true, null),
+	BOOLEAN("Логический (1 бит)", "BOOLEAN", Boolean.class, true, null),
 	
 	BYTE("Целое число (1 байт)", "BYTE", Byte.class, true, Arrays.asList(
 			new Format("DEC", "10"),
@@ -52,7 +52,7 @@ public enum DataType {
 	DATETIME("Дата/Время", "DATETIME", LocalDateTime.class, false, Arrays.asList(
 			new Format("dd.MM.yyyy HH:mm:ss", "dd.MM.yyyy HH:mm:ss")
 	)),
-	OVERFLOWING_TIME_SEQUENCE("Переполняемая временная последовательность", "OVERFLOWING_TIME_SEQUENCE", LocalDateTime.class, false, Arrays.asList(
+	TIME_SEQUENCE("Временная последовательность", "TIME_SEQUENCE", LocalDateTime.class, false, Arrays.asList(
 			new Format("HH:mm:ss", "HH:mm:ss")
 	));
 	

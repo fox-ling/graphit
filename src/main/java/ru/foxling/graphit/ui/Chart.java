@@ -87,7 +87,7 @@ public class Chart {
 		for (Startup startup : logFile.getStartups()) {
 			LocalDateTime datetime;
 			switch (xField.getDatatype()) {
-			case OVERFLOWING_TIME_SEQUENCE:
+			case TIME_SEQUENCE:
 			case DATETIME:
 				datetime = startup.getDatetime();
 				break;
@@ -224,7 +224,7 @@ public class Chart {
 					timeSeries.addOrUpdate(second(xDatetime.plus(1, ChronoUnit.SECONDS)), null);
 				break;
 			case DATETIME:
-			case OVERFLOWING_TIME_SEQUENCE:
+			case TIME_SEQUENCE:
 				datetime = (LocalDateTime) fieldValue;
 				if (xDatetime != null && ChronoUnit.SECONDS.between(xDatetime, datetime) > 1)
 					timeSeries.addOrUpdate(second(xDatetime.plus(1, ChronoUnit.SECONDS)), null);

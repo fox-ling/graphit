@@ -41,7 +41,7 @@ public class DefaultTableCellRenderers {
 			
 			switch (datatype) {
 			case DATETIME:
-			case OVERFLOWING_TIME_SEQUENCE:
+			case TIME_SEQUENCE:
 				renderer = new DefaultTableCellRenderer() {
 					private static final long serialVersionUID = 9123910403864393934L;
 					
@@ -84,7 +84,7 @@ public class DefaultTableCellRenderers {
 				renderer = new DefaultTableCellRenderer();
 				break;
 			default: // Unlikely if someone gonna need a custom string renderer, so let's store default renderer in that key
-				return map.get(DataType.STRING);
+				return forDataType(DataType.STRING);
 			}
 			renderer.setHorizontalAlignment(SwingConstants.CENTER);
 			map.put(datatype, renderer);

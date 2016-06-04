@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import gnu.trove.map.hash.TIntIntHashMap;
 import ru.foxling.graphit.Core;
 import ru.foxling.graphit.config.ConfigModel;
 import ru.foxling.graphit.config.Field;
@@ -57,18 +56,11 @@ public class LogFile {
 	/** Good records */
 	private ParsedData parsedData;
 	
-	/** Source strings */
-	private TStringList sourceData;
-	
 	/** Bad records */
 	private ArrayList<BadRecord> badRecords;
 	
-	/** {@link #sourceData} [key] ~ {@link #parsedData}/{@link #badRecords} [value] index <br>
-	 * <code>key</code> -- normal zero-based index <br>
-	 * <code>value</code> -- <u>1-based index</u>*, where values > 0 are {@link #parsedData} indexes and values < 0 are {@link #badRecords} indexes <br><br>
-	 * <i>*Note that collections themselves have zero-bases indexing. I've made <code>[value]</code> 1-based just to fit two indexes in one space</i> 
-	 */
-	private TIntIntHashMap index;
+	/** Bad data index */
+	private BadDataIndex ixBadData;
 	
 	public LogFile(ConfigModel config, String filename) {
 		this.filename = filename;
@@ -77,9 +69,7 @@ public class LogFile {
 		startups = new ArrayList<Startup>(3);
 		badRecords = new ArrayList<BadRecord>(25);
 		parsedData = new ParsedData(config, charset);
-		sourceData = new TStringList(charset);
-		index = new TIntIntHashMap();
-		
+		ixBadData = new BadDataIndex(charset);
 		
 		List<Field> fieldList = config.getFieldList();
 		for (int i = 0; i < fieldList.size(); i++) {
@@ -216,8 +206,7 @@ public class LogFile {
 							parseRec(lineNo, line);
 						} catch (ParseExceptionEx e) {
 							badRecords.add(new BadRecord(lineNo, line, e.getMessage(), e.getErrorOffset(), e.getErrorLength(), e.getFieldId()));
-							sourceData.add(line);
-							index.put(sourceData.size() - 1, -1 * badRecords.size());
+							ixBadData.addUnparsedLink(lineNo, line, badRecords.size() - 1);
 							LOG.log(Level.WARNING, e.getMessage() + String.format(" [Строка=%d; Столбец=%d]", lineNo, e.getErrorOffset()), e);
 						}
 					}
@@ -316,8 +305,7 @@ public class LogFile {
 		try {
 			parsedData.addRecord(values, authentic);
 			if (!authentic) {
-				sourceData.add(rec);
-				index.put(sourceData.size() - 1, parsedData.size());
+				ixBadData.addWrongHashLink(lineNo, rec, parsedData.size() - 1);
 			}
 		} catch (Exception e) {
 			LOG.log(Level.SEVERE, "Ошибка при сохранении записи в модель", e);
@@ -328,12 +316,8 @@ public class LogFile {
 		return parsedData;
 	}
 	
-	public String getSourceLine(int index) {
-		return sourceData.get(index);
-	}
-
-	public TIntIntHashMap getIndex() {
-		return index;
+	public BadDataIndex getBadDataIndex() {
+		return ixBadData;
 	}
 
 	// ===== CRC Section ===========================================================================

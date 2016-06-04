@@ -30,10 +30,15 @@ implements Serializable {
 
 	public static final Parser<Boolean> BOOLEAN = new Parser<Boolean>() {
 		private static final long serialVersionUID = 1031723417497313355L;
+		private final String TRUE = "true";
+		private final String YES = "yes";
+		private final String ONE = "1";
 
 		@Override
 		public Boolean parse(String str) {
-			return str != null && (str.equals("true") || str.equals("yes") || str.equals("1"));
+			return str != null && (str.equalsIgnoreCase(ONE) ||
+									str.equalsIgnoreCase(TRUE) ||
+									str.equalsIgnoreCase(YES));
 		}
 	};
 	
@@ -154,7 +159,7 @@ implements Serializable {
 				}
 			};
 		case TIME:
-		case OVERFLOWING_TIME_SEQUENCE:
+		case TIME_SEQUENCE:
 			return new Parser<LocalTime>() {
 				private static final long serialVersionUID = 8700299087095366406L;
 				transient private final DateTimeFormatter F = _formatter;
@@ -200,7 +205,7 @@ implements Serializable {
 			case DATE:
 			case TIME:
 			case DATETIME:
-			case OVERFLOWING_TIME_SEQUENCE:
+			case TIME_SEQUENCE:
 				if (format.value == "")
 					throw new IllegalArgumentException("Формат даты не предоставлен");
 				return DefaultParser.datetimeFactory(datatype, format);

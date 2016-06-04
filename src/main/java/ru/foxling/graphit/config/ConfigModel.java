@@ -863,7 +863,7 @@ implements Serializable {
 			throw new IllegalStateException("Строковые данные нельзя поместить на график");
 		
 		if (role == FieldRole.X_AXIS) {
-			if (!Arrays.asList(DataType.DATE, DataType.TIME, DataType.DATETIME, DataType.OVERFLOWING_TIME_SEQUENCE).contains(field.getDatatype()))
+			if (!Arrays.asList(DataType.DATE, DataType.TIME, DataType.DATETIME, DataType.TIME_SEQUENCE).contains(field.getDatatype()))
 				throw new IllegalStateException("В качестве данных для оси X поддерживаются только временнЫе типы (date/time/datetime/overflowing_time)");
 		
 			for (Field f : fieldList)

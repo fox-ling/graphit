@@ -60,7 +60,7 @@ public class ParsedData {
 			case DATE: 		data[i] = new TLongArrayList(); break;
 			case DATETIME: 	data[i] = new TLongArrayList(); break;
 			case TIME: 		data[i] = new TIntArrayList(); break;
-			case OVERFLOWING_TIME_SEQUENCE: data[i] = new TimeSequence(); break;
+			case TIME_SEQUENCE: data[i] = new TimeSequence(); break;
 			case STRING: 	data[i] = new TStringList(charset); break;
 			default:
 				data = null;
@@ -132,7 +132,7 @@ public class ParsedData {
 				((TIntArrayList)data[col]).add(val == null ? Integer.MIN_VALUE : val.toSecondOfDay());
 				break;
 			}
-			case OVERFLOWING_TIME_SEQUENCE:
+			case TIME_SEQUENCE:
 				((TimeSequence)data[col]).add((LocalTime) value);
 				break;
 			case STRING:
@@ -181,7 +181,7 @@ public class ParsedData {
 			int value = ((TIntArrayList)data[col]).get(row);
 			return value == Integer.MIN_VALUE ? null : LocalTime.ofSecondOfDay(value);
 		}
-		case OVERFLOWING_TIME_SEQUENCE: return ((TimeSequence)data[col]).getDateTime(row);
+		case TIME_SEQUENCE: return ((TimeSequence)data[col]).getDateTime(row);
 		case STRING: return ((TStringList)data[col]).get(row);
 		default:
 			data = null;
@@ -201,7 +201,7 @@ public class ParsedData {
 	 * @see {@link TimeSequence}, {@link TLongArrayList}, {@link TIntArrayList} */
 	public int getRowId(int xFieldId, LocalDateTime datetime) {
 		switch (config.getFieldList().get(xFieldId).getDatatype()) {
-		case OVERFLOWING_TIME_SEQUENCE: {
+		case TIME_SEQUENCE: {
 			TimeSequence ts = (TimeSequence) data[xFieldId];
 			int offset = Period.between(ts.getBeginDate(), datetime.toLocalDate()).getDays();
 			return ts.binarySearch(offset * 86400 + datetime.toLocalTime().toSecondOfDay());
@@ -282,7 +282,7 @@ public class ParsedData {
 				}
 				break;
 			}
-			case OVERFLOWING_TIME_SEQUENCE: {
+			case TIME_SEQUENCE: {
 				TimeSequence list = (TimeSequence) data[col];
 				if (list.size() > size) {
 					list.remove(size - 1, list.size() - size);
