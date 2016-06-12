@@ -27,9 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EventListener;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -45,23 +43,15 @@ import org.jdom2.JDOMException;
 import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
-import ru.foxling.graphit.Core;
 
 public class ConfigModel
 implements Serializable {
 	private static final long serialVersionUID = 838784836109476476L;
 	private static Logger LOG = Logger.getLogger(ConfigModel.class.getName()); 
-	private static final String FILENAME = "config.xml";
-	private static final String FILE_SEPARATOR = System.getProperty("file.separator");
-	public static final String WORKDIR_PATH = getWorkDirPath() + FILENAME;
-	public static final String APPDATA_PATH = getAppDataPath() + FILENAME; 
 	public static ConfigModel instance;
 	
 	/** Good colors */
-	private static final List<Color> COLORS = Arrays.asList( Color.RED, Color.GREEN, Color.BLUE, Color.BLACK, Color.CYAN, Color.PINK, Color.MAGENTA);
-	
-	/** List of file paths where configuration file could be placed in order of priority */
-	private final LinkedHashSet<String> PATHS = new LinkedHashSet<String>(Arrays.asList(WORKDIR_PATH, APPDATA_PATH));
+	private static final List<Color> COLORS = Arrays.asList(Color.RED, Color.GREEN, Color.BLUE, Color.BLACK, Color.CYAN, Color.PINK, Color.MAGENTA);
 	
 	private File file;
 	private Map<String,String> properties;
@@ -77,16 +67,25 @@ implements Serializable {
 		
 		setDefaults();
 		try {
-			file = getConfigFile();
-			if (file != null) {
+			file = new File(System.getProperty("user.dir") + System.getProperty("file.separator") + "config.xml");
+			if (file.exists()) {
 				loadConfig();
 			} else {
-				makeConfigFile();
-				setDefaults();
+				try {
+					File f = file.getParentFile();
+					if (!f.exists())
+						f.mkdirs();
+					
+					file.createNewFile();
+				} catch (IOException | NullPointerException e) {
+					LOG.log(Level.WARNING, "Не удалось создать файл с настройками по адресу:\n" + file.getAbsolutePath(), e);
+					file = null;
+				}
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
-			JOptionPane.showMessageDialog(null, e.getMessage(), "Ошибка при инициализации настроек", JOptionPane.ERROR_MESSAGE);
+			String msg = "Ошибка при инициализации настроек";
+			LOG.log(Level.SEVERE, msg, e);
+			JOptionPane.showMessageDialog(null, e.getMessage(), msg, JOptionPane.ERROR_MESSAGE);
 		}
 	}
 	
@@ -122,120 +121,6 @@ implements Serializable {
 		
 		properties.put(key, value);
 		firePropertyChanged(new PropertyEvent(this, key, value, xValue));
-	}
-	
-	/*
-	 *  -----=== File Management ===-----
-	 */
-	
-	/** Returns config file is exists, <code>null</code> otherwise */
-	private File getConfigFile() {
-		for (String path : PATHS) {
-			File file = new File(path);
-			if (file.exists())
-				return file;
-		}
-		return null;
-	}
-	
-	public String getConfigFileLocation() {
-		if (file == null) {
-			return null;
-		}
-		
-		return file.getAbsolutePath();
-	}
-	
-	/** Sets config.xml location
-	 * @param path config file location. Gotta provide one of the paths in {@link #PATHS} */
-	private boolean setConfigFileLocation(File f) {
-		String xLocation = null;
-		if (file != null)
-			xLocation = file.getAbsolutePath();
-		
-		if (!f.exists()) {
-			LOG.log(Level.WARNING, "Не удалось установить файл настроек: " + f.getAbsolutePath() + " - не существует");
-			return false;
-		}
-		
-		file = f;
-		firePropertyChanged(new PropertyEvent(this, "config-file-location", f.getAbsolutePath(), xLocation));
-		return true;
-	}
-	
-	/** Sets config.xml location
-	 * @param path config file location. Gotta provide one of the paths in {@link #PATHS} */
-	public boolean moveConfigFile(final String path) {
-		if (path == null) {
-			LOG.warning("Путь назначения = NULL");
-			return false;
-		}
-		if (this.file == null) {
-			LOG.warning("Исходный путь не установлен -- нечего переносить.");
-			return false;
-		}
-		
-		File f = new File(path);
-		if (f.getAbsolutePath().equals(this.file.getAbsolutePath())) {
-			LOG.info("Файл уже там: " + f.getAbsolutePath());
-			return true;
-		}
-		
-		if (!f.exists() || 
-				JOptionPane.showConfirmDialog(null, "Файл config.xml уже существует по адресу: " + f.getAbsolutePath() + "\n\rЗаменить?"
-						, "Внимание", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-			if (f.exists() && !f.delete()) {
-				LOG.warning("Не удалось удалить существующий файл " + f.getAbsolutePath());
-				return false;
-			}
-			File parent = f.getParentFile(); 
-			if (!parent.exists() && !parent.mkdirs()) {
-				LOG.warning("Не удалось создать папку " + parent.getAbsolutePath());
-				return false;
-			}
-			if (file.renameTo(f) && setConfigFileLocation(f)) {
-				LOG.info("Файл успешно перенесен: " + f.getAbsolutePath());
-				return true;
-			} else {
-				LOG.warning("Не удалось перенести файл в " + f.getAbsolutePath());
-				JOptionPane.showMessageDialog(null, "Не удалось перенести файл", "Ошибка", JOptionPane.ERROR_MESSAGE);
-				return false;
-			}
-		}
-		return false;
-	}
-	
-	/** Tries to create a new config file at one of the locations {@link #PATHS}
-	 * @throws RuntimeException if failed at all of them */
-	public File makeConfigFile() throws RuntimeException {
-		HashMap<String,String> errorText = new HashMap<String,String>(PATHS.size());
-		Iterator<String> itPaths = PATHS.iterator();
-		while (itPaths.hasNext()) {
-			String path = itPaths.next();
-			file = new File(path);
-			try {
-				File f = file.getParentFile();
-				if (!f.exists())
-					f.mkdirs();
-				
-				file.createNewFile();
-				return file;
-			} catch (IOException | NullPointerException e) {
-				e.printStackTrace();
-				errorText.put(path, e.getMessage());
-			}
-		}
-		
-		// ... nothing worked, throwing Exception 
-		if (file == null || !file.exists()) {
-			String msg = "Не удалось найти/создать файл с настройками:\n";
-			for (String path : errorText.keySet()) {
-				msg += "--" + path + "\n = " + errorText.get(path) + "\n\n";
-			}
-			throw new RuntimeException(msg);
-		}
-		
-		return null;
 	}
 	
 	public void loadConfig(){
@@ -327,15 +212,18 @@ implements Serializable {
 	        	 if (values != null && !values.isEmpty()) {
 	        		 Element eValues = new Element("values");
 	        		 values.forEach((value) -> {
+	        			 if (value == null || (value.source == null && value.value == null) || (value.caption == null && value.description == null))
+	        				 return;
+	        			 
 	        			 Element item = new Element("item");
-	        			 item.setAttribute("value", value.source);
+	        			 item.setAttribute("value", value.source == null ? value.value.toString() : value.source);
 	        			 if (value.caption != null && !value.caption.isEmpty())
 	        				item.setAttribute("caption", value.caption);
 	        			 if (value.description != null && !value.description.isEmpty())
 	        				item.setAttribute("description", value.description);
 	        			 eValues.addContent(item);
 	        		 });
-	        		 eField.addContent(eValues);
+	        		 if (!eValues.getChildren().isEmpty()) eField.addContent(eValues);
 	        	 }
 	        	 
 	        	 eRoot.addContent(eField);
@@ -346,20 +234,6 @@ implements Serializable {
 	      }catch(IOException e){
 	         e.printStackTrace();
 	      }
-	}
-	
-	/**	Returns storage path in current user's [Application Data] folder</br>
-	 * <i>*depends on OS, ex.: ...\AppData\Roaming\<code>%package_name%</code>\</i> */
-	private static String getAppDataPath(){
-		return System.getenv("APPDATA")
-				+ FILE_SEPARATOR
-				+ Core.class.getPackage().getName()
-				+ FILE_SEPARATOR;
-	}
-	
-	/**	Returns workdir path */
-	private static String getWorkDirPath() {
-		return System.getProperty("user.dir") + FILE_SEPARATOR;
 	}
 	
 	private Element xmlElementFactory(String tagname, String value) {
@@ -621,47 +495,65 @@ implements Serializable {
 			}
 	}
 
-	public void setFieldDescription(Field field, String description) {
+	public boolean setFieldDescription(Field field, String description) {
 		try {
 			if (field == null)
 				throw new NullPointerException("Поле - NULL");
 			
 			field.setDescription(description);
+			return true;
 		} catch (Exception e) {
 			LOG.log(Level.WARNING,"Не удалось изменить описание поля", e);
+			return false;
 		}
 	}
 	
-	public void setFieldDatatype(Field field, DataType datatype) {
+	public boolean setFieldDatatype(Field field, DataType datatype) {
 		try {
 			if (field == null)
 				throw new NullPointerException("Поле - NULL");
 			
+			DataType xDataType = field.getDatatype();
+			
 			field.setDatatype(datatype);
+			
+			if (!setFieldRole(field, field.getRole()) && // Trying to validate the field's role (checking if we can leave it unchanged)
+					!setFieldRole(field, datatype == DataType.TIME_SEQUENCE ? FieldRole.X_AXIS : FieldRole.NONE)) /* ...then, trying to reset it */ { 
+				// ... if unable to do anything, then rolling back
+				field.setDatatype(xDataType);
+				LOG.log(Level.WARNING, "Не удалось изменить тип данных поля из-за конфликта с ролью (см. предыдущие сообщения для подробностей)");
+				return false;
+			}
+			return true;
 		} catch (Exception e) {
 			LOG.log(Level.WARNING, "Не удалось изменить тип данных поля", e);
+			return false;
 		}
 	}
 
-	public void setFieldDelimiter(Field field, FieldDelimiter delimiter) {
+	public boolean setFieldDelimiter(Field field, FieldDelimiter delimiter) {
 		try {
 			if (field == null)
 				throw new NullPointerException("Поле - NULL");
 			
 			field.setDelimiter(delimiter);
+			return true;
 		} catch (Exception e) {
 			LOG.log(Level.WARNING, "Не удалось изменить тип данных поля", e);
+			return false;
 		}
 	}
 	
-	public void setFieldFormat(Field field, ru.foxling.graphit.config.Format format) {
+	public boolean setFieldFormat(Field field, ru.foxling.graphit.config.Format format) {
 		try {
 			if (field == null)
 				throw new NullPointerException("Поле - NULL");
 			
 			field.setFormat(format);
+			return true;
 		} catch (Exception e) {
 			LOG.log(Level.WARNING, "Не удалось изменить формат поля", e);
+			return false;
 		}
 	}
 	
@@ -679,28 +571,15 @@ implements Serializable {
 	}
 	
 	public boolean setFieldOptional(Field field, boolean optional) {
-		Field xField = null;
 		try {
 			if (field == null)
 				throw new NullPointerException("Поле - NULL");
 			
-			try {
-				validateFieldOptional(field, optional);
-			} catch (UniqueFieldException e) {
-				xField = e.getPrimalField();
-				if (JOptionPane.showConfirmDialog(null, String.format("В наборе полей уже есть необязательное поле - \"%s\". "
-						+ "Может быть только одно необязательное поле.\n\rУбрать флажок с поля %s? ", xField, xField)) == JOptionPane.YES_OPTION) {
-					xField.setOptional(false);
-				} else
-					return false;
-			}
-			
+			validateFieldOptional(field, optional);
 			field.setOptional(optional);
 			return true;
-		} catch (Exception e) {
-			if (xField != null) // rolling back optional changing
-				xField.setOptional(true);
-			LOG.log(Level.WARNING, "Не удалось изменить опциональность поля", e);
+		} catch (UniqueFieldException e) {
+			LOG.log(Level.WARNING, String.format("Не удалось изменить опциональность поля, т.к. в наборе полей уже есть необязательное поле - '%s'. Может быть только одно необязательное поле", e.getPrimalField()), e);
 			return false;
 		}
 	}
@@ -713,42 +592,31 @@ implements Serializable {
 		}
 	}
 	
-	public void setFieldBitmask(Field field, boolean isBitmask) {
+	/** Sets the field's bitmask property
+	 * @return <code>false</code> if encountered any exceptions during execution, <code>true</code> – otherwise */
+	public boolean setFieldBitmask(Field field, boolean isBitmask) {
 		try {
 			if (field == null)
 				throw new NullPointerException("Поле - NULL");
-			
+
 			field.setBitmask(isBitmask);
+			return true;
 		} catch (Exception e) {
 			LOG.log(Level.WARNING, "Не удалось изменить свойство поля \"битовая маска\"", e);
+			return false;
 		}
 	}
 	
 	public boolean setFieldHashsum(Field field, boolean hashsum) {
-		Field xField = null;
 		try {
 			if (field == null)
 				throw new NullPointerException("Поле - NULL");
 			
-			if (field.isHashsum() == hashsum)
-				return true;
-			
-			try {
-				validateFieldHashsum(field, hashsum);
-			} catch (UniqueFieldException e) {
-				xField = e.getPrimalField();
-				if (JOptionPane.showConfirmDialog(null, String.format("В наборе полей уже есть хэш-сумма - поле \"%s\". Может быть только одно поле хранящее хэш-сумму.\n\rУбрать флажок с поля %s? ", xField, xField)) == JOptionPane.YES_OPTION) {
-					xField.setHashsum(false);
-				} else
-					return false;
-			}
-			
+			validateFieldHashsum(field, hashsum);
 			field.setHashsum(hashsum);
 			return true;
-		} catch (Exception e) {
-			if (xField != null) // rolling back bitmask changing
-				xField.setBitmask(true);
-			LOG.log(Level.WARNING, "Не удалось изменить свойство поля \"битовая маска\"", e);
+		} catch (UniqueFieldException e) {
+			LOG.log(Level.WARNING, String.format("Не удалось изменить свойство поля 'хэш-сумма', т.к. уже есть поле хранящее хэш-сумму - '%s'", e.getPrimalField()), e);
 			return false;
 		}
 	}
@@ -760,14 +628,16 @@ implements Serializable {
 					throw new UniqueFieldException(field, f, "Хэш-сумма");
 	}
 	
-	public void setFieldColor(Field field, Color color) {
+	public boolean setFieldColor(Field field, Color color) {
 		try {
 			if (field == null)
 				throw new NullPointerException("Поле - NULL");
 			
 			field.setColor(color);
+			return true;
 		} catch (Exception e) {
 			LOG.log(Level.WARNING, "Не удалось изменить цвет поля ", e);
+			return false;
 		}
 	}
 	
@@ -823,37 +693,24 @@ implements Serializable {
 	}
 	
 	public boolean setFieldRole(Field field, FieldRole role) {
-		Field xField = null;
 		try {
 			if (field == null)
 				throw new NullPointerException("Поле - NULL");
 			
-			try {
-				validateFieldRole(field, role);
-			} catch (UniqueFieldException e) {
-				xField = e.getPrimalField();
-				if (JOptionPane.showConfirmDialog(null, String.format("В наборе полей уже есть поле отмеченное как ось X - \"%s\". "
-						+ "Может быть только одна ось X.\n\rУбрать признак с поля %s? ", xField, xField)) == JOptionPane.YES_OPTION) {
-					xField.setRole(FieldRole.NONE);
-				} else
-					return false;
-			}
-			
-			if (role == FieldRole.DRAW)
-				field.setColor(getNextColor());
-			
-			field.setRole(role);
-			return true;
+			validateFieldRole(field, role);
+		} catch (UniqueFieldException e) {
+			LOG.log(Level.WARNING, String.format("Не удалось изменить роль поля, т.к. в наборе полей уже есть поле отмеченное как ось X - \"%s\". Может быть только одна ось X.", e.getPrimalField()), e);
+			return false;
 		} catch (Exception e) {
-			if (xField != null)
-				try {     // try to rollback role changing
-					xField.setRole(FieldRole.X_AXIS);
-				} catch (Exception e2) {
-					LOG.log(Level.WARNING, "Не удалось откатить роль поля ", e);
-				}
-			LOG.log(Level.WARNING, "Не удалось изменить роль поля", e);
+			LOG.log(Level.WARNING, e.getMessage(), e);
 			return false;
 		}
+		
+		if (role == FieldRole.DRAW)
+			field.setColor(getNextColor());
+		
+		field.setRole(role);
+		return true;
 	}
 	
 	/** @see {@link #role} */
@@ -862,9 +719,12 @@ implements Serializable {
 		if (role == FieldRole.DRAW && type == DataType.STRING)
 			throw new IllegalStateException("Строковые данные нельзя поместить на график");
 		
+		if (field.getDatatype() == DataType.TIME_SEQUENCE && role != FieldRole.X_AXIS)
+			throw new IllegalStateException(String.format("Тип данных '%s' есть смысл использовать только для роли '%s'", DataType.TIME_SEQUENCE, FieldRole.X_AXIS));
+		
 		if (role == FieldRole.X_AXIS) {
 			if (!Arrays.asList(DataType.DATE, DataType.TIME, DataType.DATETIME, DataType.TIME_SEQUENCE).contains(field.getDatatype()))
-				throw new IllegalStateException("В качестве данных для оси X поддерживаются только временнЫе типы (date/time/datetime/overflowing_time)");
+				throw new IllegalStateException("В качестве данных для оси X поддерживаются только временнЫе типы (date/time/datetime/time_sequence)");
 		
 			for (Field f : fieldList)
 				if (!f.equals(field) && f.getRole() == FieldRole.X_AXIS)

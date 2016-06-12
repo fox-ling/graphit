@@ -26,7 +26,6 @@ import java.util.logging.Logger;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import java.awt.BorderLayout;
 import javax.swing.JLabel;
@@ -42,13 +41,8 @@ import javax.swing.JComponent;
 import javax.swing.JCheckBox;
 import javax.swing.JColorChooser;
 import javax.swing.border.TitledBorder;
-import javax.swing.JTabbedPane;
-import java.awt.FlowLayout;
-import javax.swing.ButtonGroup;
 import javax.swing.ComboBoxModel;
 import javax.swing.DefaultComboBoxModel;
-import javax.swing.JRadioButton;
-import javax.swing.SwingConstants;
 import net.miginfocom.swing.MigLayout;
 import ru.foxling.graphit.LoggerLabelHandler;
 import ru.foxling.graphit.config.ConfigModel;
@@ -84,6 +78,7 @@ import javax.swing.border.EtchedBorder;
 
 public class ConfigFrame extends JFrame {
 	private static final long serialVersionUID = 3103016344816004897L;
+	private static Logger LOG = Logger.getLogger(ConfigFrame.class.getName()); 
 	private JPanel contentPane;
 	private JTextField iFieldName;
 	private JComboBox<FieldDelimiter> iFieldDelimiter;		
@@ -104,10 +99,6 @@ public class ConfigFrame extends JFrame {
 	private byte[] configState;
 	private JButton btnCancel;
 	private JButton btnOkay;
-	private JComboBox<FieldDelimiter> iDefaultFieldDelimiter;
-	private JComboBox<FieldDelimiter> iDefaultLineDelimiter;
-	private JRadioButton iWorkDir;
-	private JRadioButton iCurrUser;
 	private JCheckBox iBitMask;
 	private JCheckBox iHashsum;
 	private JComboBox<FieldRole> iFieldRole;
@@ -127,53 +118,8 @@ public class ConfigFrame extends JFrame {
 		setContentPane(contentPane);
 		contentPane.setLayout(new BorderLayout(0, 0));
 		
-		JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
-		contentPane.add(tabbedPane, BorderLayout.CENTER);
-		
-		JPanel pnlGeneral = new JPanel();
-		tabbedPane.addTab("Общее", null, pnlGeneral, null);
-		pnlGeneral.setLayout(new BorderLayout(0, 0));
-		
-		JPanel pnlConfigLocation = new JPanel();
-		pnlConfigLocation.setBorder(new TitledBorder(null, "", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-		pnlGeneral.add(pnlConfigLocation, BorderLayout.NORTH);
-		pnlConfigLocation.setLayout(new FlowLayout(FlowLayout.LEADING, 5, 5));
-		
-		JLabel lblConfigLocation = new JLabel("Хранилище настроек:");
-		lblConfigLocation.setVerticalAlignment(SwingConstants.BOTTOM);
-		pnlConfigLocation.add(lblConfigLocation);
-		
-		iWorkDir = new JRadioButton("Рабочая папка");
-		iWorkDir.setSelected(true);
-		pnlConfigLocation.add(iWorkDir);
-		
-		iCurrUser = new JRadioButton("Папка текущего пользователя");
-		pnlConfigLocation.add(iCurrUser);
-		
-		ButtonGroup groupConfigLocation = new ButtonGroup();
-	    groupConfigLocation.add(iWorkDir);
-	    groupConfigLocation.add(iCurrUser);
-	    
-	    
-	    JPanel panel = new JPanel();
-	    panel.setBorder(new TitledBorder(UIManager.getBorder("TitledBorder.border"), "Значения по умолчанию", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
-	    pnlGeneral.add(panel, BorderLayout.CENTER);
-	    panel.setLayout(new MigLayout("", "[][grow]", "[][]"));
-	    
-	    JLabel label = new JLabel("Разделитель столбцов");
-	    panel.add(label, "cell 0 0,alignx trailing");
-	    
-	    iDefaultFieldDelimiter = new JComboBox<FieldDelimiter>(new DefaultComboBoxModel<FieldDelimiter>(FieldDelimiter.values()));
-	    panel.add(iDefaultFieldDelimiter, "cell 1 0,growx");
-	    
-	    JLabel lblNewLabel = new JLabel("Разделитель строк");
-	    panel.add(lblNewLabel, "cell 0 1,alignx trailing");
-	    
-	    iDefaultLineDelimiter = new JComboBox<FieldDelimiter>(new DefaultComboBoxModel<FieldDelimiter>(FieldDelimiter.values()));
-	    panel.add(iDefaultLineDelimiter, "cell 1 1,growx");
-		
 		JPanel pnlFields = new JPanel();
-		tabbedPane.addTab("Настройка полей", null, pnlFields, null);
+		contentPane.add(pnlFields, BorderLayout.CENTER);
 		pnlFields.setLayout(new MigLayout("", "[][grow]", "[]"));
 		
 		JPanel pnlFieldList = new JPanel();
@@ -212,8 +158,8 @@ public class ConfigFrame extends JFrame {
 		
 		
 		iFieldName = new JTextField();
-		iFieldDelimiter = new JComboBox<FieldDelimiter>();
-		iDataType = new JComboBox<DataType>();
+		iFieldDelimiter = new JComboBox<FieldDelimiter>(new DefaultComboBoxModel<>(FieldDelimiter.values()));
+		iDataType = new JComboBox<DataType>(new DefaultComboBoxModel<>(DataType.values()));
 		iOptional = new JCheckBox();
 		iFormat = new JComboBox<Format>();
 		edtFormat = new JTextField();
@@ -350,7 +296,7 @@ public class ConfigFrame extends JFrame {
 		}
 	}
 
-	public static void main(String[] args) {
+	/*public static void main(String[] args) {
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		} catch (Exception e) {
@@ -367,7 +313,7 @@ public class ConfigFrame extends JFrame {
 				}
 			}
 		});
-	}
+	}*/
 	
 	public static void launch() {
 		EventQueue.invokeLater(new Runnable() {
@@ -425,11 +371,6 @@ public class ConfigFrame extends JFrame {
 		});
 		
 		
-		iFieldDelimiter.setModel(new DelimiterListModel(ConfigModel.getInstance()));
-		
-		// ComboBox "Datatype" model
-		iDataType.setModel(new DataTypeListModel(ConfigModel.getInstance()));
-		
 		// ComboBox "Format" model
 		mdlFormatlist = new FormatListModel();
 		iFormat.setModel(mdlFormatlist);
@@ -470,6 +411,15 @@ public class ConfigFrame extends JFrame {
 				
 				if (!iFieldDelimiter.getSelectedItem().equals(field.getDelimiter()))
 					ConfigModel.getInstance().setFieldDelimiter(field, (FieldDelimiter) iFieldDelimiter.getSelectedItem());
+		});
+		
+		iDataType.addActionListener(e -> {
+			Field field = getSelectedField();
+			if (field == null)
+				return;
+			
+			if (!iDataType.getSelectedItem().equals(field.getDatatype()))
+				ConfigModel.getInstance().setFieldDatatype(field, (DataType) iDataType.getSelectedItem());
 		});
 		
 		iFieldRole.addActionListener(e -> {
@@ -513,7 +463,7 @@ public class ConfigFrame extends JFrame {
 		miAddValue.addActionListener(e -> {
 			Field field = getSelectedField();
 			int index = tValues.getSelectedRow();
-			FieldValue value = new FieldValue("");
+			FieldValue value = new FieldValue();
 			if (index == -1) {
 				ConfigModel.getInstance().addFieldValueAt(field, null, value);
 			} else {
@@ -534,41 +484,6 @@ public class ConfigFrame extends JFrame {
 			loadConfigState();
 			super.dispose();
 		});
-
-		ConfigModel.getInstance().addPropertyListener(e -> {
-			switch (e.getPropertyName()) {
-			case "field-delimiter":
-				iDefaultFieldDelimiter.setSelectedItem(FieldDelimiter.valueOf(e.getValue()));
-				break;
-			case "line-delimiter":
-				iDefaultLineDelimiter.setSelectedItem(FieldDelimiter.valueOf(e.getValue()));
-				break;
-			case "config-file-location":
-				refreshConfigFileLocation(e.getValue());
-			}
-		});
-		
-		iDefaultFieldDelimiter.setSelectedItem(ConfigModel.getInstance().getDefaultFieldDelimiter());
-		iDefaultFieldDelimiter.addActionListener(e -> {
-			FieldDelimiter d = (FieldDelimiter) iDefaultFieldDelimiter.getSelectedItem();
-			ConfigModel.getInstance().setProperty("field-delimiter", d.name());
-		});
-		
-		iDefaultLineDelimiter.setSelectedItem(ConfigModel.getInstance().getDefaultLineDelimiter());
-		iDefaultLineDelimiter.addActionListener(e -> {
-			FieldDelimiter d = (FieldDelimiter) iDefaultLineDelimiter.getSelectedItem();
-			ConfigModel.getInstance().setProperty("line-delimiter", d.name());
-		});
-		
-		refreshConfigFileLocation(ConfigModel.getInstance().getConfigFileLocation());
-		iWorkDir.addActionListener(e -> {
-			if (!ConfigModel.getInstance().moveConfigFile(ConfigModel.WORKDIR_PATH))
-				refreshConfigFileLocation(ConfigModel.getInstance().getConfigFileLocation());
-		});
-		iCurrUser.addActionListener(e -> {
-			if (!ConfigModel.getInstance().moveConfigFile(ConfigModel.APPDATA_PATH))
-				refreshConfigFileLocation(ConfigModel.getInstance().getConfigFileLocation());
-		});
 		
 		iOptional.addActionListener(e -> {
 			if (!ConfigModel.getInstance().setFieldOptional(getSelectedField(), iOptional.isSelected()))
@@ -585,13 +500,6 @@ public class ConfigFrame extends JFrame {
 		});
 		
 		// TODO
-	}
-	
-	private void refreshConfigFileLocation(String path) {
-		if (path == ConfigModel.APPDATA_PATH) {
-			iCurrUser.setSelected(true);
-		} else if (path == ConfigModel.WORKDIR_PATH)
-			iWorkDir.setSelected(true);
 	}
 	
 	/** Updates control state: enabled/disabled, clear values */
@@ -640,6 +548,8 @@ public class ConfigFrame extends JFrame {
 		Field field = getSelectedField();
 		if (field != null) {
 			iFieldName.setText(field.getName());
+			iFieldDelimiter.setSelectedItem(field.getDelimiter());
+			iDataType.setSelectedItem(field.getDatatype());
 			iOptional.setSelected(field.isOptional());
 			edtFormat.setText(field.getFormatValue());
 			mdlFormatlist.refresh();
@@ -712,128 +622,6 @@ public class ConfigFrame extends JFrame {
 			setFont(list.getFont());
 			setOpaque(true);
 			return this;
-		}
-	}
-	
-	private class DelimiterListModel
-	extends AbstractListModel<FieldDelimiter>
-	implements ComboBoxModel<FieldDelimiter> {
-		private static final long serialVersionUID = -3972948053898882301L;
-		private ConfigModel configModel;
-		
-		public DelimiterListModel(ConfigModel configModel) {
-			this.configModel = configModel;
-		}
-		
-		@Override
-		public FieldDelimiter getElementAt(int index) {
-			return FieldDelimiter.values()[index];
-		}
-
-		@Override
-		public int getSize() {
-			return FieldDelimiter.values().length;
-		}
-
-		@Override
-		public Object getSelectedItem() {
-			Field field = getSelectedField();
-			if (field != null)
-				return field.getDelimiter();
-			
-			return null;
-		}
-
-		@Override
-		public void setSelectedItem(Object object) {
-			Object selectedItem = getSelectedItem();
-			if (selectedItem == null && object == null ||
-				selectedItem != null && selectedItem.equals(object) ||
-				object != null && getIndexOf(object) == -1)
-					return;
-			
-			configModel.setFieldDelimiter(getSelectedField(), (FieldDelimiter) object);
-			refresh();
-		}
-		
-		/** Refreshes whole list */
-		public void refresh() {
-			fireContentsChanged(this, -1, -1);
-		}
-		
-		/**
-		 * Returns the index of the specified element in the model's item list.
-		 * @param object  the element.
-		 * @return The index of the specified element in the model's item list or -1 if it's not in the list.
-		 * */
-		private int getIndexOf(Object object) {
-			FieldDelimiter[] values = FieldDelimiter.values();
-			for (int i = 0; i < values.length; i++) {
-				if (values[i].equals(object))
-					return i;
-			}
-			return -1;
-		}
-	}
-	
-	private class DataTypeListModel
-	extends AbstractListModel<DataType>
-	implements ComboBoxModel<DataType> {
-		private static final long serialVersionUID = -3972948053898888801L;
-		private ConfigModel configModel;
-		
-		public DataTypeListModel(ConfigModel configModel) {
-			this.configModel = configModel;
-		}
-		
-		@Override
-		public DataType getElementAt(int index) {
-			return DataType.values()[index];
-		}
-
-		@Override
-		public int getSize() {
-			return DataType.values().length;
-		}
-
-		@Override
-		public Object getSelectedItem() {
-			Field field = getSelectedField();
-			if (field != null)
-				return field.getDatatype();
-			
-			return null;
-		}
-
-		@Override
-		public void setSelectedItem(Object object) {
-			Object selectedItem = getSelectedItem();
-			if (selectedItem == null && object == null ||
-				selectedItem != null && selectedItem.equals(object) ||
-				object != null && getIndexOf(object) == -1)
-					return;
-			
-			configModel.setFieldDatatype(getSelectedField(), (DataType) object);
-			refresh();
-		}
-		
-		/** Refreshes whole list */
-		public void refresh() {
-			fireContentsChanged(this, -1, -1);
-		}
-		
-		/**
-		 * Returns the index of the specified element in the model's item list.
-		 * @param object  the element.
-		 * @return The index of the specified element in the model's item list or -1 if it's not in the list.
-		 * */
-		private int getIndexOf(Object object) {
-			DataType[] values = DataType.values();
-			for (int i = 0; i < values.length; i++) {
-				if (values[i].equals(object))
-					return i;
-			}
-			return -1;
 		}
 	}
 	
@@ -916,8 +704,9 @@ public class ConfigFrame extends JFrame {
 		private static final long serialVersionUID = 3742047021848215242L;
 		
 		private final String[] COLS = { "Значение", "Метка", "Описание" };
-		private final Class<?>[] COL_CLASS = {Object.class, String.class, String.class};
+		private final Class<?>[] COL_CLASS = {String.class, String.class, String.class};
 		
+		private Field field;
 		private List<FieldValue> valueList;
 		
 		@Override
@@ -950,7 +739,7 @@ public class ConfigFrame extends JFrame {
 					return null;
 				switch (col) {
 				case 0:
-					return valueList.get(row).value;
+					return valueList.get(row).source;
 				case 1:
 					return valueList.get(row).caption;
 				case 2:
@@ -969,7 +758,19 @@ public class ConfigFrame extends JFrame {
 					return;
 				switch (col) {
 				case 0:
-					valueList.get(row).value = value;
+					String src = (String) value;
+					FieldValue fValue = valueList.get(row);
+					if (src == null || src.trim().isEmpty()) {
+						fValue.source = null;
+						fValue.value = null;
+						return;
+					}
+					try {
+						valueList.get(row).value = field.getParser().parse(src);
+						valueList.get(row).source = src;
+					} catch (Exception e) {
+						LOG.log(Level.WARNING, String.format("Не удалось сконвертировать строку '%s' в тип '%s'", value, field.getDatatype()), e);
+					}
 					break;
 				case 1:
 					valueList.get(row).caption = value.toString();
@@ -987,6 +788,7 @@ public class ConfigFrame extends JFrame {
 		}
 		
 		public void setField(Field field) {
+			this.field = field;
 			if (field != null) {
 				valueList = field.getValueList();
 				fireTableDataChanged();
