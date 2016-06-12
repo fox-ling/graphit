@@ -100,15 +100,16 @@ implements Serializable {
 	public String getName() { return name; }
 	
 	/** @see {@link #name} */
-	public void setName(String name) throws IllegalArgumentException {
+	public boolean setName(String name) throws IllegalArgumentException {
 		if (name == null || name.equals(""))
 			throw new IllegalArgumentException("Имя не должно быть пустым");
 		
 		if (name.equals(this.name))
-			return;
+			return false;
 		
 		this.name = name;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "name"));
+		return true;
 	}
 	
 	
@@ -118,15 +119,16 @@ implements Serializable {
 	public String getDescription() { return description; }
 	
 	/** @see {@link #description} */
-	public void setDescription(String description) {
+	public boolean setDescription(String description) {
 		if (description == null)
 			setDescription("");
 		
 		if (description.equals(this.description))
-			return;
+			return false;
 		
 		this.description = description;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "description"));
+		return true;
 	}
 	
 	
@@ -135,12 +137,12 @@ implements Serializable {
 	public DataType getDatatype() { return datatype; }
 	
 	/** @see {@link #datatype} */
-	public void setDatatype(DataType datatype) throws IllegalArgumentException {
+	public boolean setDatatype(DataType datatype) throws IllegalArgumentException {
 		if (datatype == null)
 			throw new IllegalArgumentException("Тип данных не должен быть пустым");
 		
 		if (this.datatype.equals(datatype))
-			return;
+			return false;
 		
 		this.datatype = datatype;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "datatype"));
@@ -149,6 +151,7 @@ implements Serializable {
 			setFormat(datatype.getDefaultFormat());
 		
 		setParser(DefaultParser.getDefaultParser(this.datatype, this.format));
+		return true;
 	}
 	
 	
@@ -158,12 +161,12 @@ implements Serializable {
 	public Format getFormat() { return format; }
 	
 	/** @see {@link #format} */
-	public void setFormat(String format) throws IllegalStateException {
+	public boolean setFormat(String format) throws IllegalStateException {
 		if (datatype == null)
 			throw new IllegalStateException("Тип данных - пустой");
 		
 		if (format == null || format.equals("")) {
-			setFormat(datatype.getDefaultFormat());
+			return setFormat(datatype.getDefaultFormat());
 		} else {
 			Format f = datatype.indexOfFormatV(format);
 			if (f == null) {
@@ -187,21 +190,22 @@ implements Serializable {
 					throw new IllegalStateException(String.format("У типа данных %s фиксированный набор форматов и формата \"%s\" в нём нет", datatype.getCaption(), format));
 			}
 			
-			setFormat(f);
+			return setFormat(f);
 		}
 	}
 	
 	/** @see {@link #format} */
-	public void setFormat(Format format) throws IllegalArgumentException {
+	public boolean setFormat(Format format) throws IllegalArgumentException {
 		if (format == null)
 			throw new IllegalArgumentException("Попытка установить NULL-формат");
 			
 		if (this.format.equals(format))
-			return;
+			return false;
 		
 		this.format = format;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "format"));
 		setParser(DefaultParser.getDefaultParser(this.datatype, this.format));
+		return true;
 	}
 	
 	/** @see {@link #format} */
@@ -219,12 +223,16 @@ implements Serializable {
 	public FieldDelimiter getDelimiter() { return delimiter; }
 	
 	/** @see {@link #delimiter} */
-	public void setDelimiter(FieldDelimiter delimiter) {
+	public boolean setDelimiter(FieldDelimiter delimiter) {
 		if (delimiter == null)
 			throw new IllegalArgumentException("Ограничитель не должен быть пустым");
 		
+		if (this.delimiter.equals(delimiter))
+			return false;
+		
 		this.delimiter = delimiter;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "delimiter"));
+		return true;
 	}
 	
 	
@@ -234,12 +242,13 @@ implements Serializable {
 	public boolean isOptional() { return optional; }
 	
 	/** @see {@link #optional} */
-	public void setOptional(boolean optional) {
+	public boolean setOptional(boolean optional) {
 		if (optional == this.optional)
-			return;
+			return false;
 		
 		this.optional = optional;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "optional"));
+		return true;
 	}
 	
 	
@@ -249,12 +258,13 @@ implements Serializable {
 	public boolean isBitmask() { return bitmask; }
 	
 	/** @see {@link #bitmask} */
-	public void setBitmask(boolean bitmask) {
+	public boolean setBitmask(boolean bitmask) {
 		if (this.bitmask == bitmask)
-			return;
+			return false;
 		
 		this.bitmask = bitmask;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "bitmask"));
+		return true;
 	}
 	
 	
@@ -264,12 +274,13 @@ implements Serializable {
 	public boolean isHashsum() { return hashsum; }
 	
 	/** @see {@link #hashsum} */
-	public void setHashsum(boolean hashsum) {
+	public boolean setHashsum(boolean hashsum) {
 		if (this.hashsum == hashsum)
-			return;
+			return false;
 		
 		this.hashsum = hashsum;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "hashsum"));
+		return true;
 	}
 	
 	
@@ -279,15 +290,16 @@ implements Serializable {
 	public FieldRole getRole() { return role; }
 	
 	/** @see {@link #role} */
-	public void setRole(FieldRole role) throws IllegalArgumentException, IllegalStateException {
+	public boolean setRole(FieldRole role) throws IllegalArgumentException, IllegalStateException {
 		if (role == null)
 			throw new IllegalArgumentException("Состояние не может быть NULL");
 		
 		if (this.role == role)
-			return;
+			return false;
 		
 		this.role = role;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "role"));
+		return true;
 	}
 	
 	
@@ -295,12 +307,13 @@ implements Serializable {
 	
 	public Color getColor() { return color;	}
 	
-	public void setColor(Color color) {
-		if (this.color != null && this.color.equals(color))
-			return;
+	public boolean setColor(Color color) {
+		if (this.color != null && this.color.equals(color) || this.color == null && color == null)
+			return false;
 		
 		this.color = color;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "color"));
+		return true;
 	}
 	
 	
@@ -310,12 +323,13 @@ implements Serializable {
 	public Parser<?> getParser() { return parser; }
 	
 	/** @see {@link #parser} */
-	public void setParser(Parser<?> parser) {
+	public boolean setParser(Parser<?> parser) {
 		if (parser.equals(this.parser))
-			return;
+			return false;
 		
 		this.parser = parser;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "parser"));
+		return true;
 	}
 	
 	
@@ -326,12 +340,13 @@ implements Serializable {
 	}
 
 
-	public void setValid(boolean valid) {
+	public boolean setValid(boolean valid) {
 		if (this.valid == valid)
-			return;
+			return false;
 		
 		this.valid = valid;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "valid"));
+		return true;
 	}
 
 

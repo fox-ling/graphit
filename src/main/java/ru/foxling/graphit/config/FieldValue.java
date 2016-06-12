@@ -38,6 +38,8 @@ implements Serializable{
 	 * <i>*will be shown in the tooltip</i> */
 	public String description;
 	
+	public FieldValue() { }
+	
 	public FieldValue(Object value){
 		this.value = value;
 		this.description = value.toString();
