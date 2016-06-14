@@ -17,9 +17,6 @@
 
 package ru.foxling.graphit.config;
 
-import java.io.Serializable;
-
-public interface Parser<T>
-extends Serializable{
+public interface Parser<T> {
 	public T parse(String str) throws Exception;
 }

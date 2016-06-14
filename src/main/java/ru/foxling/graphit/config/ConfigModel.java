@@ -464,184 +464,260 @@ implements Serializable {
 	}
 	
 	/*
-	 * -----=== Field mgmt ===----- 
+	 * -----=== FIELD MGMT ===----- 
 	 */
 	
+	
+	/* ---=== FIELD.NAME ===--- */
+
+	/** Sets <code>name</code> of a <code>field</code>
+	 * @return <code>true</code> if the property changed */
 	public boolean setFieldName(Field field, String name) {
-		try {
-			if (field == null)
-				throw new NullPointerException("Поле - NULL");
-			
-			if (field.getName().equals(name))
-				return false;
-			
-			validateFieldName(field, name);
-			
-			field.setName(name);
-			return true;
-		} catch (Exception e) {
-			LOG.log(Level.WARNING, "Не удалось изменить имя поля", e);
-			return false;
-		}
+		if (field == null)
+			throw new NullPointerException("Parameter 'field' is NULL");
+		
+		return field.setName(name);
 	}
 	
-	public void validateFieldName(Field field, String name) throws UniqueFieldException {
-		for (Field f : getFieldList())
+	
+	/** Checks if a name fits a field
+	 * @param field a field to check
+	 * @param name a name to check
+	 * @param trace do the issues' logging
+	 * @returns validity */
+	public boolean validateFieldName(Field field, String name, boolean trace) {
+		if (field == null)
+			throw new NullPointerException("Parameter 'field' is NULL");
+		
+		for (Field f : getFieldList()) {
 			if (!field.equals(f) && f.getName().equals(name)) {
-				if (field.getRole() == FieldRole.DRAW && f.getRole() == FieldRole.DRAW) {
-					throw new UniqueFieldException("Имена рисуемых полей должны быть уникальными.", field, f, name);
+				if (field.getRole() == FieldRole.DRAW && f.getRole() == FieldRole.X_AXIS) {
+					if (trace) {
+						LOG.log(Level.WARNING, "Имена рисуемых полей должны быть уникальными.");
+					}
+					return false;
 				} else
-					LOG.log(Level.INFO, "Уже есть поле с именем " + name);
+					if (trace) {
+						LOG.log(Level.INFO, "Уже есть поле с именем " + name);
+					}
 			}
-	}
-
-	public boolean setFieldDescription(Field field, String description) {
-		try {
-			if (field == null)
-				throw new NullPointerException("Поле - NULL");
-			
-			field.setDescription(description);
-			return true;
-		} catch (Exception e) {
-			LOG.log(Level.WARNING,"Не удалось изменить описание поля", e);
-			return false;
 		}
+		return true;
 	}
 	
+	
+	/* ---=== FIELD.DESCRIPTION ===---*/
+	
+	/** Sets <code>description</code> of a <code>field</code>
+	 * @return <code>true</code> if the property changed */
+	public boolean setFieldDescription(Field field, String description) {
+		if (field == null)
+			throw new NullPointerException("Parameter 'field' is NULL");
+		
+		return field.setDescription(description);
+	}
+	
+	
+	/* ---=== FIELD.DATATYPE ===--- */
+	
+	/** Sets <code>datatype</code> of a <code>field</code>
+	 * @return <code>true</code> if the property changed */
 	public boolean setFieldDatatype(Field field, DataType datatype) {
-		try {
-			if (field == null)
-				throw new NullPointerException("Поле - NULL");
+		if (field == null)
+			throw new NullPointerException("Parameter 'field' is NULL");
+		
+		if (datatype == null)
+			throw new NullPointerException("Parameter 'datatype' is NULL");
 			
-			DataType xDataType = field.getDatatype();
-			
-			field.setDatatype(datatype);
-			
-			if (!setFieldRole(field, field.getRole()) && // Trying to validate the field's role (checking if we can leave it unchanged)
-					!setFieldRole(field, datatype == DataType.TIME_SEQUENCE ? FieldRole.X_AXIS : FieldRole.NONE)) /* ...then, trying to reset it */ { 
-				// ... if unable to do anything, then rolling back
-				field.setDatatype(xDataType);
-				LOG.log(Level.WARNING, "Не удалось изменить тип данных поля из-за конфликта с ролью (см. предыдущие сообщения для подробностей)");
-				return false;
-			}
-			return true;
-		} catch (Exception e) {
-			LOG.log(Level.WARNING, "Не удалось изменить тип данных поля", e);
-			return false;
-		}
+		return field.setDatatype(datatype);
 	}
-
-	public boolean setFieldDelimiter(Field field, FieldDelimiter delimiter) {
-		try {
-			if (field == null)
-				throw new NullPointerException("Поле - NULL");
-			
-			field.setDelimiter(delimiter);
-			return true;
-		} catch (Exception e) {
-			LOG.log(Level.WARNING, "Не удалось изменить тип данных поля", e);
-			return false;
-		}
-	}
+	
+	
+	/* ---=== FIELD.FORMAT ===--- */
 	
 	public boolean setFieldFormat(Field field, ru.foxling.graphit.config.Format format) {
-		try {
-			if (field == null)
-				throw new NullPointerException("Поле - NULL");
-			
-			field.setFormat(format);
-			return true;
-		} catch (Exception e) {
-			LOG.log(Level.WARNING, "Не удалось изменить формат поля", e);
-			return false;
+		if (field == null) {
+			throw new NullPointerException("Parameter 'field' is NULL");
 		}
+		
+		return field.setFormat(format);
 	}
 	
 	public boolean setFieldFormat(Field field, String format) {
-		try {
-			if (field == null)
-				throw new NullPointerException("Поле - NULL");
-			
-			field.setFormat(format);
-			return true;
-		} catch (Exception e) {
-			LOG.log(Level.WARNING, "Не удалось изменить формат поля", e);
-			return false;
+		if (field == null) {
+			throw new NullPointerException("Parameter 'field' is NULL");
 		}
+		
+		return field.setFormat(format);
 	}
 	
+	
+	/* ---=== FIELD.DELIMITER ===--- */
+	
+	public boolean setFieldDelimiter(Field field, FieldDelimiter delimiter) {
+		if (field == null) {
+			throw new NullPointerException("Parameter 'field' is NULL");
+		}
+			
+		return field.setDelimiter(delimiter);
+	}
+	
+	
+	/* ---=== FIELD.OPTIONAL ===--- */
+	
+	/** Sets parameter <code>'optional'</code> of a <code>field</code>
+	 * @returns true if value has changed*/
 	public boolean setFieldOptional(Field field, boolean optional) {
-		try {
-			if (field == null)
-				throw new NullPointerException("Поле - NULL");
-			
-			validateFieldOptional(field, optional);
-			field.setOptional(optional);
-			return true;
-		} catch (UniqueFieldException e) {
-			LOG.log(Level.WARNING, String.format("Не удалось изменить опциональность поля, т.к. в наборе полей уже есть необязательное поле - '%s'. Может быть только одно необязательное поле", e.getPrimalField()), e);
-			return false;
+		if (field == null) {
+			throw new NullPointerException("Parameter 'field' is NULL");
 		}
+		
+		if (validateFieldOptional(field, optional, true)) {
+			return field.setOptional(optional);
+		}
+		return false;
 	}
 	
-	public void validateFieldOptional(Field field, boolean optional) throws UniqueFieldException {
+	/** Checks if a field could be the optional field
+	 * @param field a field to check
+	 * @param optional optional flag to check
+	 * @param trace do the issues' logging
+	 * @returns validity */
+	public boolean validateFieldOptional(Field field, boolean optional, boolean trace) {
 		if (optional) {
-			for (Field f : fieldList)
-				if (!f.equals(field) && f.isOptional())
-					throw new UniqueFieldException(field, f, "Необязательное");
+			for (Field f : fieldList) {
+				if (!f.equals(field) && f.isOptional()) {
+					if (trace) {
+						LOG.log(Level.WARNING, String.format("В наборе полей уже есть необязательное поле - '%s'. Может быть только одно необязательное поле", f));
+					}
+					return false;
+				}
+			}
 		}
+		return true;
 	}
+	
+	
+	/* ---=== FIELD.BITMASK ===--- */
 	
 	/** Sets the field's bitmask property
-	 * @return <code>false</code> if encountered any exceptions during execution, <code>true</code> – otherwise */
+	 * @return <code>true</code> if value has changed */
 	public boolean setFieldBitmask(Field field, boolean isBitmask) {
-		try {
-			if (field == null)
-				throw new NullPointerException("Поле - NULL");
+		if (field == null) {
+			throw new NullPointerException("Parameter 'field' is NULL");
+		}
 
-			field.setBitmask(isBitmask);
-			return true;
-		} catch (Exception e) {
-			LOG.log(Level.WARNING, "Не удалось изменить свойство поля \"битовая маска\"", e);
-			return false;
-		}
+		return field.setBitmask(isBitmask);
 	}
 	
+	
+	/* ---=== FIELD.HASHSUM ===--- */
+	
+	/** Sets the field's hashsum property
+	 * @return <code>true</code> if value has changed */
 	public boolean setFieldHashsum(Field field, boolean hashsum) {
-		try {
-			if (field == null)
-				throw new NullPointerException("Поле - NULL");
-			
-			validateFieldHashsum(field, hashsum);
-			field.setHashsum(hashsum);
-			return true;
-		} catch (UniqueFieldException e) {
-			LOG.log(Level.WARNING, String.format("Не удалось изменить свойство поля 'хэш-сумма', т.к. уже есть поле хранящее хэш-сумму - '%s'", e.getPrimalField()), e);
-			return false;
+		if (field == null)
+			throw new NullPointerException("Parameter 'field' is NULL");
+		
+		validateFieldHashsum(field, hashsum, true);
+		field.setHashsum(hashsum);
+		return true;
+	}
+	
+	/** Checks if a <code>field</code> could be the hashsum-field
+	 * @param field a field to check
+	 * @param hashsum a hashsum flag to check
+	 * @param trace do the issues' logging
+	 * @returns validity */
+	public boolean validateFieldHashsum(Field field, boolean hashsum, boolean trace) {
+		if (hashsum) {
+			for (Field f : fieldList) {
+				if (!f.equals(field) && f.isHashsum()) {
+					if (trace) {
+						LOG.log(Level.WARNING, String.format("В наборе полей уже есть необязательное поле - '%s'. Может быть только одно необязательное поле", f));
+					}
+					return false;
+				}
+			}
 		}
+		return true;
 	}
 	
-	public void validateFieldHashsum(Field field, boolean hashsum) throws UniqueFieldException {
-		if (hashsum)
-			for (Field f : fieldList)
-				if (!f.equals(field) && f.isHashsum())
-					throw new UniqueFieldException(field, f, "Хэш-сумма");
+	
+	/* ---=== FIELD.ROLE ===--- */
+	
+	/** Sets the field's role property
+	 * @return <code>true</code> if value has changed */
+	public boolean setFieldRole(Field field, FieldRole role) {
+		if (validateFieldRole(field, role, true) && field.setRole(role)) {
+			if (role == FieldRole.DRAW) {
+				field.setColor(getNextColor());
+			}
+			return true;
+		} else
+			return false;
 	}
 	
+	/** Checks if a <code>field</code> could have a <code>role</code>
+	 * @param field a field to check
+	 * @param role a role to check
+	 * @param trace do the issues' logging
+	 * @returns validity */
+	public boolean validateFieldRole(Field field, FieldRole role, boolean trace) {
+		if (role == FieldRole.X_AXIS) {
+			for (Field f : fieldList) {
+				if (!f.equals(field) && f.getRole() == FieldRole.X_AXIS) {
+					if (trace) {
+						LOG.log(Level.WARNING, String.format("В наборе полей уже есть поле отмеченное как ось X - \"%s\". Может быть только одна ось X.", f));
+					}
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	/** Toggles visibility of a field on the plot */
+	public boolean toggleYAxis(Field field, boolean visible) {
+		if (field == null) {
+			throw new NullPointerException("Parameter 'field' is NULL");
+		}
+		
+		FieldRole role = field.getRole();
+		if (visible && role == FieldRole.X_AXIS) {
+			throw new IllegalStateException(String.format("Поле \"%s\" является X-осью", field));
+		}
+		
+		if (visible && role == FieldRole.DRAW ||
+				!visible && role == FieldRole.NONE) {
+					return false;
+		}
+		
+		if (visible && role == FieldRole.NONE) {
+			return setFieldRole(field, FieldRole.DRAW);
+		} else {
+			if (!visible && role == FieldRole.DRAW) {
+				return setFieldRole(field, FieldRole.NONE);
+			}
+		}
+		
+		return false;
+	}
+	
+	
+	/* ---=== FIELD.COLOR ===--- */
+	
+	/** Sets the field's color property
+	 * @return <code>true</code> if value has changed */
 	public boolean setFieldColor(Field field, Color color) {
-		try {
-			if (field == null)
-				throw new NullPointerException("Поле - NULL");
-			
-			field.setColor(color);
-			return true;
-		} catch (Exception e) {
-			LOG.log(Level.WARNING, "Не удалось изменить цвет поля ", e);
-			return false;
+		if (field == null) {
+			throw new NullPointerException("Parameter 'field' is NULL");
 		}
+		
+		return field.setColor(color);
 	}
 	
-	/** @return Next free <i>(not used)</i> color */ 
+	/** @return Next free <i>(not used by any fields in fieldList)</i> color */ 
 	private Color getNextColor() {
 		for (Color color : COLORS) {
 			boolean inuse = false;
@@ -653,8 +729,9 @@ implements Serializable {
 					break;
 				}
 			}
-			if (!inuse)
+			if (!inuse) {
 				return color;
+			}
 		}
 		return getRandomColor();				
 	}
@@ -663,81 +740,17 @@ implements Serializable {
 		Random rnd = new Random();
 		return new Color(rnd.nextInt(255), rnd.nextInt(255), rnd.nextInt(255));
 	}
-	
-	/**
-	 * @param field which axis you wanna toggle
-	 * @param visible wanna draw it or not */
-	public boolean toggleYAxis(Field field, boolean visible) {
-		try {
-			if (field == null)
-				throw new NullPointerException("Поле - NULL");
-			
-			FieldRole role = field.getRole();
-			if (visible && role == FieldRole.X_AXIS)
-				throw new IllegalStateException(String.format("Поле \"%s\" является X-осью", field));
-			if (visible && role == FieldRole.DRAW ||
-					!visible && role == FieldRole.NONE)
-						return true;
-			
-			if (visible && role == FieldRole.NONE) {
-				return setFieldRole(field, FieldRole.DRAW);
-			} else
-				if (!visible && role == FieldRole.DRAW)
-					return setFieldRole(field, FieldRole.NONE);
-			
-			return true;
-		} catch (Exception e) {
-			LOG.log(Level.WARNING, "Не удалось изменить ось x", e);
-			return false;
-		}
-	}
-	
-	public boolean setFieldRole(Field field, FieldRole role) {
-		try {
-			if (field == null)
-				throw new NullPointerException("Поле - NULL");
-			
-			validateFieldRole(field, role);
-		} catch (UniqueFieldException e) {
-			LOG.log(Level.WARNING, String.format("Не удалось изменить роль поля, т.к. в наборе полей уже есть поле отмеченное как ось X - \"%s\". Может быть только одна ось X.", e.getPrimalField()), e);
-			return false;
-		} catch (Exception e) {
-			LOG.log(Level.WARNING, e.getMessage(), e);
-			return false;
-		}
-		
-		if (role == FieldRole.DRAW)
-			field.setColor(getNextColor());
-		
-		field.setRole(role);
-		return true;
-	}
-	
-	/** @see {@link #role} */
-	public void validateFieldRole(Field field, FieldRole role) throws IllegalStateException, UniqueFieldException {
-		DataType type = field.getDatatype();  
-		if (role == FieldRole.DRAW && type == DataType.STRING)
-			throw new IllegalStateException("Строковые данные нельзя поместить на график");
-		
-		if (field.getDatatype() == DataType.TIME_SEQUENCE && role != FieldRole.X_AXIS)
-			throw new IllegalStateException(String.format("Тип данных '%s' есть смысл использовать только для роли '%s'", DataType.TIME_SEQUENCE, FieldRole.X_AXIS));
-		
-		if (role == FieldRole.X_AXIS) {
-			if (!Arrays.asList(DataType.DATE, DataType.TIME, DataType.DATETIME, DataType.TIME_SEQUENCE).contains(field.getDatatype()))
-				throw new IllegalStateException("В качестве данных для оси X поддерживаются только временнЫе типы (date/time/datetime/time_sequence)");
-		
-			for (Field f : fieldList)
-				if (!f.equals(field) && f.getRole() == FieldRole.X_AXIS)
-					throw new UniqueFieldException(field, f, FieldRole.X_AXIS.toString());
-		}
-	}
+
+
+	/* ---=== FIELD VALUES ===--- */
 	
 	public void addFieldValueAt(Field field, Integer index, FieldValue value) {
 		try {
 			if (index == null) {
 				field.addValue(value);
-			} else
+			} else {
 				field.addValueAt(index, value);
+			}
 		} catch (Exception e) {
 			LOG.log(Level.WARNING, "Не удалось добавить значение поля", e);
 		}
@@ -745,8 +758,9 @@ implements Serializable {
 	}
 	
 	public void removeFieldValue(Field field, int[] index) {
-		if (index.length == 0)
+		if (index.length == 0) {
 			return;
+		}
 		
 		try {
 			field.removeValues(index);
@@ -755,17 +769,14 @@ implements Serializable {
 		}
 	}
 	
-	public void validateField(Field field) throws UniqueFieldException, IllegalStateException {
-		try {
-			validateFieldName(field, field.getName());
-			validateFieldHashsum(field, field.isHashsum());
-			validateFieldOptional(field, field.isOptional());
-			validateFieldRole(field, field.getRole());
-			field.setValid(true);
-		} catch(Exception e) {
-			field.setValid(false);
-			throw e;
-		}
+	public boolean validateField(Field field) throws UniqueFieldException, IllegalStateException {
+		// TODO: return -> boolean
+		field.setValid(validateFieldName(field, field.getName(), true) &&
+				validateFieldHashsum(field, field.isHashsum(), true) &&
+				validateFieldOptional(field, field.isOptional(), true) &&
+				field.validateRole(field.getRole(), true) && validateFieldRole(field, field.getRole(), true));
+		
+		return field.isValid();
 	}
 	
 	public boolean validateFieldList() {
