@@ -446,6 +446,7 @@ implements Serializable {
 			} else
 				field.setDelimiter(getDefaultFieldDelimiter());
 			
+			field.addFieldListener(this::fireFieldChanged); // Event Propagation
 			fireFieldChanged(new FieldEvent(field, FieldEvent.INSERT));
 		} catch (Exception e) {
 			LOG.log(Level.WARNING, "Не удалось создать новое поле", e);

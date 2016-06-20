@@ -213,6 +213,9 @@ public class ConfigFrame extends JFrame {
 					"Значение из лог файла",
 					"Короткое пояснение, отображается в таблице",
 					"Длинное описание, отображается в всплывающей подсказке таблицы"};
+			{
+				this.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
+			}
 			//Implement table header tool tips.
 			protected JTableHeader createDefaultTableHeader() {
 				return new JTableHeader(columnModel) {
@@ -269,7 +272,6 @@ public class ConfigFrame extends JFrame {
 		pnlStatusBar.add(btnCancel);
 		
 		Logger.getLogger(getClass().getPackage().getName()).addHandler(new LoggerLabelHandler(lblLogMessage, Level.INFO));
-		//TODO
 		configController();
 	}
 
@@ -365,8 +367,9 @@ public class ConfigFrame extends JFrame {
 			int id = iFieldList.getSelectedIndex(); 
 			if (id > 0) {
 				iFieldList.setSelectedIndex(id - 1);
-			} else
+			} else {
 				iFieldList.clearSelection();
+			}
 			ConfigModel.getInstance().removeFields(list);
 		});
 		
@@ -381,7 +384,13 @@ public class ConfigFrame extends JFrame {
 		
 		// Config model >> Field List >> onChange 
 		ConfigModel.getInstance().addFieldListener((evt) -> {
+			//TODO Isn't enough ((
+			if (tValues.isEditing()) {
+				tValues.getCellEditor().stopCellEditing();
+			}
+			
 			Field field = (Field) evt.getSource();
+			Field selected = getSelectedField();
 			
 			if (field != null)
 				try {
@@ -393,10 +402,11 @@ public class ConfigFrame extends JFrame {
 			
 			mdlFieldList.refresh();
 			
-			if (field == null || field == getSelectedField()) {
-				mdlValueList.setField(getSelectedField());
+			if (field == null || selected == null || field == selected || mdlFieldList.getSize() == 0) {
+				mdlValueList.setField(selected);
 			}
-			if (evt.getType() == FieldEvent.UPDATE && field == getSelectedField()) {
+			
+			if (evt.getType() == FieldEvent.UPDATE && field == selected) {
 				refreshFieldInfo(evt);
 			}
 		});
@@ -498,8 +508,6 @@ public class ConfigFrame extends JFrame {
 		iBitMask.addActionListener(e -> {
 			ConfigModel.getInstance().setFieldBitmask(getSelectedField(), iBitMask.isSelected());
 		});
-		
-		// TODO
 	}
 	
 	/** Updates control state: enabled/disabled, clear values */
@@ -538,8 +546,15 @@ public class ConfigFrame extends JFrame {
 		iColorChooser.setVisible(isColorChooserVisible);
 	}
 	
+	/** Returns the selected field in <code><i>JList</i></code> {@link #iFieldList}<br>
+	 * If two or more fields are selected, returns <code>null</code> 
+	 * */
 	private Field getSelectedField() {
-		return iFieldList.getSelectedValue();
+		if (iFieldList.getSelectedIndices().length == 1) {
+			return iFieldList.getSelectedValue();
+		} else {
+			return null;
+		}
 	}
 	
 	private void refreshFieldInfo(EventObject evt) {
@@ -569,6 +584,7 @@ public class ConfigFrame extends JFrame {
 			iOptional.setSelected(false);
 			iBitMask.setSelected(false);
 			iHashsum.setSelected(false);
+			mdlValueList.setField(null);
 		}
 		
 		updateContolState();
@@ -699,6 +715,7 @@ public class ConfigFrame extends JFrame {
 		}
 	}
 	
+	//FIXME ValueListModel
 	private class ValueListModel
 	extends AbstractTableModel {
 		private static final long serialVersionUID = 3742047021848215242L;
