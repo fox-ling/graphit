@@ -60,6 +60,7 @@ import java.awt.Component;
 import javax.swing.JTable;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableModel;
 
 import java.awt.Dimension;
 import javax.swing.JPopupMenu;
@@ -95,7 +96,6 @@ public class ConfigFrame extends JFrame {
 	private JTable tValues;
 	private JScrollPane spValues;
 	private FormatListModel mdlFormatlist;
-	private ValueListModel mdlValueList;
 	private byte[] configState;
 	private JButton btnCancel;
 	private JButton btnOkay;
@@ -216,6 +216,7 @@ public class ConfigFrame extends JFrame {
 			{
 				this.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
 			}
+			
 			//Implement table header tool tips.
 			protected JTableHeader createDefaultTableHeader() {
 				return new JTableHeader(columnModel) {
@@ -297,25 +298,6 @@ public class ConfigFrame extends JFrame {
 			e.printStackTrace();
 		}
 	}
-
-	/*public static void main(String[] args) {
-		try {
-			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					ConfigFrame frame = new ConfigFrame();
-					frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
-					frame.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		});
-	}*/
 	
 	public static void launch() {
 		EventQueue.invokeLater(new Runnable() {
@@ -379,16 +361,10 @@ public class ConfigFrame extends JFrame {
 		iFormat.setModel(mdlFormatlist);
 		
 		// Table "Field Values" model
-		mdlValueList = new ValueListModel();
-		tValues.setModel(mdlValueList);
+		tValues.setModel(BlankTableModel.instance());
 		
 		// Config model >> Field List >> onChange 
 		ConfigModel.getInstance().addFieldListener((evt) -> {
-			//TODO Isn't enough ((
-			if (tValues.isEditing()) {
-				tValues.getCellEditor().stopCellEditing();
-			}
-			
 			Field field = (Field) evt.getSource();
 			Field selected = getSelectedField();
 			
@@ -401,10 +377,6 @@ public class ConfigFrame extends JFrame {
 				}
 			
 			mdlFieldList.refresh();
-			
-			if (field == null || selected == null || field == selected || mdlFieldList.getSize() == 0) {
-				mdlValueList.setField(selected);
-			}
 			
 			if (evt.getType() == FieldEvent.UPDATE && field == selected) {
 				refreshFieldInfo(evt);
@@ -568,12 +540,18 @@ public class ConfigFrame extends JFrame {
 			iOptional.setSelected(field.isOptional());
 			edtFormat.setText(field.getFormatValue());
 			mdlFormatlist.refresh();
-			mdlValueList.setField(field);
 			iFieldRole.setSelectedItem(field.getRole());
 			iBitMask.setSelected(field.isBitmask());
 			iHashsum.setSelected(field.isHashsum());
 			if (field.getRole() == FieldRole.DRAW && field.getColor() != null)
 				iColorChooser.setBackground(field.getColor());
+			
+			TableModel model = tValues.getModel();
+			if (model instanceof BlankTableModel || ((ValueListModel) model).getField() != field) {
+				tValues.setModel(new ValueListModel(field));
+			} else {
+				((ValueListModel) model).refresh();
+			}
 		} else {
 			iFieldName.setText("");
 			iFieldDelimiter.setSelectedIndex(-1);
@@ -584,7 +562,9 @@ public class ConfigFrame extends JFrame {
 			iOptional.setSelected(false);
 			iBitMask.setSelected(false);
 			iHashsum.setSelected(false);
-			mdlValueList.setField(null);
+			if (!(tValues.getModel() instanceof BlankTableModel)) {
+				tValues.setModel(BlankTableModel.instance());
+			}
 		}
 		
 		updateContolState();
@@ -715,7 +695,6 @@ public class ConfigFrame extends JFrame {
 		}
 	}
 	
-	//FIXME ValueListModel
 	private class ValueListModel
 	extends AbstractTableModel {
 		private static final long serialVersionUID = 3742047021848215242L;
@@ -724,7 +703,15 @@ public class ConfigFrame extends JFrame {
 		private final Class<?>[] COL_CLASS = {String.class, String.class, String.class};
 		
 		private Field field;
-		private List<FieldValue> valueList;
+		List<FieldValue> valueList;
+
+		public ValueListModel(Field field) {
+			if (field == null) {
+				throw new IllegalArgumentException("field-param shouldn't be null");
+			}
+			this.field = field;
+			this.valueList = field.getValueList();
+		}
 		
 		@Override
 		public int getColumnCount() {
@@ -743,59 +730,52 @@ public class ConfigFrame extends JFrame {
 
 		@Override
 		public int getRowCount() {
-			if (valueList != null) {
-				return valueList.size();
-			} else
-				return 0;
+			return valueList.size();
 		}
 
 		@Override
 		public Object getValueAt(int row, int col) {
-			if (valueList != null) {
-				if (row >= valueList.size())
-					return null;
-				switch (col) {
-				case 0:
-					return valueList.get(row).source;
-				case 1:
-					return valueList.get(row).caption;
-				case 2:
-					return valueList.get(row).description;
-				default:
-					return null;
-				}
-			} else
+			if (row >= valueList.size())
 				return null;
+			
+			switch (col) {
+			case 0:
+				return valueList.get(row).source;
+			case 1:
+				return valueList.get(row).caption;
+			case 2:
+				return valueList.get(row).description;
+			default:
+				return null;
+			}
 		}
 		
 		@Override
 		public void setValueAt(Object value, int row, int col) {
-			if (valueList != null) {
-				if (row >= valueList.size())
+			if (row >= valueList.size())
+				return;
+			switch (col) {
+			case 0:
+				String src = (String) value;
+				FieldValue fValue = valueList.get(row);
+				if (src == null || src.trim().isEmpty()) {
+					fValue.source = null;
+					fValue.value = null;
 					return;
-				switch (col) {
-				case 0:
-					String src = (String) value;
-					FieldValue fValue = valueList.get(row);
-					if (src == null || src.trim().isEmpty()) {
-						fValue.source = null;
-						fValue.value = null;
-						return;
-					}
-					try {
-						valueList.get(row).value = field.getParser().parse(src);
-						valueList.get(row).source = src;
-					} catch (Exception e) {
-						LOG.log(Level.WARNING, String.format("Не удалось сконвертировать строку '%s' в тип '%s'", value, field.getDatatype()), e);
-					}
-					break;
-				case 1:
-					valueList.get(row).caption = value.toString();
-					break;
-				case 2:
-					valueList.get(row).description = value.toString();
-					break;
 				}
+				try {
+					valueList.get(row).value = field.getParser().parse(src);
+					valueList.get(row).source = src;
+				} catch (Exception e) {
+					LOG.log(Level.WARNING, String.format("Не удалось сконвертировать строку '%s' в тип '%s'", value, field.getDatatype()), e);
+				}
+				break;
+			case 1:
+				valueList.get(row).caption = value.toString();
+				break;
+			case 2:
+				valueList.get(row).description = value.toString();
+				break;
 			}
 		}
 		
@@ -804,16 +784,12 @@ public class ConfigFrame extends JFrame {
 			return true;
 		}
 		
-		public void setField(Field field) {
-			this.field = field;
-			if (field != null) {
-				valueList = field.getValueList();
-				fireTableDataChanged();
-			} else
-				if (valueList != null) {
-					valueList = null;
-					fireTableDataChanged();
-				}
+		public Field getField() {
+			return field;
+		}
+		
+		public void refresh() {
+			this.fireTableDataChanged();
 		}
 	}
 	

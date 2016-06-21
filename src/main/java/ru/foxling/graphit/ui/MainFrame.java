@@ -27,11 +27,8 @@ import javax.swing.KeyStroke;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import javax.swing.event.TableModelListener;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
-import javax.swing.table.TableModel;
-
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
@@ -118,7 +115,6 @@ extends JFrame implements ChartProgressListener {
 	private JSplitPane splitPane;
 	private JScrollPane spTable;
 	private JTable table;
-	private static TableModel blankTableModel;
 	private JTextField tfCurrFile;
 	private JPopupMenu popupMenu;
 	private JMenu mRecent;
@@ -360,30 +356,8 @@ extends JFrame implements ChartProgressListener {
 	/** Drops current session */
 	private void reset() {
 		chartPanel.setChart(null);
-		if (blankTableModel == null) {
-			blankTableModel = new TableModel(){
-				@Override
-				public int getRowCount() { return 0; }
-				@Override
-				public int getColumnCount() { return 0; }
-				@Override
-				public String getColumnName(int columnIndex) { return null; }
-				@Override
-				public Class<?> getColumnClass(int columnIndex) { return null; }
-				@Override
-				public boolean isCellEditable(int rowIndex, int columnIndex) { return false; }
-				@Override
-				public Object getValueAt(int rowIndex, int columnIndex) { return null; }
-				@Override
-				public void setValueAt(Object aValue, int rowIndex, int columnIndex) {}
-				@Override
-				public void addTableModelListener(TableModelListener l) {}
-				@Override
-				public void removeTableModelListener(TableModelListener l) {}
-				
-			};
-		}
-		table.setModel(blankTableModel);
+		
+		table.setModel(BlankTableModel.instance());
 		logFile = null;
 	}
 	

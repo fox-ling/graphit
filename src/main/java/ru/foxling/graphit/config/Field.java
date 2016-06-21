@@ -455,7 +455,7 @@ implements Serializable {
 			throw new IndexOutOfBoundsException(String.format("Попытка вставить значение поля в некорректную позицию (%d)", index));
 		
 		valueList.add(index, value);
-		fireFieldChanged(new FieldEvent(this, FieldEvent.INSERT, "valueList"));
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "valueList"));
 	}
 	
 	public void removeValues(int[] index) throws IndexOutOfBoundsException, NullPointerException {
@@ -470,7 +470,7 @@ implements Serializable {
 			valueList.remove(index[i]);
 		}
 		
-		fireFieldChanged(new FieldEvent(this, FieldEvent.DELETE, "valueList"));
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "valueList"));
 	}
 	
 	
