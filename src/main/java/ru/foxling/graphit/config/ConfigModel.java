@@ -491,10 +491,13 @@ implements Serializable {
 			throw new NullPointerException("Parameter 'field' is NULL");
 		
 		for (Field f : getFieldList()) {
-			if (!field.equals(f) && f.getName().equals(name)) {
+			if (field.equals(f)) {
+				return true;
+			}
+			if (f.getName().equals(name)) {
 				if (field.getRole() == FieldRole.DRAW && f.getRole() == FieldRole.X_AXIS) {
 					if (trace) {
-						LOG.log(Level.WARNING, "Имена рисуемых полей должны быть уникальными.");
+						LOG.log(Level.WARNING, String.format("В наборе полей два или более поля с именем '%s'. Имена рисуемых полей должны быть уникальными.", field));
 					}
 					return false;
 				} else
@@ -587,7 +590,10 @@ implements Serializable {
 	public boolean validateFieldOptional(Field field, boolean optional, boolean trace) {
 		if (optional) {
 			for (Field f : fieldList) {
-				if (!f.equals(field) && f.isOptional()) {
+				if (field.equals(f)) {
+					return true;
+				}
+				if (f.isOptional()) {
 					if (trace) {
 						LOG.log(Level.WARNING, String.format("В наборе полей уже есть необязательное поле - '%s'. Может быть только одно необязательное поле", f));
 					}
@@ -633,7 +639,10 @@ implements Serializable {
 	public boolean validateFieldHashsum(Field field, boolean hashsum, boolean trace) {
 		if (hashsum) {
 			for (Field f : fieldList) {
-				if (!f.equals(field) && f.isHashsum()) {
+				if (f.equals(field)) {
+					return true;
+				}
+				if (f.isHashsum()) {
 					if (trace) {
 						LOG.log(Level.WARNING, String.format("В наборе полей уже есть необязательное поле - '%s'. Может быть только одно необязательное поле", f));
 					}
@@ -667,7 +676,10 @@ implements Serializable {
 	public boolean validateFieldRole(Field field, FieldRole role, boolean trace) {
 		if (role == FieldRole.X_AXIS) {
 			for (Field f : fieldList) {
-				if (!f.equals(field) && f.getRole() == FieldRole.X_AXIS) {
+				if (field.equals(f)) {
+					return true;
+				}
+				if (f.getRole() == FieldRole.X_AXIS) {
 					if (trace) {
 						LOG.log(Level.WARNING, String.format("В наборе полей уже есть поле отмеченное как ось X - \"%s\". Может быть только одна ось X.", f));
 					}
@@ -770,8 +782,7 @@ implements Serializable {
 		}
 	}
 	
-	public boolean validateField(Field field) throws UniqueFieldException, IllegalStateException {
-		// TODO: return -> boolean
+	public boolean validateField(Field field) {
 		field.setValid(validateFieldName(field, field.getName(), true) &&
 				validateFieldHashsum(field, field.isHashsum(), true) &&
 				validateFieldOptional(field, field.isOptional(), true) &&
@@ -781,25 +792,13 @@ implements Serializable {
 	}
 	
 	public boolean validateFieldList() {
-		String msg = "";
-		Field field = null;
-		try {
-			for (int i = 0; i < getFieldList().size(); i++) {
-				field = getFieldList().get(i);
-				validateField(field);
+		for (int i = 0; i < getFieldList().size(); i++) {
+			Field field = getFieldList().get(i);
+			if (!validateField(field)) {
+				return false;
 			}
-			return true;
-		} catch (UniqueFieldException e) {
-			if (e.getMessage() != null) {
-				msg = e.getMessage();
-			} else
-				msg = String.format("В наборе полей должно быть только одно поле со свойством \"%s\", но у поля [%s] это уже есть", e.getUniqueProperty(), e.getPrimalField());
-		} catch (IllegalStateException e) {
-			msg = e.getMessage();
 		}
-		if (field != null)
-			LOG.log(Level.WARNING, "Ошибка при валидации поля \"" + field.toString() + "\": " + msg);
-		return false;
+		return true;
 	}
 	
 	public boolean getLaunchVisible() {

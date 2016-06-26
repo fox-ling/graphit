@@ -308,11 +308,14 @@ public class Chart {
 		
 		if (logFile.getParsedData().size() == 0)
 			throw new IllegalStateException("В файле нет ни одной нормальной записи");
+		
 		ConfigModel configModel = ConfigModel.getInstance();
 		boolean xAxis = false;
 		for (Field field : configModel.getFieldList()) {
 			if (field.getRole() == FieldRole.X_AXIS || field.getRole() == FieldRole.DRAW)
-				configModel.validateField(field);
+				if (!configModel.validateField(field)) {
+					continue;
+				}
 			
 			if (field.getRole() == FieldRole.X_AXIS)
 				xAxis = true;

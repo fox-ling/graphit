@@ -247,7 +247,6 @@ extends JFrame implements ChartProgressListener {
 						}
 						case TIME_SEQUENCE:
 						case DATETIME: {
-							//TODO
 							LocalDateTime datetime = (LocalDateTime) model.getValueAt(selectedIndex, Chart.getxFieldId());
 							ZonedDateTime zdt = ZonedDateTime.of(datetime, ZoneId.systemDefault());
 							pos = zdt.toEpochSecond() * 1000;
@@ -475,7 +474,6 @@ extends JFrame implements ChartProgressListener {
 
 	@Override
 	public void chartProgress(ChartProgressEvent e) {
-		//TODO
 		if (e.getType() != 2) return;
 		
 		if (Chart.getInstance() != null && Chart.getxFieldId() > -1) {
@@ -566,10 +564,12 @@ extends JFrame implements ChartProgressListener {
 						switch (e.getPropertyName()) {
 						case "role":
 						case "color":
-							if (field.getRole() == FieldRole.DRAW) {
-								Chart.drawField(field);
-							} else
-								Chart.setFieldVisible(field, false);
+							if (chartPanel.getChart() != null) {
+								if (field.getRole() == FieldRole.DRAW) {
+									Chart.drawField(field);
+								} else
+									Chart.setFieldVisible(field, false);
+							}
 							break;
 						case "datatype":
 						case "parser":
