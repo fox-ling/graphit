@@ -354,6 +354,7 @@ extends JFrame implements ChartProgressListener {
 	
 	/** Drops current session */
 	private void reset() {
+		configController.clearAxesList();
 		chartPanel.setChart(null);
 		
 		table.setModel(BlankTableModel.instance());
@@ -611,14 +612,18 @@ extends JFrame implements ChartProgressListener {
 			return null;
 		}
 		
-		/** Refreshes Axes list at the "Add Axis" button's popup menu*/
-		public void refreshAxesList() {
+		public void clearAxesList() {
 			mYAxes.removeAll();
 			links.clear();
-			
+		}
+		
+		/** Refreshes Axes list at the "Add Axis" button's popup menu*/
+		public void refreshAxesList() {
+			clearAxesList();
 			List<Field> fields = ConfigModel.getInstance().getFieldList(); 
 			for (Field field : fields) {
-				if (field.getDatatype() == DataType.STRING ||
+				if (field.isValid() == false ||
+						field.getDatatype() == DataType.STRING ||
 						field.getRole() == FieldRole.X_AXIS)
 							continue;
 				Link link = new Link(field);

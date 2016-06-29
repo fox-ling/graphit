@@ -368,10 +368,6 @@ public class ConfigFrame extends JFrame {
 			Field field = (Field) evt.getSource();
 			Field selected = getSelectedField();
 			
-			if (field != null && !evt.getPropertyName().equals("valid")) {
-				ConfigModel.getInstance().validateField(field);
-			}
-			
 			mdlFieldList.refresh();
 			
 			if (evt.getType() == FieldEvent.UPDATE && field == selected) {

@@ -491,19 +491,9 @@ implements Serializable {
 			throw new NullPointerException("Parameter 'field' is NULL");
 		
 		for (Field f : getFieldList()) {
-			if (field.equals(f)) {
-				return true;
-			}
-			if (f.getName().equals(name)) {
-				if (field.getRole() == FieldRole.DRAW && f.getRole() == FieldRole.X_AXIS) {
-					if (trace) {
-						LOG.log(Level.WARNING, String.format("В наборе полей два или более поля с именем '%s'. Имена рисуемых полей должны быть уникальными.", field));
-					}
-					return false;
-				} else
-					if (trace) {
-						LOG.log(Level.INFO, "Уже есть поле с именем " + name);
-					}
+			if (!f.equals(field) && f.getName().equals(name)) {
+				LOG.log(Level.WARNING, "Уже есть поле с именем " + name);
+				return false;
 			}
 		}
 		return true;
@@ -590,10 +580,7 @@ implements Serializable {
 	public boolean validateFieldOptional(Field field, boolean optional, boolean trace) {
 		if (optional) {
 			for (Field f : fieldList) {
-				if (field.equals(f)) {
-					return true;
-				}
-				if (f.isOptional()) {
+				if (!f.equals(field) && f.isOptional()) {
 					if (trace) {
 						LOG.log(Level.WARNING, String.format("В наборе полей уже есть необязательное поле - '%s'. Может быть только одно необязательное поле", f));
 					}
@@ -639,10 +626,7 @@ implements Serializable {
 	public boolean validateFieldHashsum(Field field, boolean hashsum, boolean trace) {
 		if (hashsum) {
 			for (Field f : fieldList) {
-				if (f.equals(field)) {
-					return true;
-				}
-				if (f.isHashsum()) {
+				if (!f.equals(field) && f.isHashsum()) {
 					if (trace) {
 						LOG.log(Level.WARNING, String.format("В наборе полей уже есть необязательное поле - '%s'. Может быть только одно необязательное поле", f));
 					}
@@ -676,10 +660,7 @@ implements Serializable {
 	public boolean validateFieldRole(Field field, FieldRole role, boolean trace) {
 		if (role == FieldRole.X_AXIS) {
 			for (Field f : fieldList) {
-				if (field.equals(f)) {
-					return true;
-				}
-				if (f.getRole() == FieldRole.X_AXIS) {
+				if (!f.equals(field) && f.getRole() == FieldRole.X_AXIS) {
 					if (trace) {
 						LOG.log(Level.WARNING, String.format("В наборе полей уже есть поле отмеченное как ось X - \"%s\". Может быть только одна ось X.", f));
 					}
@@ -850,6 +831,26 @@ implements Serializable {
 	}
 	
 	public void fireFieldChanged(FieldEvent evt) {
+		if (evt.getSource() != null) {
+			Field field = (Field) evt.getSource();
+			switch (evt.getType()) {
+			case 0:
+				if (evt.getPropertyName() != null) {
+					switch (evt.getPropertyName()) {
+					case "name": validateFieldName(field, field.getName(), true); break;
+					case "hashsum": validateFieldHashsum(field, field.isHashsum(), true); break;
+					case "optional": validateFieldOptional(field, field.isOptional(), true); break;
+					case "role": validateFieldRole(field, field.getRole(), true); break;
+					}
+				} else {
+					validateField(field);
+				}
+				break;
+			case 1:
+				validateField(field);
+				break;
+			}
+	}
 		for (FieldListener listener : getListeners(FieldListener.class))
 			listener.fieldChanged(evt);
 	}

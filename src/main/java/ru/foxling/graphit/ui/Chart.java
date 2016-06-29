@@ -45,7 +45,6 @@ import org.jfree.ui.RectangleInsets;
 import ru.foxling.graphit.config.ConfigModel;
 import ru.foxling.graphit.config.Field;
 import ru.foxling.graphit.config.FieldRole;
-import ru.foxling.graphit.config.UniqueFieldException;
 import ru.foxling.graphit.logfile.LogFile;
 import ru.foxling.graphit.logfile.ParsedData;
 import ru.foxling.graphit.logfile.Startup;
@@ -61,25 +60,28 @@ public class Chart {
 	private static int xFieldId;
 	
 	public static JFreeChart chartFactory(LogFile logFile) {
+		instance = null;
+		xField = null;
+		xFieldId = -1;
 		yFields.clear();
 		List<Field> yFields = new LinkedList<>();
 		List<Field> fieldList = ConfigModel.getInstance().getFieldList(); 
 		for (int i = 0; i < fieldList.size(); i++) {
 			Field f = fieldList.get(i);
 			
-			if (f.getRole() == FieldRole.X_AXIS) {
-				xFieldId = i;
-				xField = f;
-			} else if (f.getRole() == FieldRole.DRAW)
-				yFields.add(f);
+			if (f.isValid()) {
+				if (f.getRole() == FieldRole.X_AXIS) {
+					xFieldId = i;
+					xField = f;
+				} else if (f.getRole() == FieldRole.DRAW)
+					yFields.add(f);
+			}
 		}
 		
-		try {
-			drawable(logFile);
-		} catch (Exception e) {
-			LOG.log(Level.SEVERE, "Построение графика невозможно", e);
+		if (!drawable(logFile, xField, yFields)) {
 			return null;
 		}
+		
 		Chart.logFile = logFile;
 		
 		TimeSeriesCollection dsLaunch = new TimeSeriesCollection();
@@ -137,9 +139,6 @@ public class Chart {
 			for (Field yField : yFields)
 				plotFactory(yField);
 		
-        /*for (int i = 1; i < plot.getRangeAxisCount(); i++) {
-			plot.getRangeAxis(i).setAutoRange(true);
-		}*/
         System.out.println("Running Garbage Collector...");
 		Runtime.getRuntime().gc();
 		System.out.println("Completed.");
@@ -302,27 +301,26 @@ public class Chart {
 			renderer.setSeriesShapesVisible(i, visible);
 	}
 
-	private static boolean drawable(LogFile logFile) throws IllegalStateException, UniqueFieldException {
-		if (logFile == null)
-			throw new IllegalStateException("Неизвестная ошибка (LogFile is NULL)");
-		
-		if (logFile.getParsedData().size() == 0)
-			throw new IllegalStateException("В файле нет ни одной нормальной записи");
-		
-		ConfigModel configModel = ConfigModel.getInstance();
-		boolean xAxis = false;
-		for (Field field : configModel.getFieldList()) {
-			if (field.getRole() == FieldRole.X_AXIS || field.getRole() == FieldRole.DRAW)
-				if (!configModel.validateField(field)) {
-					continue;
-				}
+	private static boolean drawable(LogFile logFile, Field xField, List<Field> yFields) {
+		try {
+			if (logFile == null)
+				throw new IllegalStateException("Неизвестная ошибка (LogFile is NULL)");
 			
-			if (field.getRole() == FieldRole.X_AXIS)
-				xAxis = true;
+			if (logFile.getParsedData().size() == 0)
+				throw new IllegalStateException("В файле нет ни одной нормальной записи");
+			
+			if (xField == null) {
+				throw new IllegalStateException("Не настроена ось X");
+			}
+			
+			if (yFields == null || yFields.isEmpty()) {
+				throw new IllegalStateException("Не настроено ни одной оси Y");
+			}
+			return true;
+		} catch (Exception e) {
+			LOG.log(Level.SEVERE, "Построение графика невозможно: " + e.getMessage());
+			return false;
 		}
-		if (!xAxis)
-			throw new IllegalStateException("Не настроена ось X");
-		return true;
 	}
 
 	public static JFreeChart getInstance() { return instance; }
