@@ -27,11 +27,8 @@ import javax.swing.KeyStroke;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import javax.swing.event.TableModelListener;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
-import javax.swing.table.TableModel;
-
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
@@ -118,7 +115,6 @@ extends JFrame implements ChartProgressListener {
 	private JSplitPane splitPane;
 	private JScrollPane spTable;
 	private JTable table;
-	private static TableModel blankTableModel;
 	private JTextField tfCurrFile;
 	private JPopupMenu popupMenu;
 	private JMenu mRecent;
@@ -251,7 +247,6 @@ extends JFrame implements ChartProgressListener {
 						}
 						case TIME_SEQUENCE:
 						case DATETIME: {
-							//TODO
 							LocalDateTime datetime = (LocalDateTime) model.getValueAt(selectedIndex, Chart.getxFieldId());
 							ZonedDateTime zdt = ZonedDateTime.of(datetime, ZoneId.systemDefault());
 							pos = zdt.toEpochSecond() * 1000;
@@ -359,31 +354,10 @@ extends JFrame implements ChartProgressListener {
 	
 	/** Drops current session */
 	private void reset() {
+		configController.clearAxesList();
 		chartPanel.setChart(null);
-		if (blankTableModel == null) {
-			blankTableModel = new TableModel(){
-				@Override
-				public int getRowCount() { return 0; }
-				@Override
-				public int getColumnCount() { return 0; }
-				@Override
-				public String getColumnName(int columnIndex) { return null; }
-				@Override
-				public Class<?> getColumnClass(int columnIndex) { return null; }
-				@Override
-				public boolean isCellEditable(int rowIndex, int columnIndex) { return false; }
-				@Override
-				public Object getValueAt(int rowIndex, int columnIndex) { return null; }
-				@Override
-				public void setValueAt(Object aValue, int rowIndex, int columnIndex) {}
-				@Override
-				public void addTableModelListener(TableModelListener l) {}
-				@Override
-				public void removeTableModelListener(TableModelListener l) {}
-				
-			};
-		}
-		table.setModel(blankTableModel);
+		
+		table.setModel(BlankTableModel.instance());
 		logFile = null;
 	}
 	
@@ -501,7 +475,6 @@ extends JFrame implements ChartProgressListener {
 
 	@Override
 	public void chartProgress(ChartProgressEvent e) {
-		//TODO
 		if (e.getType() != 2) return;
 		
 		if (Chart.getInstance() != null && Chart.getxFieldId() > -1) {
@@ -592,10 +565,12 @@ extends JFrame implements ChartProgressListener {
 						switch (e.getPropertyName()) {
 						case "role":
 						case "color":
-							if (field.getRole() == FieldRole.DRAW) {
-								Chart.drawField(field);
-							} else
-								Chart.setFieldVisible(field, false);
+							if (chartPanel.getChart() != null) {
+								if (field.getRole() == FieldRole.DRAW) {
+									Chart.drawField(field);
+								} else
+									Chart.setFieldVisible(field, false);
+							}
 							break;
 						case "datatype":
 						case "parser":
@@ -637,14 +612,18 @@ extends JFrame implements ChartProgressListener {
 			return null;
 		}
 		
-		/** Refreshes Axes list at the "Add Axis" button's popup menu*/
-		public void refreshAxesList() {
+		public void clearAxesList() {
 			mYAxes.removeAll();
 			links.clear();
-			
+		}
+		
+		/** Refreshes Axes list at the "Add Axis" button's popup menu*/
+		public void refreshAxesList() {
+			clearAxesList();
 			List<Field> fields = ConfigModel.getInstance().getFieldList(); 
 			for (Field field : fields) {
-				if (field.getDatatype() == DataType.STRING ||
+				if (field.isValid() == false ||
+						field.getDatatype() == DataType.STRING ||
 						field.getRole() == FieldRole.X_AXIS)
 							continue;
 				Link link = new Link(field);

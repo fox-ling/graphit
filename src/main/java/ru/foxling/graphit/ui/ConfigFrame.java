@@ -60,6 +60,7 @@ import java.awt.Component;
 import javax.swing.JTable;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableModel;
 
 import java.awt.Dimension;
 import javax.swing.JPopupMenu;
@@ -95,7 +96,6 @@ public class ConfigFrame extends JFrame {
 	private JTable tValues;
 	private JScrollPane spValues;
 	private FormatListModel mdlFormatlist;
-	private ValueListModel mdlValueList;
 	private byte[] configState;
 	private JButton btnCancel;
 	private JButton btnOkay;
@@ -213,6 +213,10 @@ public class ConfigFrame extends JFrame {
 					"Значение из лог файла",
 					"Короткое пояснение, отображается в таблице",
 					"Длинное описание, отображается в всплывающей подсказке таблицы"};
+			{
+				this.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
+			}
+			
 			//Implement table header tool tips.
 			protected JTableHeader createDefaultTableHeader() {
 				return new JTableHeader(columnModel) {
@@ -269,7 +273,6 @@ public class ConfigFrame extends JFrame {
 		pnlStatusBar.add(btnCancel);
 		
 		Logger.getLogger(getClass().getPackage().getName()).addHandler(new LoggerLabelHandler(lblLogMessage, Level.INFO));
-		//TODO
 		configController();
 	}
 
@@ -295,25 +298,6 @@ public class ConfigFrame extends JFrame {
 			e.printStackTrace();
 		}
 	}
-
-	/*public static void main(String[] args) {
-		try {
-			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					ConfigFrame frame = new ConfigFrame();
-					frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
-					frame.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		});
-	}*/
 	
 	public static void launch() {
 		EventQueue.invokeLater(new Runnable() {
@@ -365,8 +349,9 @@ public class ConfigFrame extends JFrame {
 			int id = iFieldList.getSelectedIndex(); 
 			if (id > 0) {
 				iFieldList.setSelectedIndex(id - 1);
-			} else
+			} else {
 				iFieldList.clearSelection();
+			}
 			ConfigModel.getInstance().removeFields(list);
 		});
 		
@@ -376,27 +361,16 @@ public class ConfigFrame extends JFrame {
 		iFormat.setModel(mdlFormatlist);
 		
 		// Table "Field Values" model
-		mdlValueList = new ValueListModel();
-		tValues.setModel(mdlValueList);
+		tValues.setModel(BlankTableModel.instance());
 		
 		// Config model >> Field List >> onChange 
 		ConfigModel.getInstance().addFieldListener((evt) -> {
 			Field field = (Field) evt.getSource();
-			
-			if (field != null)
-				try {
-					ConfigModel.getInstance().validateField(field);
-					field.setValid(true);
-				} catch (Exception e1) {
-					field.setValid(false);
-				}
+			Field selected = getSelectedField();
 			
 			mdlFieldList.refresh();
 			
-			if (field == null || field == getSelectedField()) {
-				mdlValueList.setField(getSelectedField());
-			}
-			if (evt.getType() == FieldEvent.UPDATE && field == getSelectedField()) {
+			if (evt.getType() == FieldEvent.UPDATE && field == selected) {
 				refreshFieldInfo(evt);
 			}
 		});
@@ -498,8 +472,6 @@ public class ConfigFrame extends JFrame {
 		iBitMask.addActionListener(e -> {
 			ConfigModel.getInstance().setFieldBitmask(getSelectedField(), iBitMask.isSelected());
 		});
-		
-		// TODO
 	}
 	
 	/** Updates control state: enabled/disabled, clear values */
@@ -538,8 +510,15 @@ public class ConfigFrame extends JFrame {
 		iColorChooser.setVisible(isColorChooserVisible);
 	}
 	
+	/** Returns the selected field in <code><i>JList</i></code> {@link #iFieldList}<br>
+	 * If two or more fields are selected, returns <code>null</code> 
+	 * */
 	private Field getSelectedField() {
-		return iFieldList.getSelectedValue();
+		if (iFieldList.getSelectedIndices().length == 1) {
+			return iFieldList.getSelectedValue();
+		} else {
+			return null;
+		}
 	}
 	
 	private void refreshFieldInfo(EventObject evt) {
@@ -553,12 +532,18 @@ public class ConfigFrame extends JFrame {
 			iOptional.setSelected(field.isOptional());
 			edtFormat.setText(field.getFormatValue());
 			mdlFormatlist.refresh();
-			mdlValueList.setField(field);
 			iFieldRole.setSelectedItem(field.getRole());
 			iBitMask.setSelected(field.isBitmask());
 			iHashsum.setSelected(field.isHashsum());
 			if (field.getRole() == FieldRole.DRAW && field.getColor() != null)
 				iColorChooser.setBackground(field.getColor());
+			
+			TableModel model = tValues.getModel();
+			if (model instanceof BlankTableModel || ((ValueListModel) model).getField() != field) {
+				tValues.setModel(new ValueListModel(field));
+			} else {
+				((ValueListModel) model).refresh();
+			}
 		} else {
 			iFieldName.setText("");
 			iFieldDelimiter.setSelectedIndex(-1);
@@ -569,6 +554,9 @@ public class ConfigFrame extends JFrame {
 			iOptional.setSelected(false);
 			iBitMask.setSelected(false);
 			iHashsum.setSelected(false);
+			if (!(tValues.getModel() instanceof BlankTableModel)) {
+				tValues.setModel(BlankTableModel.instance());
+			}
 		}
 		
 		updateContolState();
@@ -707,7 +695,15 @@ public class ConfigFrame extends JFrame {
 		private final Class<?>[] COL_CLASS = {String.class, String.class, String.class};
 		
 		private Field field;
-		private List<FieldValue> valueList;
+		List<FieldValue> valueList;
+
+		public ValueListModel(Field field) {
+			if (field == null) {
+				throw new IllegalArgumentException("field-param shouldn't be null");
+			}
+			this.field = field;
+			this.valueList = field.getValueList();
+		}
 		
 		@Override
 		public int getColumnCount() {
@@ -726,59 +722,52 @@ public class ConfigFrame extends JFrame {
 
 		@Override
 		public int getRowCount() {
-			if (valueList != null) {
-				return valueList.size();
-			} else
-				return 0;
+			return valueList.size();
 		}
 
 		@Override
 		public Object getValueAt(int row, int col) {
-			if (valueList != null) {
-				if (row >= valueList.size())
-					return null;
-				switch (col) {
-				case 0:
-					return valueList.get(row).source;
-				case 1:
-					return valueList.get(row).caption;
-				case 2:
-					return valueList.get(row).description;
-				default:
-					return null;
-				}
-			} else
+			if (row >= valueList.size())
 				return null;
+			
+			switch (col) {
+			case 0:
+				return valueList.get(row).source;
+			case 1:
+				return valueList.get(row).caption;
+			case 2:
+				return valueList.get(row).description;
+			default:
+				return null;
+			}
 		}
 		
 		@Override
 		public void setValueAt(Object value, int row, int col) {
-			if (valueList != null) {
-				if (row >= valueList.size())
+			if (row >= valueList.size())
+				return;
+			switch (col) {
+			case 0:
+				String src = (String) value;
+				FieldValue fValue = valueList.get(row);
+				if (src == null || src.trim().isEmpty()) {
+					fValue.source = null;
+					fValue.value = null;
 					return;
-				switch (col) {
-				case 0:
-					String src = (String) value;
-					FieldValue fValue = valueList.get(row);
-					if (src == null || src.trim().isEmpty()) {
-						fValue.source = null;
-						fValue.value = null;
-						return;
-					}
-					try {
-						valueList.get(row).value = field.getParser().parse(src);
-						valueList.get(row).source = src;
-					} catch (Exception e) {
-						LOG.log(Level.WARNING, String.format("Не удалось сконвертировать строку '%s' в тип '%s'", value, field.getDatatype()), e);
-					}
-					break;
-				case 1:
-					valueList.get(row).caption = value.toString();
-					break;
-				case 2:
-					valueList.get(row).description = value.toString();
-					break;
 				}
+				try {
+					valueList.get(row).value = field.getParser().parse(src);
+					valueList.get(row).source = src;
+				} catch (Exception e) {
+					LOG.log(Level.WARNING, String.format("Не удалось сконвертировать строку '%s' в тип '%s'", value, field.getDatatype()), e);
+				}
+				break;
+			case 1:
+				valueList.get(row).caption = value.toString();
+				break;
+			case 2:
+				valueList.get(row).description = value.toString();
+				break;
 			}
 		}
 		
@@ -787,16 +776,12 @@ public class ConfigFrame extends JFrame {
 			return true;
 		}
 		
-		public void setField(Field field) {
-			this.field = field;
-			if (field != null) {
-				valueList = field.getValueList();
-				fireTableDataChanged();
-			} else
-				if (valueList != null) {
-					valueList = null;
-					fireTableDataChanged();
-				}
+		public Field getField() {
+			return field;
+		}
+		
+		public void refresh() {
+			this.fireTableDataChanged();
 		}
 	}
 	

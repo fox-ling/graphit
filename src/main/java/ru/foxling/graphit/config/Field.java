@@ -25,11 +25,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EventListener;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import javax.swing.event.EventListenerList;
 
 public class Field
 implements Serializable {
 	private static final long serialVersionUID = 2916573767059483325L;
+	private static Logger LOG = Logger.getLogger(Field.class.getName());
 	
 	/** Global field counter */
 	private static int gCounter;
@@ -66,7 +70,7 @@ implements Serializable {
 	/** The field role... what to do with the field's data */
 	private FieldRole role;
 	
-	/** The color of the line <br>
+	/** The color of the line on the plot <br>
 	 * *If we gonna draw this data */
 	private Color color;
 	
@@ -74,7 +78,7 @@ implements Serializable {
 	private List<FieldValue> valueList;
 	
 	/** Object that converts string to field's {@link #datatype} */
-	private Parser<?> parser;
+	transient private Parser<?> parser;
 	
 	private boolean valid;
 
@@ -97,61 +101,85 @@ implements Serializable {
 	/* ---=== NAME ===--- */
 
 	/** @see {@link #name} */
-	public String getName() { return name; }
+	public String getName() {
+		return name;
+	}
 	
-	/** @see {@link #name} */
-	public boolean setName(String name) throws IllegalArgumentException {
-		if (name == null || name.equals(""))
-			throw new IllegalArgumentException("Имя не должно быть пустым");
-		
-		if (name.equals(this.name))
-			return false;
-		
-		this.name = name;
-		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "name"));
-		return true;
+	/** Sets the field's name
+	 * @param name non NULL and non empty name 
+	 * @see {@link #name} */
+	public boolean setName(String name) {
+		if (name != null && !name.isEmpty() && !name.equals(this.name)) {
+			this.name = name;
+			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "name"));
+			return true;
+		}
+		return false;
 	}
 	
 	
 	/* ---=== DESCRIPTION ===---*/
 	
 	/** @see {@link #description} */
-	public String getDescription() { return description; }
+	public String getDescription() {
+		return description;
+	}
 	
 	/** @see {@link #description} */
 	public boolean setDescription(String description) {
-		if (description == null)
-			setDescription("");
+		if (description == null) {
+			description = "";
+		}
 		
-		if (description.equals(this.description))
-			return false;
-		
-		this.description = description;
-		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "description"));
-		return true;
+		if (!this.description.equals(description)) {
+			this.description = description;
+			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "description"));
+			return true;
+		}
+		return false;
 	}
 	
 	
 	/* ---=== DATATYPE ===--- */
-	/** @see {@link #datatype} */
-	public DataType getDatatype() { return datatype; }
 	
 	/** @see {@link #datatype} */
-	public boolean setDatatype(DataType datatype) throws IllegalArgumentException {
-		if (datatype == null)
-			throw new IllegalArgumentException("Тип данных не должен быть пустым");
+	public DataType getDatatype() {
+		return datatype;
+	}
+	
+	/** @see {@link #datatype} */
+	public boolean setDatatype(DataType datatype) {
+		if (datatype == null) {
+			throw new NullPointerException("Тип данных не должен быть пустым");
+		}
 		
-		if (this.datatype.equals(datatype))
-			return false;
-		
-		this.datatype = datatype;
-		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "datatype"));
-		
-		if (datatype.getFormatList().indexOf(getFormat()) == -1)
-			setFormat(datatype.getDefaultFormat());
-		
-		setParser(DefaultParser.getDefaultParser(this.datatype, this.format));
-		return true;
+		if (!this.datatype.equals(datatype)) {
+			DataType xDataType = this.datatype;
+			this.datatype = datatype;
+			
+			// Trying to validate the field's role (checking if we can leave it unchanged)
+			if (!validateRole(role, false)) {
+				// ...if not, trying to reset it
+				FieldRole role0 = datatype == DataType.TIME_SEQUENCE ? FieldRole.X_AXIS : FieldRole.NONE;
+				if (!validateRole(role0, false) || !setRole(role0)) {
+					// ... if unable to do anything, then rolling back (... and then most likely something fishing is going on)
+					this.datatype = xDataType;
+					LOG.log(Level.WARNING, "Не удалось изменить тип данных поля из-за конфликта с ролью");
+					return false;
+				}
+			}
+
+			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "datatype"));
+			
+			// If format isn't compatible with new datatype, then setting a datatype's default format 
+			if (datatype.getFormatList().indexOf(format) == -1) {
+				setFormat(datatype.getDefaultFormat());
+			}
+			
+			setParser(DefaultParser.getDefaultParser(this.datatype, format));
+			return true;
+		}
+		return false;
 	}
 	
 	
@@ -220,7 +248,9 @@ implements Serializable {
 	/* ---=== DELIMITER ===--- */
 	
 	/** @see {@link #delimiter} */
-	public FieldDelimiter getDelimiter() { return delimiter; }
+	public FieldDelimiter getDelimiter() {
+		return delimiter;
+	}
 	
 	/** @see {@link #delimiter} */
 	public boolean setDelimiter(FieldDelimiter delimiter) {
@@ -243,7 +273,7 @@ implements Serializable {
 	
 	/** @see {@link #optional} */
 	public boolean setOptional(boolean optional) {
-		if (optional == this.optional)
+		if (this.optional == optional)
 			return false;
 		
 		this.optional = optional;
@@ -271,12 +301,15 @@ implements Serializable {
 	/* ---=== HASHSUM ===--- */
 	
 	/** @see {@link #hashsum} */
-	public boolean isHashsum() { return hashsum; }
+	public boolean isHashsum() {
+		return hashsum;
+	}
 	
 	/** @see {@link #hashsum} */
 	public boolean setHashsum(boolean hashsum) {
-		if (this.hashsum == hashsum)
+		if (this.hashsum == hashsum) {
 			return false;
+		}
 		
 		this.hashsum = hashsum;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "hashsum"));
@@ -286,30 +319,79 @@ implements Serializable {
 	
 	/* ---=== ROLE ===--- */
 	
-	/** @see {@link #role} */
-	public FieldRole getRole() { return role; }
+	/** Returns field's role
+	 * @see {@link #role} */
+	public FieldRole getRole() {
+		return role;
+	}
 	
-	/** @see {@link #role} */
-	public boolean setRole(FieldRole role) throws IllegalArgumentException, IllegalStateException {
-		if (role == null)
-			throw new IllegalArgumentException("Состояние не может быть NULL");
-		
-		if (this.role == role)
+	/** Sets field's role
+	 * @param role a role to set
+	 * @return <code>true</code> if property changed
+	 * @see {@link #role} */
+	public boolean setRole(FieldRole role) {
+		if (this.role != role && validateRole(role, true)) {
+			this.role = role;
+			fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "role"));
+			if (role != FieldRole.DRAW) {
+				setColor(null);
+			}
+			return true;
+		}
+		return false;
+	}
+	
+	/** Checks if the provided <code>role</code> suits the field
+	 * @param role a role to check
+	 * @param trace log encountered exceptions or not 
+	 * @return validity */
+	public boolean validateRole(FieldRole role, boolean trace) {
+		try {
+			if (role == null) {
+				throw new IllegalArgumentException("Роль не может быть пустая");
+			}
+			
+			if (role == FieldRole.DRAW && datatype == DataType.STRING) {
+				throw new IllegalStateException("Строковые данные нельзя поместить на график");
+			}
+			
+			if (datatype == DataType.TIME_SEQUENCE && role != FieldRole.X_AXIS) {
+				throw new IllegalStateException(String.format("Тип данных '%s' есть смысл использовать только для роли '%s'", DataType.TIME_SEQUENCE, FieldRole.X_AXIS));
+			}
+			
+			if (role == FieldRole.X_AXIS &&
+					!Arrays.asList(DataType.DATE, DataType.TIME, DataType.DATETIME, DataType.TIME_SEQUENCE).contains(datatype)) {
+				throw new IllegalStateException("В качестве данных для оси X поддерживаются только временнЫе типы (date/time/datetime/time_sequence)");
+			}
+		} catch (Exception e) {
+			if (trace) {
+				LOG.log(Level.WARNING, e.getMessage());
+			}
 			return false;
-		
-		this.role = role;
-		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "role"));
+		}
 		return true;
 	}
 	
 	
 	/* ---=== COLOR ===--- */
 	
-	public Color getColor() { return color;	}
+	public Color getColor() {
+		return color;
+	}
 	
+	/** Sets field's color
+	 * @param color a color to set
+	 * @return <code>true</code> if property changed
+	 * @see {@link #color} */
 	public boolean setColor(Color color) {
-		if (this.color != null && this.color.equals(color) || this.color == null && color == null)
+		if (this.color != null && this.color.equals(color) || this.color == null && color == null) {
 			return false;
+		}
+		
+		if (getRole() != FieldRole.DRAW && color != null) {
+			LOG.log(Level.WARNING, "Невозможно установить цвет для нерисуемого поля");
+			return false;
+		}
 		
 		this.color = color;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "color"));
@@ -320,12 +402,15 @@ implements Serializable {
 	/* ---=== PARSER ===--- */
 
 	/** @see {@link #parser} */
-	public Parser<?> getParser() { return parser; }
+	public Parser<?> getParser() {
+		return parser;
+	}
 	
 	/** @see {@link #parser} */
 	public boolean setParser(Parser<?> parser) {
-		if (parser.equals(this.parser))
+		if (parser.equals(this.parser)) {
 			return false;
+		}
 		
 		this.parser = parser;
 		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "parser"));
@@ -370,7 +455,7 @@ implements Serializable {
 			throw new IndexOutOfBoundsException(String.format("Попытка вставить значение поля в некорректную позицию (%d)", index));
 		
 		valueList.add(index, value);
-		fireFieldChanged(new FieldEvent(this, FieldEvent.INSERT, "valueList"));
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "valueList"));
 	}
 	
 	public void removeValues(int[] index) throws IndexOutOfBoundsException, NullPointerException {
@@ -385,7 +470,7 @@ implements Serializable {
 			valueList.remove(index[i]);
 		}
 		
-		fireFieldChanged(new FieldEvent(this, FieldEvent.DELETE, "valueList"));
+		fireFieldChanged(new FieldEvent(this, FieldEvent.UPDATE, "valueList"));
 	}
 	
 	
@@ -418,9 +503,8 @@ implements Serializable {
 	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
 		in.defaultReadObject();
 		
+		// Parser - isn't serializable.. gotta recreate parsers
 		DataType type = getDatatype(); 
-		/* DateTimeFormatter - isn't serializable.. gotta recreate parsers */
-		
 		if (Arrays.asList(DataType.DATE, DataType.TIME, DataType.DATETIME, DataType.TIME_SEQUENCE).contains(type))
 			setParser(DefaultParser.datetimeFactory(type, getFormat()));
 	}
