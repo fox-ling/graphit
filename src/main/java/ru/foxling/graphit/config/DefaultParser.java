@@ -17,19 +17,14 @@
 
 package ru.foxling.graphit.config;
 
-import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
-public class DefaultParser
-implements Serializable {
-	private static final long serialVersionUID = 1573595876414927487L;
-
+public class DefaultParser {
 	public static final Parser<Boolean> BOOLEAN = new Parser<Boolean>() {
-		private static final long serialVersionUID = 1031723417497313355L;
 		private final String TRUE = "true";
 		private final String YES = "yes";
 		private final String ONE = "1";
@@ -43,8 +38,6 @@ implements Serializable {
 	};
 	
 	public static final Parser<Float> FLOAT = new Parser<Float>() {
-		private static final long serialVersionUID = -1545547304264524852L;
-
 		@Override
 		public Float parse(String str) throws NullPointerException, NumberFormatException {
 			return Float.parseFloat(str);
@@ -52,8 +45,6 @@ implements Serializable {
 	};
 
 	public static final Parser<Double> DOUBLE = new Parser<Double>() {
-		private static final long serialVersionUID = 5833166046239982531L;
-
 		@Override
 		public Double parse(String str) throws NullPointerException, NumberFormatException {
 			return Double.parseDouble(str);
@@ -61,8 +52,6 @@ implements Serializable {
 	};
 
 	public static final Parser<String> STRING = new Parser<String>() {
-		private static final long serialVersionUID = -4557619708186480639L;
-
 		@Override
 		public String parse(String str) throws NullPointerException {
 			if (str == null)
@@ -95,7 +84,6 @@ implements Serializable {
 		switch (datatype) {
 		case BYTE:
 			return new Parser<Byte>(){
-				private static final long serialVersionUID = -6331314762362308370L;
 				private final int RADIX = _radix;
 				private final String PREFIX = _prefix;
 				
@@ -107,7 +95,6 @@ implements Serializable {
 			};
 		case SHORT:
 			return new Parser<Short>(){
-				private static final long serialVersionUID = 5087761920527362736L;
 				private final int RADIX = _radix;
 				private final String PREFIX = _prefix;
 				
@@ -119,7 +106,6 @@ implements Serializable {
 			};
 		case INTEGER:
 			return new Parser<Integer>(){
-				private static final long serialVersionUID = 1517554987236466272L;
 				private final int RADIX = _radix;
 				private final String PREFIX = _prefix;
 				
@@ -150,8 +136,7 @@ implements Serializable {
 		switch (datatype) {
 		case DATE:
 			return new Parser<LocalDate>() {
-				private static final long serialVersionUID = 8573862226829284211L;
-				transient private final DateTimeFormatter F = _formatter;
+				private final DateTimeFormatter F = _formatter;
 				
 				@Override
 				public LocalDate parse(String str) throws DateTimeParseException {
@@ -161,8 +146,7 @@ implements Serializable {
 		case TIME:
 		case TIME_SEQUENCE:
 			return new Parser<LocalTime>() {
-				private static final long serialVersionUID = 8700299087095366406L;
-				transient private final DateTimeFormatter F = _formatter;
+				private final DateTimeFormatter F = _formatter;
 				
 				@Override
 				public LocalTime parse(String str) throws DateTimeParseException {
@@ -171,8 +155,7 @@ implements Serializable {
 			};
 		case DATETIME:
 			return new Parser<LocalDateTime>() {
-				private static final long serialVersionUID = 237991710208932548L;
-				transient private final DateTimeFormatter F = _formatter;
+				private final DateTimeFormatter F = _formatter;
 				
 				@Override
 				public LocalDateTime parse(String str) throws DateTimeParseException {
@@ -187,8 +170,9 @@ implements Serializable {
 	}
 	
 	public static Parser<?> getDefaultParser(DataType datatype, Format format) throws IllegalArgumentException{
-		if (format == null) 
-				format = new Format("");
+		if (format == null) {
+			format = new Format("");
+		}
 		switch (datatype) {
 			case BOOLEAN:
 				return DefaultParser.BOOLEAN;
@@ -206,8 +190,9 @@ implements Serializable {
 			case TIME:
 			case DATETIME:
 			case TIME_SEQUENCE:
-				if (format.value == "")
+				if (format.value == "") {
 					throw new IllegalArgumentException("Формат даты не предоставлен");
+				}
 				return DefaultParser.datetimeFactory(datatype, format);
 			default:
 				throw new IllegalArgumentException("Не удалось подобрать парсер по умолчанию - неподдерживаемый тип данных (" + datatype + ")");
