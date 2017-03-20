@@ -393,6 +393,8 @@ public class LogFile {
 			uchCRCLo = auchCRCLo[uIndex] ;
 		}
 		
-		return Integer.toString((uchCRCLo << 8 | uchCRCHi),16).toUpperCase();
+		String crc = Integer.toString((uchCRCLo << 8 | uchCRCHi),16).toUpperCase();
+		while (crc.length() < 4) crc = "0" + crc;
+		return crc;
 	}
 }
