@@ -50,6 +50,7 @@ public class AboutFrame extends JFrame {
     setBounds(100, 100, 600, 175);
     setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     setContentPane(createContentPane());
+    setIconImage(Resources.getFrameIcon());
   }
 
   private Container createContentPane() {

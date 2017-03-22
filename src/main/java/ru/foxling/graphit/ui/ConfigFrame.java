@@ -53,6 +53,7 @@ import ru.foxling.graphit.config.FieldEvent;
 import ru.foxling.graphit.config.FieldRole;
 import ru.foxling.graphit.config.FieldValue;
 import ru.foxling.graphit.config.Format;
+import ru.foxling.graphit.utils.Resources;
 
 import java.awt.Color;
 import javax.swing.BoxLayout;
@@ -110,6 +111,7 @@ public class ConfigFrame extends JFrame {
 		super("Настройки");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 850, 500);
+        setIconImage(Resources.getFrameIcon());
 		
 		saveConfigState();
 		

@@ -56,6 +56,8 @@ import ru.foxling.graphit.config.DataType;
 import ru.foxling.graphit.config.Field;
 import ru.foxling.graphit.config.FieldRole;
 import ru.foxling.graphit.logfile.LogFile;
+import ru.foxling.graphit.utils.Resources;
+
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
@@ -103,12 +105,11 @@ public class MainFrame
 extends JFrame implements ChartProgressListener {
 	private static final long serialVersionUID = 1L;
 	private static final String APPNAME = "Graphit - ИСУ \"Оптима\" ";
-	//private static final Logger LOG = Logger.getLogger(MainFrame.class.getName());
 	
 	private JPanel contentPane;
-	private JMenu mFile = null;
-	private LogFile logFile = null;
-	private ChartPanel chartPanel = null;
+	private JMenu mFile;
+	private LogFile logFile;
+	private ChartPanel chartPanel;
 	
 	private JMenuItem miDetails;
 	private JSplitPane splitPane;
@@ -133,8 +134,9 @@ extends JFrame implements ChartProgressListener {
 	public MainFrame() {
 		super(APPNAME);
 		
-		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 850, 600);
+		setIconImage(Resources.getFrameIcon());
 		
 		JMenuBar menuBar = new JMenuBar();
 		setJMenuBar(menuBar);

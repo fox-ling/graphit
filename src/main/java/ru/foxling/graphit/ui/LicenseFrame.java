@@ -31,6 +31,7 @@ public class LicenseFrame extends JFrame {
     setBounds(100, 100, 600, 600);
     setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     setContentPane(createContentPane());
+    setIconImage(Resources.getFrameIcon());
   }
 
   private Container createContentPane() {
