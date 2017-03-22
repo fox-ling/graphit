@@ -64,7 +64,7 @@ public class DetailsFrame extends JFrame {
 	private JTextPane iLineNo;
 	
 	public DetailsFrame(final LogFile logFile){
-		super("Details" + logFile.getFileName());
+		super("Details - " + logFile.getFileName());
 		setBounds(100, 100, 600, 500);
 		JPanel contentPane = new JPanel();
 		setContentPane(contentPane);
