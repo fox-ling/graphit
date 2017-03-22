@@ -52,21 +52,25 @@ public class AboutFrame extends JFrame {
 
   public AboutFrame() {
     super("О программе");
-    setBounds(100, 100, 600, 200);
+    //setBounds(100, 100, 600, 200);
+    setBounds(100, 100, 600, 175);
     setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     setContentPane(createContentPane());
   }
 
   private Container createContentPane() {
     JPanel contentPane = new JPanel();
-    contentPane.setLayout(new MigLayout("", "[][grow]", "[]15[]"));
+    /*contentPane.setLayout(new MigLayout("", "[][grow]", "[]15[]"));
     contentPane.add(createCompanyLogo(), "top,span 1 2");
     contentPane.add(createCompanyInfoWidget(), "top,growx,wrap");
+    contentPane.add(createLicenseLabel(), "");*/
+    contentPane.setLayout(new MigLayout("", "[grow]", "[][]"));
+    contentPane.add(createCompanyInfoWidget(), "growx,wrap");
     contentPane.add(createLicenseLabel(), "");
     return contentPane;
   }
 
-  private Component createCompanyLogo() {
+  /*private Component createCompanyLogo() {
     BufferedImage logo = null;
     try {
       logo = ImageIO.read(Resources.getInputStream(LOGO_RESOURCE_FILE));
@@ -75,7 +79,7 @@ public class AboutFrame extends JFrame {
     }
     ImageIcon imgIcon = new ImageIcon(logo);
     return new JLabel(imgIcon);
-  }
+  }*/
 
   private Component createCompanyInfoWidget() {
     JTextArea textArea = new JTextArea(); 
