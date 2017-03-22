@@ -139,9 +139,7 @@ public class Chart {
 			for (Field yField : yFields)
 				plotFactory(yField);
 		
-        System.out.println("Running Garbage Collector...");
-		Runtime.getRuntime().gc();
-		System.out.println("Completed.");
+        Runtime.getRuntime().gc();
         return instance;
 	}
 	

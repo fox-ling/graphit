@@ -87,7 +87,6 @@ import java.awt.event.InputEvent;
 import javax.swing.JTextField;
 import javax.swing.JPopupMenu;
 import java.awt.Component;
-
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JCheckBox;
 
@@ -196,6 +195,8 @@ extends JFrame implements ChartProgressListener {
 		miPreferences.addActionListener(e -> ConfigFrame.launch());
 		miPreferences.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_P, InputEvent.CTRL_MASK));
 		mSettings.add(miPreferences);
+		
+		menuBar.add(createHelpMenu());
 		
 		tfCurrFile = new JTextField();
 		tfCurrFile.setEditable(false);
@@ -352,7 +353,15 @@ extends JFrame implements ChartProgressListener {
 	    configController = new ConfigController(ConfigModel.getInstance());
 	}
 	
-	/** Drops current session */
+	private JMenu createHelpMenu() {
+	  JMenu help = new JMenu("Помощь");
+      JMenuItem about = new JMenuItem("О программе");
+      help.add(about);
+      about.addActionListener((e) -> {new AboutFrame().setVisible(true);});
+      return help;
+    }
+
+  /** Drops current session */
 	private void reset() {
 		configController.clearAxesList();
 		chartPanel.setChart(null);
