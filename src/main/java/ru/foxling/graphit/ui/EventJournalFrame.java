@@ -44,6 +44,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import ru.foxling.graphit.Core;
 import ru.foxling.graphit.LoggerIcons;
 import ru.foxling.graphit.LoggerMemoryHandler;
+import ru.foxling.graphit.utils.Resources;
 
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -90,6 +91,7 @@ public class EventJournalFrame extends JFrame {
 		
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		setBounds(100, 100, 886, 600);
+        setIconImage(Resources.getFrameIcon());
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		contentPane.setLayout(new BorderLayout(0, 0));

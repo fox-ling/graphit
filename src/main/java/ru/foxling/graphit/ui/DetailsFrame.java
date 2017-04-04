@@ -34,6 +34,7 @@ import ru.foxling.graphit.logfile.LogFile;
 import ru.foxling.graphit.logfile.BadDataIndex;
 import ru.foxling.graphit.logfile.BadRecord;
 import ru.foxling.graphit.logfile.Startup;
+import ru.foxling.graphit.utils.Resources;
 
 import javax.swing.JTree;
 import javax.swing.text.BadLocationException;
@@ -63,10 +64,11 @@ public class DetailsFrame extends JFrame {
 	private JTextPane iLineNo;
 	
 	public DetailsFrame(final LogFile logFile){
-		super("Details" + logFile.getFileName());
+		super("Details - " + logFile.getFileName());
 		setBounds(100, 100, 600, 500);
 		JPanel contentPane = new JPanel();
 		setContentPane(contentPane);
+        setIconImage(Resources.getFrameIcon());
 		
 		this.logFile = logFile;
 		
