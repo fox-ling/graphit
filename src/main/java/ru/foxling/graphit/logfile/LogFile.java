@@ -45,7 +45,7 @@ public class LogFile {
 	private String intFilename;
 	private String serialNo;
 	private String frimware;
-	private int counter;
+	private int counter = Integer.MIN_VALUE;
 	private ArrayList<Startup> startups;
 
 	private Path filePath;

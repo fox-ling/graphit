@@ -64,7 +64,7 @@ public class DetailsFrame extends JFrame {
 	private JTextPane iLineNo;
 	
 	public DetailsFrame(final LogFile logFile){
-		super("Details - " + logFile.getFileName());
+		super("Детали - " + logFile.getFileName());
 		setBounds(100, 100, 600, 500);
 		JPanel contentPane = new JPanel();
 		setContentPane(contentPane);
@@ -141,10 +141,13 @@ public class DetailsFrame extends JFrame {
 	
 	private String getSummaryHeader() {
 		StringBuilder text = new StringBuilder(250);
-		text.append(logFile.getFileName()).append(LINE_SEPARATOR)
-			.append("file: ").append(logFile.getIntFileName()).append(LINE_SEPARATOR)
-			.append("serial no.: ").append(logFile.getSerialNo()).append(LINE_SEPARATOR)
-			.append("counter: ").append(logFile.getCounter()).append(LINE_SEPARATOR);
+		text.append(logFile.getFileName()).append(LINE_SEPARATOR);
+		if (logFile.getIntFileName() != null)
+		  text.append("file: ").append(logFile.getIntFileName()).append(LINE_SEPARATOR);
+		if (logFile.getSerialNo() != null)
+		  text.append("serial no.: ").append(logFile.getSerialNo()).append(LINE_SEPARATOR);
+		if (logFile.getCounter() != Integer.MIN_VALUE)
+          text.append("counter: ").append(logFile.getCounter()).append(LINE_SEPARATOR);
 		return text.toString();
 	}
 	
