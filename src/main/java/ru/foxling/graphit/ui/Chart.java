@@ -100,7 +100,7 @@ public class Chart {
 				datetime = LocalDateTime.of(startup.getDate(), LocalTime.MIN);
 				break;
 			default:
-				throw new IllegalStateException(String.format("Неподдерщиваемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME/TIME_SEQUENCE", xField.getDatatype().getValue()));
+				throw new IllegalStateException(String.format("Неподдерживаемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME/TIME_SEQUENCE", xField.getDatatype().getValue()));
 			}
 			
 			tsLaunch.addOrUpdate(new Second(datetime.getSecond(), datetime.getMinute(), datetime.getHour(), datetime.getDayOfMonth(), datetime.getMonthValue(), datetime.getYear()), -1);
@@ -227,7 +227,7 @@ public class Chart {
 					timeSeries.addOrUpdate(second(xDatetime.plus(1, ChronoUnit.SECONDS)), null);
 				break;
 			default:
-				throw new IllegalStateException(String.format("Неподдерщиваемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME/OVERFLOWING_TIME_SEQUENCE", xField.getDatatype().getValue()));
+				throw new IllegalStateException(String.format("Неподдерживаемый тип данных для оси X (%s). Выберите DATE/TIME/DATETIME/OVERFLOWING_TIME_SEQUENCE", xField.getDatatype().getValue()));
 			}
 			
 			fieldValue = data.getValue(row, yFieldId);

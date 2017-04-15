@@ -27,6 +27,7 @@ extends Handler {
 	private JLabel label;
 	private int height;
 	private Level level;
+	private boolean isClosed;
 	
 	public LoggerLabelHandler(JLabel label){
 		this(label, Level.ALL);
@@ -46,6 +47,9 @@ extends Handler {
 	}
 
 	public void publish(LogRecord record)  {
+	  if (isClosed)
+	    return;
+	  
 		Level lvl = record.getLevel();
 		if (lvl.intValue() < level.intValue())
 		    return;
@@ -55,7 +59,9 @@ extends Handler {
 	}
 	
 	@Override
-	public void close() {}
+	public void close() {
+	  isClosed = true;
+	}
 
 	@Override
 	public void flush() {}
@@ -64,5 +70,8 @@ extends Handler {
 		height = label.getFontMetrics(label.getFont()).getHeight();
 	}
 	
-
+	public void clear() {
+	  label.setText(null);
+	  label.setIcon(null);
+	}
 }

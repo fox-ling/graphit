@@ -105,6 +105,7 @@ public class MainFrame
 extends JFrame implements ChartProgressListener {
 	private static final long serialVersionUID = 1L;
 	private static final String APPNAME = "Graphit - ИСУ \"Оптима\" ";
+	private static final Logger LOG = Logger.getLogger(MainFrame.class.getName());
 	
 	private JPanel contentPane;
 	private JMenu mFile;
@@ -373,6 +374,8 @@ extends JFrame implements ChartProgressListener {
 	}
 	
 	private void openLogFile(File aFile){
+	  clearEvents();
+	    
 		logFile = new LogFile(ConfigModel.getInstance(), aFile.getPath());
 		try {
 			logFile.readFile();
@@ -426,7 +429,12 @@ extends JFrame implements ChartProgressListener {
 		System.out.println("Work's done");
 	}
 	
-	private void setTableVisible(boolean visible) {
+	private void clearEvents() {
+	  Core.getMemoryHandler().flush();
+	  loggerLabelHandler.clear();
+  }
+
+  private void setTableVisible(boolean visible) {
 		spTable.setVisible(visible);
 		if (visible) {
 			splitPane.setDividerLocation(.75);
@@ -485,8 +493,8 @@ extends JFrame implements ChartProgressListener {
 	}
 
 	@Override
-	public void chartProgress(ChartProgressEvent e) {
-		if (e.getType() != 2) return;
+	public void chartProgress(ChartProgressEvent evt) {
+		if (evt.getType() != 2) return;
 		
 		if (Chart.getInstance() != null && Chart.getxFieldId() > -1) {
 			XYPlot xyplot = (XYPlot)Chart.getInstance().getPlot();
@@ -494,8 +502,12 @@ extends JFrame implements ChartProgressListener {
 			int index = logFile.getParsedData().getRowId(Chart.getxFieldId(), LocalDateTime.ofInstant(Instant.ofEpochMilli(value), ZoneId.systemDefault()));
 			if (index != -1 && table.getSelectedRow() != index) {
 				Rectangle rect = table.getCellRect(index, 0, true);
-				table.scrollRectToVisible(rect);					
-				table.setRowSelectionInterval(index, index);
+				table.scrollRectToVisible(rect);			
+				try {
+				  table.setRowSelectionInterval(index, index);
+                } catch (Exception e) {
+                  LOG.log(Level.WARNING, "Ошибка при попытке выделить строку таблицы по клику в график", e);
+                }
 				int col = table.getSelectedColumn() == -1 ? 0 : table.getSelectedColumn();
 				table.setColumnSelectionInterval(col, col);
 			}
